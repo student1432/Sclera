@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ subject_name }} - Student Platform</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+<body>
+    <div class="page-wrapper">
+        <header class="page-header">
+            <h1>{{ subject_name }}</h1>
+            <div class="header-actions">
+                <a href="{{ url_for('profile_dashboard') }}" class="btn">Profile</a>
+                <a href="{{ url_for('logout') }}" class="btn">Logout</a>
+            </div>
+        </header>
+        
+        <main class="page-content">
+            <div class="breadcrumb">
+                <a href="{{ url_for('profile_dashboard') }}">Profile</a>
+                <span class="breadcrumb-separator">/</span>
+                <a href="{{ url_for('academic_dashboard') }}">Academic</a>
+                <span class="breadcrumb-separator">/</span>
+                <span>{{ subject_name }}</span>
+            </div>
+            
+            <h2>Chapters</h2>
+            
+            {% if chapters %}
+                <div class="chapters-list">
+                    {% for chapter_name, chapter_data in chapters.items() %}
+                        <a href="{{ url_for('chapter_detail', subject_name=subject_name, chapter_name=chapter_name) }}" class="chapter-item">
+                            <div class="chapter-info">
+                                <h4>{{ chapter_name }}</h4>
+                                <p class="chapter-meta">
+                                    {{ chapter_data.topics|length if chapter_data.topics else 0 }} topics
+                                </p>
+                            </div>
+                            <span>→</span>
+                        </a>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="empty-state">
+                    <h3>No Chapters Available</h3>
+                    <p>Chapter content is being prepared.</p>
+                </div>
+            {% endif %}
+        </main>
+    </div>
+</body>
+</html>

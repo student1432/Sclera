@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ chapter_name }} — Student Platform</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+<body>
+<div class="dashboard-layout">
+
+    <aside class="sidebar">
+        <div class="sidebar-header">
+            <a href="{{ url_for('profile_resume') }}">{{ name }}</a>
+        </div>
+        <nav class="sidebar-nav">
+            <a href="{{ url_for('profile_dashboard') }}" class="nav-item">Home</a>
+            <a href="{{ url_for('academic_dashboard') }}" class="nav-item active">Academic</a>
+            <a href="{{ url_for('interests_dashboard') }}" class="nav-item">Interests</a>
+        </nav>
+        <div class="sidebar-footer">
+            <a href="{{ url_for('about') }}" class="nav-item">Settings</a>
+            <a href="{{ url_for('about') }}" class="nav-item">Contact</a>
+            <a href="{{ url_for('logout') }}" class="nav-item">Logout</a>
+        </div>
+    </aside>
+
+    <main class="main-content">
+        <div class="breadcrumb">
+            <a href="{{ url_for('academic_dashboard') }}">Academic</a>
+            <span class="breadcrumb-separator">/</span>
+            <span style="color:var(--text-muted);">{{ subject_name }}</span>
+            <span class="breadcrumb-separator">/</span>
+            <span>{{ chapter_name }}</span>
+        </div>
+
+        {% if topics %}
+            {% for topic in topics %}
+            <div class="topic-detail">
+                <div class="topic-header">
+                    <h2>{{ topic.name }}</h2>
+                </div>
+                <div class="topic-overview">
+                    <p>{{ topic.overview }}</p>
+                </div>
+
+                {% if topic.resources %}
+                    {% if topic.resources.videos %}
+                    <div class="resources-section">
+                        <h4>Videos</h4>
+                        <ul class="resource-list">
+                            {% for v in topic.resources.videos %}
+                            <li><a href="{{ v }}" target="_blank">{{ v }}</a></li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                    {% endif %}
+
+                    {% if topic.resources.pdfs %}
+                    <div class="resources-section">
+                        <h4>PDFs</h4>
+                        <ul class="resource-list">
+                            {% for p in topic.resources.pdfs %}
+                            <li><a href="{{ p }}" target="_blank">{{ p }}</a></li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                    {% endif %}
+
+                    {% if topic.resources.practice %}
+                    <div class="resources-section">
+                        <h4>Practice</h4>
+                        <ul class="resource-list">
+                            {% for pr in topic.resources.practice %}
+                            <li>{{ pr }}</li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                    {% endif %}
+                {% endif %}
+            </div>
+
+            {% if not loop.last %}
+            <hr style="border:none; border-top:1px solid var(--border); margin: 40px 0;">
+            {% endif %}
+            {% endfor %}
+
+            <!-- Mark Chapter Complete -->
+            <div class="chapter-actions">
+                <form method="POST" action="{{ url_for('toggle_chapter_completion') }}">
+                    <input type="hidden" name="subject_name" value="{{ subject_name }}">
+                    <input type="hidden" name="chapter_name" value="{{ chapter_name }}">
+                    <button type="submit" class="chapter-complete-btn {% if is_completed %}completed{% endif %}">
+                        {% if is_completed %}✓ Chapter Completed{% else %}Mark Chapter as Complete{% endif %}
+                    </button>
+                </form>
+            </div>
+        {% else %}
+        <div class="empty-state">
+            <h3>No Topics Available</h3>
+            <p>Topic content is being prepared.</p>
+        </div>
+        {% endif %}
+    </main>
+</div>
+</body>
+</html>

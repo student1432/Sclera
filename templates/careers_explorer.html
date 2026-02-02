@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Careers - Student Platform</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+<body>
+    <div class="dashboard-layout">
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <h2>Student Platform</h2>
+            </div>
+            <nav class="sidebar-nav">
+                <a href="{{ url_for('profile_dashboard') }}" class="nav-item">Home</a>
+                <a href="{{ url_for('academic_dashboard') }}" class="nav-item">Academic</a>
+                <a href="{{ url_for('profile_resume') }}" class="nav-item">Profile</a>
+                <a href="{{ url_for('interests_dashboard') }}" class="nav-item active">Interests</a>
+                <a href="{{ url_for('goals_dashboard') }}" class="nav-item">Goals</a>
+                <a href="{{ url_for('tasks_dashboard') }}" class="nav-item">Tasks</a>
+                <a href="{{ url_for('results_dashboard') }}" class="nav-item">Results</a>
+                <a href="{{ url_for('projects_dashboard') }}" class="nav-item">Projects</a>
+                <a href="{{ url_for('logout') }}" class="nav-item">Logout</a>
+            </nav>
+        </aside>
+
+        <main class="main-content">
+            <header class="content-header">
+                <h1>Career Explorer</h1>
+                <p>Discover career paths and their requirements</p>
+            </header>
+
+            {% for domain, career_list in careers.items() %}
+            <div style="margin-bottom: 40px;">
+                <h2>{{ domain }}</h2>
+                <div class="subjects-grid">
+                    {% for career in career_list %}
+                    <div class="subject-card">
+                        <h3>{{ career.name }}</h3>
+                        <p><strong>Required Subjects:</strong> {{ career.subjects|join(', ') }}</p>
+                        <p><strong>Key Skills:</strong> {{ career.skills|join(', ') }}</p>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endfor %}
+        </main>
+    </div>
+</body>
+</html>

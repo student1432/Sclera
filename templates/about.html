@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>About - Student Platform</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+<body>
+    <div class="container">
+        <div class="dashboard-card">
+            <div class="dashboard-header">
+                <h1>About Student Platform</h1>
+                <a href="{{ url_for('dashboard') }}" class="btn btn-secondary">Back to Dashboard</a>
+            </div>
+            
+            <div class="about-content">
+                <h2>Welcome to Student Platform</h2>
+                <p>Student Platform is a comprehensive learning management system designed specifically for students at different stages of their academic journey.</p>
+                
+                <h3>Our Mission</h3>
+                <p>We aim to provide personalized learning experiences tailored to your specific educational needs, whether you're in high school, preparing for competitive exams, or planning your post-10th academic path.</p>
+                
+                <h3>Features</h3>
+                <ul>
+                    <li><strong>Personalized Dashboards:</strong> Custom interfaces based on your educational stage and goals</li>
+                    <li><strong>Task Management:</strong> Keep track of your assignments and to-do items</li>
+                    <li><strong>Progress Tracking:</strong> Monitor your academic progress and achievements</li>
+                    <li><strong>Resource Library:</strong> Access curated study materials and resources</li>
+                    <li><strong>Secure Authentication:</strong> Your data is protected with Firebase security</li>
+                </ul>
+                
+                <h3>Who We Serve</h3>
+                <ul>
+                    <li><strong>High School Students:</strong> Track your board exam preparation and overall academic progress</li>
+                    <li><strong>Exam Aspirants:</strong> Focused tools for JEE, NEET, SAT, and other competitive exam preparation</li>
+                    <li><strong>After 10th Students:</strong> Navigate your chosen stream with specialized resources and guidance</li>
+                </ul>
+                
+                <h3>Technology</h3>
+                <p>Built with modern web technologies including Flask (Python), Firebase Authentication, and Firestore Database to ensure a fast, secure, and reliable experience.</p>
+                
+                <h3>Contact & Support</h3>
+                <p>If you have any questions, feedback, or need assistance, please reach out to our support team.</p>
+                
+                <div class="version-info">
+                    <p><strong>Version:</strong> 1.0.0</p>
+                    <p><strong>Last Updated:</strong> January 2026</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

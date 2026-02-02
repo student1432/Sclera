@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ internship.name }} - Student Platform</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+<body>
+<div class="dashboard-layout">
+
+    <aside class="sidebar">
+        <div class="sidebar-header">
+            <a href="{{ url_for('profile_resume') }}">{{ name }}</a>
+        </div>
+        <nav class="sidebar-nav">
+            <a href="{{ url_for('profile_dashboard') }}" class="nav-item">Home</a>
+            <a href="{{ url_for('academic_dashboard') }}" class="nav-item">Academic</a>
+            <a href="{{ url_for('interests_dashboard') }}" class="nav-item active">Interests</a>
+        </nav>
+        <div class="sidebar-footer">
+            <a href="{{ url_for('about') }}" class="nav-item">Settings</a>
+            <a href="{{ url_for('about') }}" class="nav-item">Contact</a>
+            <a href="{{ url_for('logout') }}" class="nav-item">Logout</a>
+        </div>
+    </aside>
+
+    <main class="main-content">
+        <div class="breadcrumb">
+            <a href="{{ url_for('interests_dashboard') }}">Interests</a>
+            <span class="breadcrumb-separator">/</span>
+            <span>{{ internship.name }}</span>
+        </div>
+
+        <div class="detail-page-layout">
+            <div class="detail-page-header">
+                <h1>{{ internship.name }}</h1>
+                <div class="detail-domain">{{ internship.domain }}    -  {{ internship.company }}    -  {{ internship.duration }}    -  {{ internship.location }}</div>
+            </div>
+
+            <div class="detail-section">
+                <h4>About</h4>
+                <p>{{ internship.description }}</p>
+            </div>
+
+            <div class="detail-section">
+                <h4>Required Skills</h4>
+                <div class="detail-tag-list">
+                    {% for skill in internship.skills_required %}
+                        <span class="detail-tag">{{ skill }}</span>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <div class="detail-section">
+                <h4>Eligibility</h4>
+                <p>{{ internship.eligibility }}</p>
+            </div>
+
+            <div class="detail-section">
+                <h4>How to Apply</h4>
+                <p>{{ internship.how_to_apply }}</p>
+            </div>
+        </div>
+    </main>
+</div>
+</body>
+</html>

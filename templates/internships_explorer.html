@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Internships - Student Platform</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+<body>
+    <div class="dashboard-layout">
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <h2>Student Platform</h2>
+            </div>
+            <nav class="sidebar-nav">
+                <a href="{{ url_for('profile_dashboard') }}" class="nav-item">Home</a>
+                <a href="{{ url_for('academic_dashboard') }}" class="nav-item">Academic</a>
+                <a href="{{ url_for('profile_resume') }}" class="nav-item">Profile</a>
+                <a href="{{ url_for('interests_dashboard') }}" class="nav-item active">Interests</a>
+                <a href="{{ url_for('goals_dashboard') }}" class="nav-item">Goals</a>
+                <a href="{{ url_for('tasks_dashboard') }}" class="nav-item">Tasks</a>
+                <a href="{{ url_for('results_dashboard') }}" class="nav-item">Results</a>
+                <a href="{{ url_for('projects_dashboard') }}" class="nav-item">Projects</a>
+                <a href="{{ url_for('logout') }}" class="nav-item">Logout</a>
+            </nav>
+        </aside>
+
+        <main class="main-content">
+            <header class="content-header">
+                <h1>Internship Explorer</h1>
+                <p>Find internship opportunities in various domains</p>
+            </header>
+
+            {% for domain, internship_list in internships.items() %}
+            <div style="margin-bottom: 40px;">
+                <h2>{{ domain }}</h2>
+                <div class="chapters-list">
+                    {% for internship in internship_list %}
+                    <div class="chapter-item">
+                        <div class="chapter-info">
+                            <h4>{{ internship.title }}</h4>
+                            <p class="chapter-meta">
+                                {{ internship.company }} | {{ internship.duration }} | {{ internship.location }}
+                            </p>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endfor %}
+        </main>
+    </div>
+</body>
+</html>

@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Exam Preparation Dashboard - Student Platform</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+<body>
+    <div class="container">
+        <div class="dashboard-card">
+            <div class="dashboard-header">
+                <h1>Exam Preparation Dashboard</h1>
+                <a href="{{ url_for('dashboard') }}" class="btn btn-secondary">Back to Main Dashboard</a>
+            </div>
+            
+            <div class="profile-info">
+                <h2>Welcome, {{ name }}!</h2>
+                <p><strong>Exam:</strong> {{ exam_type }}</p>
+            </div>
+            
+            <div class="dashboard-content">
+                <h3>Your Exam Preparation Hub</h3>
+                <p>Focused preparation tools and resources for {{ exam_type }}. Stay on track with your exam preparation journey.</p>
+                
+                <div class="info-section">
+                    <h4>Features Coming Soon:</h4>
+                    <ul>
+                        <li>Topic-wise preparation tracker</li>
+                        <li>Practice test analytics</li>
+                        <li>Study plan generator</li>
+                        <li>Previous year papers</li>
+                        <li>Performance insights</li>
+                        <li>Revision scheduler</li>
+                    </ul>
+                </div>
+            </div>
+            
+            <div class="dashboard-actions">
+                <a href="{{ url_for('todo') }}" class="btn btn-primary">Manage Tasks</a>
+                <a href="{{ url_for('logout') }}" class="btn btn-secondary">Logout</a>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
