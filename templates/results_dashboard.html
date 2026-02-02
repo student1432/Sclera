@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Results - Student Platform</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+<body>
+    <div class="container">
+        <div class="dashboard-card">
+            <div class="dashboard-header">
+                <h1>Exam Results & Performance</h1>
+                <a href="{{ url_for('profile_dashboard') }}" class="btn btn-secondary">Back to Profile</a>
+            </div>
+            
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    {% for category, message in messages %}
+                        <div class="alert alert-{{ category }}">{{ message }}</div>
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
+            
+            <!-- Performance Summary -->
+            <div class="results-summary">
+                <div class="summary-card">
+                    <h3>Total Exams</h3>
+                    <p class="summary-number">{{ total_exams }}</p>
+                </div>
+                <div class="summary-card">
+                    <h3>Average Score</h3>
+                    <p class="summary-number">{{ avg_percentage }}%</p>
+                </div>
+            </div>
+            
+            <div class="todo-section">
+                <h2>Add New Result</h2>
+                <form method="POST" action="{{ url_for('results_dashboard') }}" class="result-form">
+                    <input type="hidden" name="action" value="add">
+                    
+                    <div class="form-row-split">
+                        <div class="form-group">
+                            <label for="exam_name">Exam Name</label>
+                            <input type="text" id="exam_name" name="exam_name" placeholder="e.g., Mid-term Exam" required>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="subject">Subject</label>
+                            <input type="text" id="subject" name="subject" placeholder="e.g., Mathematics">
+                        </div>
+                    </div>
+                    
+                    <div class="form-row-split">
+                        <div class="form-group">
+                            <label for="score">Score</label>
+                            <input type="number" id="score" name="score" step="0.01" placeholder="85" required>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="max_score">Max Score</label>
+                            <input type="number" id="max_score" name="max_score" step="0.01" placeholder="100">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="date">Date</label>
+                            <input type="date" id="date" name="date">
+                        </div>
+                    </div>
+                    
+                    <button type="submit" class="btn btn-primary">Add Result</button>
+                </form>
+            </div>
+            
+            <div class="todo-section">
+                <h2>Your Results</h2>
+                {% if results %}
+                    <div class="results-table">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Exam</th>
+                                    <th>Subject</th>
+                                    <th>Score</th>
+                                    <th>Percentage</th>
+                                    <th>Date</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for result in results %}
+                                    <tr>
+                                        <td>{{ result.exam_name }}</td>
+                                        <td>{{ result.subject if result.subject else 'N/A' }}</td>
+                                        <td>{{ result.score }} / {{ result.max_score }}</td>
+                                        <td>
+                                            <span class="percentage-badge {% if (result.score / result.max_score * 100) >= 75 %}good{% elif (result.score / result.max_score * 100) >= 50 %}average{% else %}poor{% endif %}">
+                                                {{ "%.2f"|format(result.score / result.max_score * 100) }}%
+                                            </span>
+                                        </td>
+                                        <td>{{ result.date if result.date else 'N/A' }}</td>
+                                        <td>
+                                            <form method="POST" action="{{ url_for('results_dashboard') }}" style="display: inline;">
+                                                <input type="hidden" name="action" value="delete">
+                                                <input type="hidden" name="result_id" value="{{ result.id }}">
+                                                <button type="submit" class="btn btn-small btn-danger">Delete</button>
+                                            </form>
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <p class="empty-message">No results recorded yet. Add your first exam result above!</p>
+                {% endif %}
+            </div>
+            
+            <div class="dashboard-actions">
+                <div class="button-grid">
+                    <a href="{{ url_for('goals_dashboard') }}" class="btn btn-secondary">Set Academic Goals</a>
+                    <a href="{{ url_for('academic_dashboard') }}" class="btn btn-secondary">View Syllabus</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

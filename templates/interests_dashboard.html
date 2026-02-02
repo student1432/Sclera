@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interests — Student Platform</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+<body>
+<div class="dashboard-layout">
+
+    <!-- SIDEBAR -->
+    <aside class="sidebar">
+        <div class="sidebar-header">
+            <a href="{{ url_for('profile_resume') }}">{{ name }}</a>
+        </div>
+        <nav class="sidebar-nav">
+            <a href="{{ url_for('profile_dashboard') }}" class="nav-item">Home</a>
+            <a href="{{ url_for('academic_dashboard') }}" class="nav-item">Academic</a>
+            <a href="{{ url_for('interests_dashboard') }}" class="nav-item active">Interests</a>
+        </nav>
+        <div class="sidebar-footer">
+            <a href="{{ url_for('about') }}" class="nav-item">Settings</a>
+            <a href="{{ url_for('about') }}" class="nav-item">Contact</a>
+            <a href="{{ url_for('logout') }}" class="nav-item">Logout</a>
+        </div>
+    </aside>
+
+    <!-- MAIN -->
+    <main class="main-content">
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="alert alert-{{ category }}">{{ message }}</div>
+            {% endfor %}
+        {% endif %}
+        {% endwith %}
+
+        <!-- SAVED CAREERS (top) -->
+        <div class="interests-saved-careers">
+            <h3>Your Saved Careers</h3>
+            {% if saved_careers %}
+            <div class="explore-grid">
+                {% for career in saved_careers %}
+                <a href="{{ url_for('career_detail', career_id=career.id) }}" class="explore-card">
+                    <div class="card-domain">{{ career.domain }}</div>
+                    <h4>{{ career.name }}</h4>
+                    <p>{{ career.skills|join(', ') }}</p>
+                </a>
+                {% endfor %}
+            </div>
+            {% else %}
+            <p style="color:var(--text-muted); font-size:14px;">No careers saved yet. Browse below and add careers you are interested in.</p>
+            {% endif %}
+        </div>
+
+        <!-- EXPLORE TABS -->
+        <div class="interests-explore-tabs">
+            <button class="explore-tab active" data-tab="careers">Careers</button>
+            <button class="explore-tab"         data-tab="courses">Courses</button>
+            <button class="explore-tab"         data-tab="internships">Internships</button>
+        </div>
+
+        <!-- CAREERS TAB -->
+        <div class="explore-section active" id="tab-careers">
+            {% for domain, career_list in all_careers.items() %}
+            <h4 style="color:var(--text-muted); font-size:12px; text-transform:uppercase; letter-spacing:0.06em; margin-bottom:10px; margin-top:20px;">{{ domain }}</h4>
+            <div class="explore-grid">
+                {% for career in career_list %}
+                <a href="{{ url_for('career_detail', career_id=career.id) }}" class="explore-card">
+                    <h4>{{ career.name }}</h4>
+                    <p>{{ career.skills[:3]|join(', ') }}</p>
+                </a>
+                {% endfor %}
+            </div>
+            {% endfor %}
+        </div>
+
+        <!-- COURSES TAB -->
+        <div class="explore-section" id="tab-courses">
+            <div class="explore-grid">
+                {% for course in all_courses %}
+                <a href="{{ url_for('course_detail', course_id=course.id) }}" class="explore-card">
+                    <div class="card-domain">{{ course.provider }} · {{ course.level }}</div>
+                    <h4>{{ course.name }}</h4>
+                    <p>{{ course.duration }} · {{ course.price }}</p>
+                </a>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- INTERNSHIPS TAB -->
+        <div class="explore-section" id="tab-internships">
+            <div class="explore-grid">
+                {% for intern in all_internships %}
+                <a href="{{ url_for('internship_detail', internship_id=intern.id) }}" class="explore-card">
+                    <div class="card-domain">{{ intern.domain }} · {{ intern.company }}</div>
+                    <h4>{{ intern.name }}</h4>
+                    <p>{{ intern.duration }} · {{ intern.location }}</p>
+                </a>
+                {% endfor %}
+            </div>
+        </div>
+
+    </main>
+</div>
+
+<script>
+(function(){
+    var tabs = document.querySelectorAll('.explore-tab');
+    tabs.forEach(function(tab){
+        tab.addEventListener('click', function(){
+            tabs.forEach(function(t){ t.classList.remove('active'); });
+            document.querySelectorAll('.explore-section').forEach(function(s){ s.classList.remove('active'); });
+            tab.classList.add('active');
+            document.getElementById('tab-' + tab.dataset.tab).classList.add('active');
+        });
+    });
+})();
+</script>
+</body>
+</html>

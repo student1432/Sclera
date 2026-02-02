@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>To-Do List - Student Platform</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+<body>
+    <div class="container">
+        <div class="dashboard-card">
+            <div class="dashboard-header">
+                <h1>My To-Do List</h1>
+                <a href="{{ url_for('dashboard') }}" class="btn btn-secondary">Back to Dashboard</a>
+            </div>
+            
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    {% for category, message in messages %}
+                        <div class="alert alert-{{ category }}">{{ message }}</div>
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
+            
+            <div class="todo-section">
+                <h2>Add New Task</h2>
+                <form method="POST" action="{{ url_for('todo') }}" class="todo-form">
+                    <input type="hidden" name="action" value="add">
+                    <div class="form-group-inline">
+                        <input type="text" name="task" placeholder="Enter a new task..." required>
+                        <button type="submit" class="btn btn-primary">Add Task</button>
+                    </div>
+                </form>
+            </div>
+            
+            <div class="todo-section">
+                <h2>Your Tasks</h2>
+                {% if todos %}
+                    <div class="todo-list">
+                        {% for todo in todos %}
+                            <div class="todo-item {% if todo.completed %}completed{% endif %}">
+                                <div class="todo-content">
+                                    <span class="todo-text">{{ todo.task }}</span>
+                                    <span class="todo-date">{{ todo.created_at[:10] if todo.created_at else '' }}</span>
+                                </div>
+                                <div class="todo-actions">
+                                    <form method="POST" action="{{ url_for('todo') }}" style="display: inline;">
+                                        <input type="hidden" name="action" value="toggle">
+                                        <input type="hidden" name="task_index" value="{{ loop.index0 }}">
+                                        <button type="submit" class="btn btn-small">
+                                            {% if todo.completed %}
+                                                Undo
+                                            {% else %}
+                                                Complete
+                                            {% endif %}
+                                        </button>
+                                    </form>
+                                    <form method="POST" action="{{ url_for('todo') }}" style="display: inline;">
+                                        <input type="hidden" name="action" value="delete">
+                                        <input type="hidden" name="task_index" value="{{ loop.index0 }}">
+                                        <button type="submit" class="btn btn-small btn-danger">Delete</button>
+                                    </form>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <p class="empty-message">No tasks yet. Add your first task above!</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</body>
+</html>

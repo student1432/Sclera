@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ career.name }} — Student Platform</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+<body>
+<div class="dashboard-layout">
+
+    <aside class="sidebar">
+        <div class="sidebar-header">
+            <a href="{{ url_for('profile_resume') }}">{{ name }}</a>
+        </div>
+        <nav class="sidebar-nav">
+            <a href="{{ url_for('profile_dashboard') }}" class="nav-item">Home</a>
+            <a href="{{ url_for('academic_dashboard') }}" class="nav-item">Academic</a>
+            <a href="{{ url_for('interests_dashboard') }}" class="nav-item active">Interests</a>
+        </nav>
+        <div class="sidebar-footer">
+            <a href="{{ url_for('about') }}" class="nav-item">Settings</a>
+            <a href="{{ url_for('about') }}" class="nav-item">Contact</a>
+            <a href="{{ url_for('logout') }}" class="nav-item">Logout</a>
+        </div>
+    </aside>
+
+    <main class="main-content">
+        <div class="breadcrumb">
+            <a href="{{ url_for('interests_dashboard') }}">Interests</a>
+            <span class="breadcrumb-separator">/</span>
+            <span>{{ career.name }}</span>
+        </div>
+
+        <div class="detail-page-layout">
+            <div class="detail-page-header">
+                <h1>{{ career.name }}</h1>
+                <div class="detail-domain">{{ career.domain }}</div>
+
+                <!-- Toggle interest -->
+                <form method="POST" action="{{ url_for('toggle_career_interest', career_id=career.id) }}" class="btn-toggle-interest">
+                    <button type="submit" class="btn {% if is_saved %}btn-danger{% else %}btn-primary{% endif %}">
+                        {% if is_saved %}Remove from Interests{% else %}Add to Interests{% endif %}
+                    </button>
+                </form>
+            </div>
+
+            <div class="detail-section">
+                <h4>About</h4>
+                <p>{{ career.description }}</p>
+            </div>
+
+            <div class="detail-section">
+                <h4>Required Skills</h4>
+                <div class="detail-tag-list">
+                    {% for skill in career.skills %}
+                        <span class="detail-tag">{{ skill }}</span>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <div class="detail-section">
+                <h4>Recommended Subjects</h4>
+                <div class="detail-tag-list">
+                    {% for subj in career.subjects %}
+                        <span class="detail-tag">{{ subj }}</span>
+                    {% endfor %}
+                </div>
+            </div>
+
+            {% if related_courses %}
+            <div class="detail-section">
+                <h4>Related Courses</h4>
+                <div class="detail-related-list">
+                    {% for course in related_courses %}
+                    <a href="{{ url_for('course_detail', course_id=course.id) }}" class="detail-related-item">
+                        <h5>{{ course.name }}</h5>
+                        <p>{{ course.provider }} · {{ course.level }} · {{ course.price }}</p>
+                    </a>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+
+            {% if related_internships %}
+            <div class="detail-section">
+                <h4>Related Internships</h4>
+                <div class="detail-related-list">
+                    {% for intern in related_internships %}
+                    <a href="{{ url_for('internship_detail', internship_id=intern.id) }}" class="detail-related-item">
+                        <h5>{{ intern.name }}</h5>
+                        <p>{{ intern.company }} · {{ intern.duration }} · {{ intern.location }}</p>
+                    </a>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </main>
+</div>
+</body>
+</html>

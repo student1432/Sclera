@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Academic — Student Platform</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+<body>
+<div class="dashboard-layout">
+
+    <!-- SIDEBAR -->
+    <aside class="sidebar">
+        <div class="sidebar-header">
+            <a href="{{ url_for('profile_resume') }}">{{ name }}</a>
+        </div>
+        <nav class="sidebar-nav">
+            <a href="{{ url_for('profile_dashboard') }}" class="nav-item">Home</a>
+            <a href="{{ url_for('academic_dashboard') }}" class="nav-item active">Academic</a>
+            <a href="{{ url_for('interests_dashboard') }}" class="nav-item">Interests</a>
+        </nav>
+        <div class="sidebar-footer">
+            <a href="{{ url_for('about') }}" class="nav-item">Settings</a>
+            <a href="{{ url_for('about') }}" class="nav-item">Contact</a>
+            <a href="{{ url_for('logout') }}" class="nav-item">Logout</a>
+        </div>
+    </aside>
+
+    <!-- MAIN -->
+    <main class="main-content">
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="alert alert-{{ category }}">{{ message }}</div>
+            {% endfor %}
+        {% endif %}
+        {% endwith %}
+
+        <div class="academic-split">
+
+            <!-- ============================================================
+                 LEFT PANEL — Syllabus + Chapter Checkboxes
+                 ============================================================ -->
+            <div class="syllabus-panel">
+                <div class="syllabus-panel-header">
+                    <h2>Syllabus</h2>
+                </div>
+
+                {% for subject_name, chapters in syllabus_flat.items() %}
+                <div class="syllabus-subject">
+                    <div class="syllabus-subject-header">
+                        <h4>{{ subject_name }}</h4>
+                        <span class="subject-pct">{{ progress_data.by_subject.get(subject_name, 0) }}%</span>
+                    </div>
+
+                    {% for chapter_name, ch_data in chapters.items() %}
+                    <div class="chapter-row {% if ch_data.completed %}completed{% endif %}">
+                        <form method="POST" action="{{ url_for('toggle_chapter_completion') }}" style="display:contents;">
+                            <input type="hidden" name="subject_name" value="{{ subject_name }}">
+                            <input type="hidden" name="chapter_name" value="{{ chapter_name }}">
+                            <button type="submit" class="chapter-checkbox" style="border:none;background:none;padding:0;cursor:pointer;display:flex;align-items:center;justify-content:center;width:18px;height:18px;border-radius:4px;flex-shrink:0;transition:all 0.2s;{% if ch_data.completed %}background:var(--tick-color);{% else %}background:var(--bg-tertiary);border:2px solid var(--border);{% endif %}">
+                                {% if ch_data.completed %}<span style="color:var(--bg-primary);font-size:11px;font-weight:700;">✔</span>{% endif %}
+                            </button>
+                        </form>
+                        <span class="chapter-row-text">{{ chapter_name }}</span>
+                        <a href="{{ url_for('chapter_detail', subject_name=subject_name, chapter_name=chapter_name) }}" class="chapter-row-link">View →</a>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% endfor %}
+
+                {% if not syllabus_flat %}
+                <div class="empty-state">
+                    <h3>No Syllabus Available</h3>
+                    <p>Content is being prepared for your academic path.</p>
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- ============================================================
+                 RIGHT PANEL — Study Tools Stack
+                 ============================================================ -->
+            <div class="study-tools-panel">
+
+                <!-- GOALS ISLAND -->
+                <div class="study-island">
+                    <div class="study-island-header">
+                        <h3>Goals</h3>
+                    </div>
+
+                    {% for goal in goals %}
+                    <div class="study-item {% if goal.completed %}done{% endif %}">
+                        <form method="POST" action="{{ url_for('goals_dashboard') }}" style="display:contents;">
+                            <input type="hidden" name="action" value="toggle">
+                            <input type="hidden" name="goal_id" value="{{ goal.id }}">
+                            <button type="submit" class="study-item-check {% if goal.completed %}done{% endif %}" style="border:none;background:none;padding:0;"></button>
+                        </form>
+                        <div class="study-item-body">
+                            <div class="study-item-title">{{ goal.title }}</div>
+                            {% if goal.subject %}<div class="study-item-meta">{{ goal.subject }}{% if goal.target_date %} · {{ goal.target_date }}{% endif %}</div>{% endif %}
+                        </div>
+                        <div class="study-item-actions">
+                            <form method="POST" action="{{ url_for('goals_dashboard') }}">
+                                <input type="hidden" name="action" value="delete">
+                                <input type="hidden" name="goal_id" value="{{ goal.id }}">
+                                <button type="submit" class="btn btn-small btn-danger">×</button>
+                            </form>
+                        </div>
+                    </div>
+                    {% endfor %}
+
+                    <form method="POST" action="{{ url_for('goals_dashboard') }}">
+                        <input type="hidden" name="action" value="add">
+                        <div class="study-add-row">
+                            <input type="text" name="title" placeholder="Add a goal…" required>
+                            <button type="submit" class="btn btn-small btn-primary">+</button>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- TASKS ISLAND -->
+                <div class="study-island">
+                    <div class="study-island-header">
+                        <h3>Tasks</h3>
+                    </div>
+
+                    {% for task in tasks %}
+                    <div class="study-item {% if task.completed %}done{% endif %}">
+                        <form method="POST" action="{{ url_for('tasks_dashboard') }}" style="display:contents;">
+                            <input type="hidden" name="action" value="toggle">
+                            <input type="hidden" name="task_id" value="{{ task.id }}">
+                            <button type="submit" class="study-item-check {% if task.completed %}done{% endif %}" style="border:none;background:none;padding:0;"></button>
+                        </form>
+                        <div class="study-item-body">
+                            <div class="study-item-title">{{ task.title }}</div>
+                            {% if task.due_date %}<div class="study-item-meta">Due {{ task.due_date }}</div>{% endif %}
+                        </div>
+                        <div class="study-item-actions">
+                            <form method="POST" action="{{ url_for('tasks_dashboard') }}">
+                                <input type="hidden" name="action" value="delete">
+                                <input type="hidden" name="task_id" value="{{ task.id }}">
+                                <button type="submit" class="btn btn-small btn-danger">×</button>
+                            </form>
+                        </div>
+                    </div>
+                    {% endfor %}
+
+                    <form method="POST" action="{{ url_for('tasks_dashboard') }}">
+                        <input type="hidden" name="action" value="add">
+                        <div class="study-add-row">
+                            <input type="text" name="title" placeholder="Add a task…" required>
+                            <button type="submit" class="btn btn-small btn-primary">+</button>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- POMODORO TIMER ISLAND (client-side only) -->
+                <div class="study-island">
+                    <div class="study-island-header">
+                        <h3>Study Mode</h3>
+                    </div>
+                    <div class="pomodoro-container">
+                        <div class="pomodoro-display" id="pomodoroDisplay">25:00</div>
+                        <div class="pomodoro-controls">
+                            <button class="btn" id="pomStart">Start</button>
+                            <button class="btn" id="pomReset">Reset</button>
+                            <button class="btn btn-small" id="pomShort">5 min</button>
+                            <button class="btn btn-small" id="pomLong">15 min</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- RESULTS ISLAND -->
+                <div class="study-island">
+                    <div class="study-island-header">
+                        <h3>Results</h3>
+                        <span style="font-size:12px;color:var(--text-muted);">Avg: {{ avg_percentage }}%</span>
+                    </div>
+
+                    {% if results %}
+                    <table class="results-mini-table">
+                        <thead>
+                            <tr>
+                                <th>Exam</th>
+                                <th>Subject</th>
+                                <th>Score</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for r in results %}
+                            <tr>
+                                <td>{{ r.exam_name }}</td>
+                                <td>{{ r.subject }}</td>
+                                <td>
+                                    {% set pct = (r.score / r.max_score * 100)|round(1) if r.max_score else 0 %}
+                                    <span class="pct-badge {% if pct >= 75 %}good{% elif pct >= 50 %}avg{% else %}poor{% endif %}">{{ pct }}%</span>
+                                </td>
+                                <td>
+                                    <form method="POST" action="{{ url_for('results_dashboard') }}">
+                                        <input type="hidden" name="action" value="delete">
+                                        <input type="hidden" name="result_id" value="{{ r.id }}">
+                                        <button type="submit" class="btn btn-small btn-danger">×</button>
+                                    </form>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                    {% endif %}
+
+                    <form method="POST" action="{{ url_for('results_dashboard') }}">
+                        <input type="hidden" name="action" value="add">
+                        <div class="study-add-row">
+                            <input type="text" name="exam_name" placeholder="Exam name" required style="flex:1.2;">
+                            <input type="text" name="subject" placeholder="Subject" style="flex:1;">
+                            <input type="number" name="score" placeholder="Score" required style="flex:0.6;" step="0.1">
+                            <input type="number" name="max_score" placeholder="/ Max" style="flex:0.6;" step="0.1">
+                            <button type="submit" class="btn btn-small btn-primary">+</button>
+                        </div>
+                    </form>
+                </div>
+
+            </div>
+            <!-- end study-tools-panel -->
+
+        </div>
+        <!-- end academic-split -->
+    </main>
+</div>
+
+<!-- POMODORO JS (pure client, no server) -->
+<script>
+(function(){
+    var display = document.getElementById('pomodoroDisplay');
+    var startBtn = document.getElementById('pomStart');
+    var resetBtn = document.getElementById('pomReset');
+    var shortBtn = document.getElementById('pomShort');
+    var longBtn  = document.getElementById('pomLong');
+
+    var totalSeconds = 25 * 60;
+    var remaining   = totalSeconds;
+    var interval    = null;
+    var running     = false;
+
+    function fmt(s){
+        var m = Math.floor(s/60), sec = s % 60;
+        return (m<10?'0':'') + m + ':' + (sec<10?'0':'') + sec;
+    }
+    function render(){ display.textContent = fmt(remaining); }
+
+    startBtn.addEventListener('click', function(){
+        if(running){
+            clearInterval(interval);
+            running = false;
+            startBtn.textContent = 'Resume';
+        } else {
+            if(remaining <= 0){ remaining = totalSeconds; render(); }
+            running = true;
+            startBtn.textContent = 'Pause';
+            interval = setInterval(function(){
+                remaining--;
+                render();
+                if(remaining <= 0){
+                    clearInterval(interval);
+                    running = false;
+                    startBtn.textContent = 'Start';
+                }
+            }, 1000);
+        }
+    });
+
+    resetBtn.addEventListener('click', function(){
+        clearInterval(interval);
+        running = false;
+        remaining = totalSeconds;
+        startBtn.textContent = 'Start';
+        render();
+    });
+
+    shortBtn.addEventListener('click', function(){
+        clearInterval(interval); running = false;
+        totalSeconds = 5*60; remaining = totalSeconds;
+        startBtn.textContent = 'Start'; render();
+    });
+
+    longBtn.addEventListener('click', function(){
+        clearInterval(interval); running = false;
+        totalSeconds = 15*60; remaining = totalSeconds;
+        startBtn.textContent = 'Start'; render();
+    });
+})();
+</script>
+</body>
+</html>
