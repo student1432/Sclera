@@ -31,7 +31,227 @@ ACADEMIC_SYLLABI = {
                                 }
                             ]
                         },
-                        'Algebra': {
+                        'Polynomials': {
+                            'topics': [
+                                {
+                                    'name': 'Polynomials',
+                                    'overview': 'Understanding polynomials, degrees, and basic operations',
+                                    'resources': {
+                                        'videos': [],
+                                        'pdfs': [],
+                                        'practice': []
+                                    }
+                                },
+                                {
+                                    'name': 'Linear Equations in Two Variables',
+                                    'overview': 'Solving linear equations with two variables',
+                                    'resources': {
+                                        'videos': [],
+                                        'pdfs': [],
+                                        'practice': []
+                                    }
+                                }
+                            ]
+                        },
+                        'Linear Equation in Two Variables': {
+                            'topics': [
+                                {
+                                    'name': 'Polynomials',
+                                    'overview': 'Understanding polynomials, degrees, and basic operations',
+                                    'resources': {
+                                        'videos': [],
+                                        'pdfs': [],
+                                        'practice': []
+                                    }
+                                },
+                                {
+                                    'name': 'Linear Equations in Two Variables',
+                                    'overview': 'Solving linear equations with two variables',
+                                    'resources': {
+                                        'videos': [],
+                                        'pdfs': [],
+                                        'practice': []
+                                    }
+                                }
+                            ]
+                        },
+                        'Co-Ordinate Geometry': {
+                            'topics': [
+                                {
+                                    'name': 'Polynomials',
+                                    'overview': 'Understanding polynomials, degrees, and basic operations',
+                                    'resources': {
+                                        'videos': [],
+                                        'pdfs': [],
+                                        'practice': []
+                                    }
+                                },
+                                {
+                                    'name': 'Linear Equations in Two Variables',
+                                    'overview': 'Solving linear equations with two variables',
+                                    'resources': {
+                                        'videos': [],
+                                        'pdfs': [],
+                                        'practice': []
+                                    }
+                                }
+                            ]
+                        },
+                        'Euclidean Geometry': {
+                            'topics': [
+                                {
+                                    'name': 'Polynomials',
+                                    'overview': 'Understanding polynomials, degrees, and basic operations',
+                                    'resources': {
+                                        'videos': [],
+                                        'pdfs': [],
+                                        'practice': []
+                                    }
+                                },
+                                {
+                                    'name': 'Linear Equations in Two Variables',
+                                    'overview': 'Solving linear equations with two variables',
+                                    'resources': {
+                                        'videos': [],
+                                        'pdfs': [],
+                                        'practice': []
+                                    }
+                                }
+                            ]
+                        },
+                        'Lines and Angles': {
+                            'topics': [
+                                {
+                                    'name': 'Polynomials',
+                                    'overview': 'Understanding polynomials, degrees, and basic operations',
+                                    'resources': {
+                                        'videos': [],
+                                        'pdfs': [],
+                                        'practice': []
+                                    }
+                                },
+                                {
+                                    'name': 'Linear Equations in Two Variables',
+                                    'overview': 'Solving linear equations with two variables',
+                                    'resources': {
+                                        'videos': [],
+                                        'pdfs': [],
+                                        'practice': []
+                                    }
+                                }
+                            ]
+                        },
+                        'Triangles': {
+                            'topics': [
+                                {
+                                    'name': 'Polynomials',
+                                    'overview': 'Understanding polynomials, degrees, and basic operations',
+                                    'resources': {
+                                        'videos': [],
+                                        'pdfs': [],
+                                        'practice': []
+                                    }
+                                },
+                                {
+                                    'name': 'Linear Equations in Two Variables',
+                                    'overview': 'Solving linear equations with two variables',
+                                    'resources': {
+                                        'videos': [],
+                                        'pdfs': [],
+                                        'practice': []
+                                    }
+                                }
+                            ]
+                        },
+                        'Quadrilaterals': {
+                            'topics': [
+                                {
+                                    'name': 'Polynomials',
+                                    'overview': 'Understanding polynomials, degrees, and basic operations',
+                                    'resources': {
+                                        'videos': [],
+                                        'pdfs': [],
+                                        'practice': []
+                                    }
+                                },
+                                {
+                                    'name': 'Linear Equations in Two Variables',
+                                    'overview': 'Solving linear equations with two variables',
+                                    'resources': {
+                                        'videos': [],
+                                        'pdfs': [],
+                                        'practice': []
+                                    }
+                                }
+                            ]
+                        },
+                        'Circles': {
+                            'topics': [
+                                {
+                                    'name': 'Polynomials',
+                                    'overview': 'Understanding polynomials, degrees, and basic operations',
+                                    'resources': {
+                                        'videos': [],
+                                        'pdfs': [],
+                                        'practice': []
+                                    }
+                                },
+                                {
+                                    'name': 'Linear Equations in Two Variables',
+                                    'overview': 'Solving linear equations with two variables',
+                                    'resources': {
+                                        'videos': [],
+                                        'pdfs': [],
+                                        'practice': []
+                                    }
+                                }
+                            ]
+                        },
+                        'Heron"s Formula': {
+                            'topics': [
+                                {
+                                    'name': 'Polynomials',
+                                    'overview': 'Understanding polynomials, degrees, and basic operations',
+                                    'resources': {
+                                        'videos': [],
+                                        'pdfs': [],
+                                        'practice': []
+                                    }
+                                },
+                                {
+                                    'name': 'Linear Equations in Two Variables',
+                                    'overview': 'Solving linear equations with two variables',
+                                    'resources': {
+                                        'videos': [],
+                                        'pdfs': [],
+                                        'practice': []
+                                    }
+                                }
+                            ]
+                        },
+                        'Surface Area and Volume': {
+                            'topics': [
+                                {
+                                    'name': 'Polynomials',
+                                    'overview': 'Understanding polynomials, degrees, and basic operations',
+                                    'resources': {
+                                        'videos': [],
+                                        'pdfs': [],
+                                        'practice': []
+                                    }
+                                },
+                                {
+                                    'name': 'Linear Equations in Two Variables',
+                                    'overview': 'Solving linear equations with two variables',
+                                    'resources': {
+                                        'videos': [],
+                                        'pdfs': [],
+                                        'practice': []
+                                    }
+                                }
+                            ]
+                        },
+                        'Statistics': {
                             'topics': [
                                 {
                                     'name': 'Polynomials',
@@ -55,7 +275,7 @@ ACADEMIC_SYLLABI = {
                         }
                     }
                 },
-                'Science': {
+                'Chemistry': {
                     'chapters': {
                         'Matter in Our Surroundings': {
                             'topics': [
@@ -79,6 +299,49 @@ ACADEMIC_SYLLABI = {
                                 }
                             ]
                         },
+                        'Is Matter Around Us Pure?': {
+                            'topics': [
+                                {
+                                    'name': 'Distance and Displacement',
+                                    'overview': 'Understanding scalar and vector quantities',
+                                    'resources': {
+                                        'videos': [],
+                                        'pdfs': [],
+                                        'practice': []
+                                    }
+                                }
+                            ]
+                        },
+                        'Atoms and Molecules': {
+                            'topics': [
+                                {
+                                    'name': 'Distance and Displacement',
+                                    'overview': 'Understanding scalar and vector quantities',
+                                    'resources': {
+                                        'videos': [],
+                                        'pdfs': [],
+                                        'practice': []
+                                    }
+                                }
+                            ]
+                        },
+                        'Structure of the Atom': {
+                            'topics': [
+                                {
+                                    'name': 'Distance and Displacement',
+                                    'overview': 'Understanding scalar and vector quantities',
+                                    'resources': {
+                                        'videos': [],
+                                        'pdfs': [],
+                                        'practice': []
+                                    }
+                                }
+                            ]
+                        },
+                    }
+                },
+                'Physics': {
+                    'chapters': {
                         'Motion': {
                             'topics': [
                                 {
@@ -91,9 +354,106 @@ ACADEMIC_SYLLABI = {
                                     }
                                 }
                             ]
-                        }
+                        },
+                        'Force and Laws of Motion': {
+                            'topics': [
+                                {
+                                    'name': 'Distance and Displacement',
+                                    'overview': 'Understanding scalar and vector quantities',
+                                    'resources': {
+                                        'videos': [],
+                                        'pdfs': [],
+                                        'practice': []
+                                    }
+                                }
+                            ]
+                        },
+                        'Gravitation': {
+                            'topics': [
+                                {
+                                    'name': 'Distance and Displacement',
+                                    'overview': 'Understanding scalar and vector quantities',
+                                    'resources': {
+                                        'videos': [],
+                                        'pdfs': [],
+                                        'practice': []
+                                    }
+                                }
+                            ]
+                        },
+                        'Work and Energy': {
+                            'topics': [
+                                {
+                                    'name': 'Distance and Displacement',
+                                    'overview': 'Understanding scalar and vector quantities',
+                                    'resources': {
+                                        'videos': [],
+                                        'pdfs': [],
+                                        'practice': []
+                                    }
+                                }
+                            ]
+                        },
+                        'Sound': {
+                            'topics': [
+                                {
+                                    'name': 'Distance and Displacement',
+                                    'overview': 'Understanding scalar and vector quantities',
+                                    'resources': {
+                                        'videos': [],
+                                        'pdfs': [],
+                                        'practice': []
+                                    }
+                                }
+                            ]
+                        },
                     }
-                }
+                },
+                'Biology': {
+                    'chapters': {
+                        'Fundamental Unit of Life': {
+                            'topics': [
+                                {
+                                    'name': 'Distance and Displacement',
+                                    'overview': 'Understanding scalar and vector quantities',
+                                    'resources': {
+                                        'videos': [],
+                                        'pdfs': [],
+                                        'practice': []
+                                    }
+                                }
+                            ]
+                        },
+                        'Tissues': {
+                            'topics': [
+                                {
+                                    'name': 'Distance and Displacement',
+                                    'overview': 'Understanding scalar and vector quantities',
+                                    'resources': {
+                                        'videos': [],
+                                        'pdfs': [],
+                                        'practice': []
+                                    }
+                                }
+                            ]
+                        },
+                        'Improvement in Food Resoures': {
+                            'topics': [
+                                {
+                                    'name': 'Distance and Displacement',
+                                    'overview': 'Understanding scalar and vector quantities',
+                                    'resources': {
+                                        'videos': [],
+                                        'pdfs': [],
+                                        'practice': []
+                                    }
+                                }
+                            ]
+                        }
+                    ,
+                    }
+                },
+
             },
             '10': {
                 'Mathematics': {

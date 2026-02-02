@@ -2,7 +2,7 @@ from flask import Flask, render_template, request, redirect, url_for, session, f
 from firebase_config import auth, db
 from firebase_admin import auth as admin_auth
 from datetime import datetime
-from academic_data import get_syllabus, get_available_subjects
+from templates.academic_data import get_syllabus, get_available_subjects
 import os
 import hashlib
 
