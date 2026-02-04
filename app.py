@@ -44,6 +44,8 @@ def get_user_data(uid):
 def calculate_academic_progress(user_data):
     purpose = user_data.get('purpose')
     chapters_completed = user_data.get('chapters_completed', {})
+    academic_exclusions = user_data.get('academic_exclusions', {})
+    chapter_name = user_data.get('chapter_name')
     syllabus = {}
     if purpose == 'highschool' and user_data.get('highschool'):
         hs = user_data['highschool']
@@ -61,6 +63,9 @@ def calculate_academic_progress(user_data):
     for subject_name, subject_data in syllabus.items():
         chapters = subject_data.get('chapters', {})
         chapter_count = len(chapters)
+        exclusion_key = f"{subject_name}::{chapter_name}"
+        if academic_exclusions.get(exclusion_key):
+            continue
         if chapter_count == 0:
             by_subject[subject_name] = 0
             continue
@@ -425,14 +430,26 @@ def academic_dashboard():
         syllabus = get_syllabus('after_tenth', 'CBSE', at.get('grade'), at.get('subjects', []))
     progress_data = calculate_academic_progress(user_data)
     chapters_completed = user_data.get('chapters_completed', {})
+    academic_exclusions = user_data.get('academic_exclusions', {})
     # Build flat chapter list with completion status for left panel
     syllabus_flat = {}
     for subject_name, subject_data in syllabus.items():
         chapters = subject_data.get('chapters', {})
         syllabus_flat[subject_name] = {}
+
         for chapter_name in chapters.keys():
-            is_done = chapters_completed.get(subject_name, {}).get(chapter_name, False)
-            syllabus_flat[subject_name][chapter_name] = {'completed': is_done}
+            exclusion_key = f"{subject_name}::{chapter_name}"
+            is_excluded = academic_exclusions.get(exclusion_key, False)
+
+            is_done = False
+            if not is_excluded:
+                is_done = chapters_completed.get(subject_name, {}).get(chapter_name, False)
+
+            syllabus_flat[subject_name][chapter_name] = {
+                'completed': is_done,
+                'excluded': is_excluded
+            }
+
     # Goals and tasks for right panel
     goals = user_data.get('goals', [])
     tasks = user_data.get('tasks', [])
@@ -517,6 +534,38 @@ def toggle_chapter_completion():
     chapters_completed[subject_name][chapter_name] = not current_status
     db.collection('users').document(uid).update({'chapters_completed': chapters_completed})
     # Redirect back to academic dashboard (the chapter list lives there now)
+    return redirect(url_for('academic_dashboard'))
+
+@app.route('/academic/toggle_chapter_exclusion', methods=['POST'])
+@require_login
+def toggle_chapter_exclusion():
+    uid = session['uid']
+    subject_name = None
+    chapter_name = None
+
+    if not subject_name or not chapter_name:
+        subject_name = request.form.get('subject_name')
+        chapter_name = request.form.get('chapter_name')
+
+    if not subject_name or not chapter_name:
+        return redirect(url_for('academic_dashboard'))
+
+    key = f"{subject_name}::{chapter_name}"
+    user_ref = db.collection('users').document(uid)
+
+    user_doc = user_ref.get()
+    user_data = user_doc.to_dict() if user_doc.exists else {}
+
+    exclusions = user_data.get('academic_exclusions', {})
+
+    # Toggle exclusion (REVERSIBLE)
+    if exclusions.get(key):
+        exclusions.pop(key)
+    else:
+        exclusions[key] = True
+
+    user_ref.update({'academic_exclusions': exclusions})
+
     return redirect(url_for('academic_dashboard'))
 
 # ============================================================

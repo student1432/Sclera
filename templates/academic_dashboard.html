@@ -58,10 +58,15 @@
 
                         <div class="syllabus-chapters">
                              {% for chapter_name, ch_data in chapters.items() %}
-                            <div class="chapter-row {% if ch_data.completed %}completed{% endif %}">
+                            <div class="chapter-row
+                                {% if ch_data.completed %}completed{% endif %}
+                                {% if ch_data.excluded %}excluded{% endif %}
+                            ">
+                                {% if not ch_data.excluded %}
                                 <form method="POST"
                                       action="{{ url_for('toggle_chapter_completion') }}"
                                       style="display:contents;">
+                                {% endif %}
                                     <input type="hidden" name="subject_name" value="{{ subject_name }}">
                                     <input type="hidden" name="chapter_name" value="{{ chapter_name }}">
                                     <button type="submit"
@@ -81,9 +86,20 @@
                                                             font-size:11px;font-weight:700;">✔</span>
                                             {% endif %}
                                         </button>
+                                    {% if not ch_data.excluded %}
                                     </form>
-
+                                    {% endif %}
                                     <span class="chapter-row-text">{{ chapter_name }}</span>
+                                        <form method="POST"
+                                              action="{{ url_for('toggle_chapter_exclusion') }}"
+                                              style="margin-left:auto;">
+                                            <input type="hidden" name="subject_name" value="{{ subject_name }}">
+                                            <input type="hidden" name="chapter_name" value="{{ chapter_name }}">
+                                            <button class="exclude-btn" title="Remove / Restore chapter">
+                                                {% if ch_data.excluded %}↺{% else %}✕{% endif %}
+                                            </button>
+                                        </form>
+
                                     <a href="{{ url_for('chapter_detail',
                                                         subject_name=subject_name,
                                                         chapter_name=chapter_name) }}"
