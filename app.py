@@ -661,13 +661,16 @@ def toggle_chapter_exclusion():
 @require_login
 def study_mode():
     uid = session['uid']
+    user_data = get_user_data(uid)
+    name = user_data.get('name', 'Student') if user_data else 'Student'
+    
     todos = db.collection('users').document(uid)\
         .collection('study_todos').stream()
     todo_list = [{'id': t.id, **t.to_dict()} for t in todos]
 
     return render_template(
         'study_mode.html',
-        name=session.get('name'),
+        name=name,
         todos=todo_list
     )
 
