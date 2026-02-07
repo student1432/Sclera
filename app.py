@@ -2,7 +2,7 @@ from flask import Flask, render_template, request, redirect, url_for, session, f
 from firebase_config import auth, db
 from firebase_admin import auth as admin_auth
 from datetime import datetime
-from templates.academic_data import get_syllabus, get_available_subjects
+from templates.academic_data import get_syllabus, get_available_subjects, ACADEMIC_SYLLABI
 import os
 import hashlib
 from google.cloud.firestore import Increment
@@ -656,6 +656,24 @@ def academic_dashboard():
         'test_types': TEST_TYPES
     }
     return render_template('academic_dashboard.html', **context)
+
+
+@app.route('/master-library')
+@require_login
+def master_library():
+    uid = session['uid']
+    user_data = get_user_data(uid)
+    if not user_data:
+        flash('User data not found', 'error')
+        return redirect(url_for('logout'))
+    
+    context = {
+        'user': user_data,
+        'name': user_data.get('name'),
+        'library_data': ACADEMIC_SYLLABI,
+        'active_nav': 'library'
+    }
+    return render_template('master_library.html', **context)
 
 
 @app.route('/academic/subject/<subject_name>/chapter/<chapter_name>')

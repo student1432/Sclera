@@ -1,134 +1,119 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="dark">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Profile — Student Platform</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
 </head>
+
 <body>
-<div class="dashboard-layout">
+    <div class="dashboard-layout">
 
-    <aside class="sidebar">
-        <div class="sidebar-header">
-            <a href="{{ url_for('profile_resume') }}">{{ name }}</a>
-        </div>
-        <nav class="sidebar-nav">
-            <a href="{{ url_for('profile_dashboard') }}" class="nav-item">Home</a>
-            <a href="{{ url_for('academic_dashboard') }}" class="nav-item">Academic</a>
-            <a href="{{ url_for('interests_dashboard') }}" class="nav-item">Interests</a>
-            <a href="{{ url_for('statistics_dashboard') }}" class="nav-item">Statistics</a>
-        </nav>
-        <div class="sidebar-footer">
-            <a id="themeToggle" class="nav-item">
-    Toggle theme
-            </a>
-            <a href="{{ url_for('about') }}" class="nav-item">Settings</a>
-            <a href="{{ url_for('about') }}" class="nav-item">Contact</a>
-            <a href="{{ url_for('logout') }}" class="nav-item">Logout</a>
-        </div>
-    </aside>
+        {% include '_sidebar.html' %}
 
-    <main class="main-content">
-        {% with messages = get_flashed_messages(with_categories=true) %}
-        {% if messages %}
+        <main class="main-content">
+            {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
             {% for category, message in messages %}
-                <div class="alert alert-{{ category }}">{{ message }}</div>
+            <div class="alert alert-{{ category }}">{{ message }}</div>
             {% endfor %}
-        {% endif %}
-        {% endwith %}
+            {% endif %}
+            {% endwith %}
 
-        <div class="profile-container">
-            <div class="profile-header-section">
-                <h1 class="profile-name">{{ name }}</h1>
-                <p class="profile-subtitle">{{ purpose_display }}</p>
-                <p class="profile-academic">{{ academic_summary }}</p>
-                <div style="margin-top:14px;">
-                    <a href="{{ url_for('profile_edit') }}" class="btn">Edit Profile</a>
+            <div class="profile-container">
+                <div class="profile-header-section">
+                    <h1 class="profile-name">{{ name }}</h1>
+                    <p class="profile-subtitle">{{ purpose_display }}</p>
+                    <p class="profile-academic">{{ academic_summary }}</p>
+                    <div style="margin-top:14px;">
+                        <a href="{{ url_for('profile_edit') }}" class="btn">Edit Profile</a>
+                    </div>
                 </div>
-            </div>
 
-            <div class="profile-section">
-                <h3>About</h3>
-                <p class="about-text">{{ about if about else 'No bio added yet.' }}</p>
-            </div>
+                <div class="profile-section">
+                    <h3>About</h3>
+                    <p class="about-text">{{ about if about else 'No bio added yet.' }}</p>
+                </div>
 
-            <div class="profile-section">
-                <h3>Skills</h3>
-                {% if skills %}
+                <div class="profile-section">
+                    <h3>Skills</h3>
+                    {% if skills %}
                     <div class="tag-list">
                         {% for skill in skills %}<span class="tag">{{ skill }}</span>{% endfor %}
                     </div>
-                {% else %}
+                    {% else %}
                     <p>No skills added yet.</p>
-                {% endif %}
-            </div>
+                    {% endif %}
+                </div>
 
-            <div class="profile-section">
-                <h3>Hobbies</h3>
-                {% if hobbies %}
+                <div class="profile-section">
+                    <h3>Hobbies</h3>
+                    {% if hobbies %}
                     <div class="tag-list">
                         {% for hobby in hobbies %}<span class="tag">{{ hobby }}</span>{% endfor %}
                     </div>
-                {% else %}
+                    {% else %}
                     <p>No hobbies added yet.</p>
-                {% endif %}
-            </div>
+                    {% endif %}
+                </div>
 
-            <div class="profile-section">
-                <h3>Certificates</h3>
-                {% if certificates %}
+                <div class="profile-section">
+                    <h3>Certificates</h3>
+                    {% if certificates %}
                     <ul class="certificates-list">
                         {% for cert in certificates %}<li>{{ cert }}</li>{% endfor %}
                     </ul>
-                {% else %}
+                    {% else %}
                     <p>No certificates added yet.</p>
+                    {% endif %}
+                </div>
+
+                {% if achievements %}
+                <div class="profile-section">
+                    <h3>Achievements</h3>
+                    <ul class="certificates-list">
+                        {% for a in achievements %}<li>{{ a }}</li>{% endfor %}
+                    </ul>
+                </div>
+                {% endif %}
+
+                {% if goals %}
+                <div class="profile-section">
+                    <h3>Active Goals</h3>
+                    <ul class="certificates-list">
+                        {% for g in goals %}<li>{{ g.title }}</li>{% endfor %}
+                    </ul>
+                </div>
                 {% endif %}
             </div>
+        </main>
+    </div>
 
-            {% if achievements %}
-            <div class="profile-section">
-                <h3>Achievements</h3>
-                <ul class="certificates-list">
-                    {% for a in achievements %}<li>{{ a }}</li>{% endfor %}
-                </ul>
-            </div>
-            {% endif %}
+    <script>
+        (function () {
+            const root = document.documentElement;
+            const toggle = document.getElementById("themeToggle");
 
-            {% if goals %}
-            <div class="profile-section">
-                <h3>Active Goals</h3>
-                <ul class="certificates-list">
-                    {% for g in goals %}<li>{{ g.title }}</li>{% endfor %}
-                </ul>
-            </div>
-            {% endif %}
-        </div>
-    </main>
-</div>
+            const savedTheme = localStorage.getItem("studyos-theme");
+            if (savedTheme) {
+                root.setAttribute("data-theme", savedTheme);
+            }
 
-<script>
-(function () {
-    const root = document.documentElement;
-    const toggle = document.getElementById("themeToggle");
+            if (toggle) {
+                toggle.addEventListener("click", () => {
+                    const next =
+                        root.getAttribute("data-theme") === "dark"
+                            ? "light"
+                            : "dark";
 
-    const savedTheme = localStorage.getItem("studyos-theme");
-    if (savedTheme) {
-        root.setAttribute("data-theme", savedTheme);
-    }
-
-    if (toggle) {
-        toggle.addEventListener("click", () => {
-            const next =
-                root.getAttribute("data-theme") === "dark"
-                ? "light"
-                : "dark";
-
-            root.setAttribute("data-theme", next);
-            localStorage.setItem("studyos-theme", next);
-        });
-    }
-})();
-</script>
+                    root.setAttribute("data-theme", next);
+                    localStorage.setItem("studyos-theme", next);
+                });
+            }
+        })();
+    </script>
 </body>
+
 </html>
