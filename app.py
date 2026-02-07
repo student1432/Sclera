@@ -12,6 +12,9 @@ from flask import render_template, request, redirect, url_for, abort, jsonify
 from firebase_admin import firestore
 from datetime import datetime
 from datetime import date, datetime, timedelta
+from collections import defaultdict
+import random
+import string
 
 
 
@@ -58,11 +61,48 @@ def get_user_data(uid):
         return user_doc.to_dict()
     return None
 
-def calculate_academic_progress(user_data):
+def calculate_academic_progress(user_data, uid=None):
+    """
+    Calculate academic progress with 3-tier exclusion system:
+    Level 1: Institution exclusions (admin)
+    Level 2: Class exclusions (teacher)
+    Level 3: Personal exclusions (student)
+    """
     purpose = user_data.get('purpose')
     chapters_completed = user_data.get('chapters_completed', {})
-    academic_exclusions = user_data.get('academic_exclusions', {})
-    # chapter_name = user_data.get('chapter_name')  <-- Removed incorrect variable
+    personal_exclusions = user_data.get('academic_exclusions', {})
+    
+    # Fetch institution and class exclusions
+    institution_exclusions = {}
+    class_exclusions = {}
+    
+    inst_id = user_data.get('institution_id')
+    class_ids = user_data.get('class_ids', [])
+    
+    # Level 1: Institution Exclusions
+    if inst_id:
+        try:
+            inst_excl_doc = db.collection('institutions').document(inst_id).collection('syllabus_exclusions').document('current').get()
+            if inst_excl_doc.exists:
+                institution_exclusions = inst_excl_doc.to_dict().get('chapters', {})
+        except:
+            pass
+    
+    # Level 2: Class Exclusions (union of all classes student is in)
+    if class_ids:
+        for class_id in class_ids:
+            try:
+                class_excl_doc = db.collection('classes').document(class_id).collection('excluded_chapters').document('current').get()
+                if class_excl_doc.exists:
+                    class_exclusions.update(class_excl_doc.to_dict().get('chapters', {}))
+            except:
+                pass
+    
+    # Merge all exclusions (union)
+    all_exclusions = {}
+    all_exclusions.update(institution_exclusions)
+    all_exclusions.update(class_exclusions)
+    all_exclusions.update(personal_exclusions)
     
     syllabus = {}
     if purpose == 'highschool' and user_data.get('highschool'):
@@ -85,24 +125,21 @@ def calculate_academic_progress(user_data):
         chapters = subject_data.get('chapters', {})
         subject_completed_data = chapters_completed.get(subject_name, {})
         
-        # Calculate counts specifically for this subject, respecting exclusions
         subject_valid_count = 0
         subject_completed_count = 0
         
         for chapter_name in chapters.keys():
             exclusion_key = f"{subject_name}::{chapter_name}"
             
-            # If chapter is excluded, skip it entirely (don't count in total or completed)
-            if academic_exclusions.get(exclusion_key):
+            # If chapter is excluded at ANY level, skip it
+            if all_exclusions.get(exclusion_key):
                 continue
             
             subject_valid_count += 1
             
-            # Check if this valid chapter is completed
             if subject_completed_data.get(chapter_name, False):
                 subject_completed_count += 1
         
-        # Calculate subject percentage based on VALID chapters only
         if subject_valid_count > 0:
             by_subject[subject_name] = round((subject_completed_count / subject_valid_count) * 100, 1)
         else:
@@ -110,9 +147,45 @@ def calculate_academic_progress(user_data):
             
         total_chapters += subject_valid_count
         total_completed += subject_completed_count
+            
+    # --- AI Analytics Engine ---
+    momentum = 0
+    consistency = 0
+    readiness = 0
+    
+    # 1. Momentum: Last 4 exams gradient
+    results = user_data.get('exam_results', [])
+    if len(results) >= 2:
+        sorted_res = sorted(results, key=lambda x: x.get('date', ''), reverse=True)
+        try:
+            series = [float(r.get('percentage', r.get('score', 0))) for r in sorted_res[:4]][::-1]
+            momentum = round(series[-1] - series[0], 1)
+        except: pass
         
+    # 2. Consistency: Time pattern stability
+    # In a full app, we analyze study_sessions. Here we use session data if available.
+    # Logic: More sessions per week = higher consistency.
+    sessions_count = len(user_data.get('recent_sessions', [])) # Mocking session density
+    consistency = min(100, sessions_count * 15) # Example calculation
+    
+    # 3. Readiness: Weighted Academic Health
+    avg_score = 0
+    if results:
+        avg_score = sum([float(r.get('percentage', r.get('score', 0))) for r in results]) / len(results)
+    
     overall = round((total_completed / total_chapters) * 100, 1) if total_chapters > 0 else 0
-    return {'overall': overall, 'by_subject': by_subject, 'total_chapters': total_chapters, 'total_completed': total_completed}
+    readiness = round((overall * 0.4) + (avg_score * 0.6), 1)
+
+    return {
+        'overall': overall,
+        'by_subject': by_subject,
+        'total_chapters': total_chapters,
+        'total_completed': total_completed,
+        'momentum': momentum,
+        'consistency': consistency,
+        'readiness': readiness
+    }
+
 
 def calculate_average_percentage(results):
     valid_percentages = []
@@ -424,6 +497,7 @@ def profile_dashboard():
         'overall_progress': progress_data.get('overall', 0),
         'subject_progress': progress_data.get('by_subject', {}),
         'saved_careers': saved_careers,
+        'streak': user_data.get('login_streak', 0),
     }
     return render_template('main_dashboard.html', **context)
 
@@ -513,9 +587,31 @@ def academic_dashboard():
     elif purpose == 'after_tenth' and user_data.get('after_tenth'):
         at = user_data['after_tenth']
         syllabus = get_syllabus('after_tenth', 'CBSE', at.get('grade'), at.get('subjects', []))
+    
     progress_data = calculate_academic_progress(user_data)
     chapters_completed = user_data.get('chapters_completed', {})
+    
+    # Merge institution and class exclusions for UI consistency
+    all_exclusions = {}
+    inst_id = user_data.get('institution_id')
+    class_ids = user_data.get('class_ids', [])
+    
+    if inst_id:
+        try:
+            inst_excl = db.collection('institutions').document(inst_id).collection('syllabus_exclusions').document('current').get()
+            if inst_excl.exists: all_exclusions.update(inst_excl.to_dict().get('chapters', {}))
+        except: pass
+    
+    if class_ids:
+        for cid in class_ids:
+            try:
+                class_excl = db.collection('classes').document(cid).collection('excluded_chapters').document('current').get()
+                if class_excl.exists: all_exclusions.update(class_excl.to_dict().get('chapters', {}))
+            except: pass
+    
     academic_exclusions = user_data.get('academic_exclusions', {})
+    all_exclusions.update(academic_exclusions)
+
     # Build flat chapter list with completion status for left panel
     syllabus_flat = {}
     for subject_name, subject_data in syllabus.items():
@@ -524,11 +620,11 @@ def academic_dashboard():
 
         for chapter_name in chapters.keys():
             exclusion_key = f"{subject_name}::{chapter_name}"
-            is_excluded = academic_exclusions.get(exclusion_key, False)
+            is_excluded = all_exclusions.get(exclusion_key, False)
 
             is_done = False
-            if not is_excluded:
-                is_done = chapters_completed.get(subject_name, {}).get(chapter_name, False)
+            # Check completion even if excluded (but UI will show it as excluded)
+            is_done = chapters_completed.get(subject_name, {}).get(chapter_name, False)
 
             syllabus_flat[subject_name][chapter_name] = {
                 'completed': is_done,
@@ -682,6 +778,19 @@ def study_time():
     db.collection('users').document(uid).set({
         'study_mode': {'total_seconds': Increment(seconds)}
     }, merge=True)
+    
+    # Record/Update session for heatmap
+    # Using YYYY-MM-DD-HH as a unique key for the hour to avoid document spam
+    now = datetime.utcnow()
+    hour_id = now.strftime("%Y-%m-%d-%H")
+    session_ref = db.collection('users').document(uid).collection('study_sessions').document(hour_id)
+    
+    session_ref.set({
+        'start_time': now.isoformat(),
+        'duration_seconds': Increment(seconds),
+        'last_updated': now.isoformat()
+    }, merge=True)
+    
     return jsonify(ok=True)
 
 @app.route('/study-mode/todo/add', methods=['POST'])
@@ -1154,10 +1263,540 @@ def about():
 #app.route('/admin/goals/<goal_id>/delete', methods=['POST'])(require_admin(admin_goal_delete))
 
 # Progress and resources
-#app.routed('/admin/progress')(require_admin(admin_progress))
-#app.route('/admin/resources')(require_admin(admin_resources))
-#app.route('/admin/resources/add', methods=['GET', 'POST'])(require_admin(admin_resource_add))
-#app.route('/admin/statistics')(require_admin(admin_statistics))
+# ============================================================================
+# INSTITUTIONAL ECOSYSTEM (PHASE 2)
+# ============================================================================
+
+def require_role(allowed_roles):
+    def decorator(f):
+        @wraps(f)
+        def wrapper(*args, **kwargs):
+            if 'uid' not in session:
+                return redirect(url_for('login'))
+            
+            # Verify claim via admin SDK (production) or session cache (dev)
+            # In production, we'd verify session cookie claims.
+            # Here we check the user doc for 'role' field as the source of truth for simplicity in this setup,
+            # but ideally this should be a Custom Claim on the ID token.
+            uid = session['uid']
+            user_doc = db.collection('users').document(uid).get()
+            if not user_doc.exists:
+                abort(403)
+            
+            user_data = user_doc.to_dict()
+            user_role = user_data.get('role', 'student') # Default to student
+            
+            if user_role not in allowed_roles:
+                abort(403) # Unauthorized
+                
+            return f(*args, **kwargs)
+        return wrapper
+    return decorator
+
+@app.route('/institution/join', methods=['GET', 'POST'])
+@require_login
+def institution_join():
+    if request.method == 'POST':
+        code = request.form.get('invite_code', '').strip().upper()
+        uid = session['uid']
+        
+        # Validate Code
+        invites_ref = db.collection('invites').where('code', '==', code).where('used', '==', False).limit(1)
+        invites = list(invites_ref.stream())
+        
+        if not invites:
+            flash('Invalid or expired invite code.', 'error')
+            return redirect(url_for('institution_join'))
+            
+        invite_doc = invites[0]
+        invite_data = invite_doc.to_dict()
+        
+        # Link User to Institution
+        inst_id = invite_data['institution_id']
+        class_id = invite_data.get('class_id')
+        role = invite_data.get('role', 'student')
+        
+        batch = db.batch()
+        user_ref = db.collection('users').document(uid)
+        
+        updates = {
+            'institution_id': inst_id,
+            'role': role
+        }
+        if class_id:
+            updates['class_ids'] = firestore.ArrayUnion([class_id])
+            
+        batch.update(user_ref, updates)
+        
+        if invite_data.get('one_time', True):
+            batch.update(invite_doc.reference, {'used': True, 'used_by': uid, 'used_at': datetime.utcnow().isoformat()})
+            
+        # Add to class roster
+        if class_id:
+             class_ref = db.collection('classes').document(class_id)
+             batch.update(class_ref, {'students': firestore.ArrayUnion([uid])})
+             
+        batch.commit()
+        
+        flash('Successfully joined institution!', 'success')
+        return redirect(url_for('profile_dashboard'))
+        
+    return render_template('institution_join.html')
+
+
+@app.route('/institution/dashboard')
+@require_role(['teacher', 'admin'])
+def institution_dashboard():
+    uid = session['uid']
+    user_data = get_user_data(uid)
+    inst_id = user_data.get('institution_id')
+    
+    if not inst_id:
+        flash('No institution assigned.', 'error')
+        return redirect(url_for('profile_dashboard'))
+
+    # --- 1. DATA FETCHING (ISOLATED) ---
+    
+    # Get Classes assigned to teacher
+    classes_ref = db.collection('classes').where('institution_id', '==', inst_id)
+    classes_docs = list(classes_ref.stream())
+    
+    # Filter by teacher's assigned classes if applicable
+    if user_data.get('role') == 'teacher':
+        my_class_ids = user_data.get('class_ids', [])
+        if my_class_ids:
+            classes_docs = [d for d in classes_docs if d.id in my_class_ids]
+    
+    classes = {d.id: d.to_dict() for d in classes_docs}
+    
+    # --- 2. ISLAND A: REAL-TIME HEATMAP AGGREGATION ---
+    heatmap_data = defaultdict(int)
+    
+    # Fetch sessions for all students in this institution from the last 30 days
+    thirty_days_ago = datetime.utcnow() - timedelta(days=30)
+    
+    # Note: In production with thousands of students, this should be pre-aggregated.
+    # For now, we aggregate in real-time for currently active classes.
+    for class_id, cls_data in classes.items():
+        student_ids = cls_data.get('students', [])
+        for sid in student_ids:
+            sessions_ref = db.collection('users').document(sid).collection('study_sessions')\
+                .where('start_time', '>=', thirty_days_ago.isoformat()).stream()
+            
+            for s in sessions_ref:
+                s_data = s.to_dict()
+                start_time_str = s_data.get('start_time')
+                if start_time_str:
+                    try:
+                        dt = datetime.fromisoformat(start_time_str)
+                        # Key: "DayIndex-Hour" (e.g., "0-14" for Monday 2 PM)
+                        key = f"{dt.weekday()}-{dt.hour}"
+                        heatmap_data[key] += 1
+                    except:
+                        pass
+    
+    # --- 3. ISLAND B: PREDICTIVE ENGINE (AI Logic) ---
+    at_risk_students = []
+    
+    # Collect all unique student IDs from all classes
+    all_student_ids = set()
+    for class_id, cls_data in classes.items():
+        all_student_ids.update(cls_data.get('students', []))
+    
+    # Batch process for performance
+    for sid in all_student_ids:
+        s_doc = db.collection('users').document(sid).get()
+        if not s_doc.exists:
+            continue
+        s_data = s_doc.to_dict()
+        
+        # Risk Logic 1: Stagnation Trigger
+        last_active_str = s_data.get('last_login_date')
+        status = 'healthy'
+        days_inactive = 0
+        
+        if last_active_str:
+            try:
+                last_active = datetime.fromisoformat(last_active_str)
+                days_inactive = (datetime.utcnow() - last_active).days
+                if days_inactive > 7:
+                    status = 'stagnating'
+            except:
+                days_inactive = 30
+        else:
+            days_inactive = 30
+            status = 'stagnating'
+            
+        # Risk Logic 2: Velocity Gradient
+        results = s_data.get('exam_results', [])
+        momentum = 0 # Slope
+        if len(results) >= 2:
+            sorted_res = sorted(results, key=lambda x: x.get('date', ''), reverse=True)
+            try:
+                # Calculate slope of last 4 exams
+                series = [float(r.get('percentage', r.get('score', 0))) for r in sorted_res[:4]][::-1]
+                if len(series) >= 2:
+                    momentum = series[-1] - series[0] # Simple gradient
+                    if momentum < -5: # Grade drop > 5%
+                        status = 'declining' if status == 'healthy' else 'critical'
+            except:
+                pass
+
+        if status != 'healthy':
+            # Map back to class name
+            student_class = "Unknown"
+            for cid, cdata in classes.items():
+                if sid in cdata.get('students', []):
+                    student_class = cdata.get('name', cid)
+                    break
+
+            at_risk_students.append({
+                'uid': sid,
+                'name': s_data.get('name', 'Unknown Student'),
+                'class': student_class,
+                'status': status,
+                'days_inactive': days_inactive,
+                'momentum': round(momentum, 2)
+            })
+
+    context = {
+        'user': user_data,
+        'institution_id': inst_id,
+        'classes': classes,
+        'at_risk_students': at_risk_students,
+        'heatmap_data': dict(heatmap_data)
+    }
+    
+    return render_template('institution_dashboard.html', **context)
+
+@app.route('/institution/generate_invite', methods=['POST'])
+@require_role(['admin', 'teacher'])
+def generate_invite():
+    uid = session['uid']
+    user_data = get_user_data(uid)
+    inst_id = user_data.get('institution_id')
+    
+    class_id = request.form.get('class_id')
+    role = request.form.get('role', 'student')
+    
+    # Generate 6-char code
+    code = ''.join(random.choices(string.ascii_uppercase + string.digits, k=6))
+    
+    db.collection('invites').add({
+        'code': code,
+        'institution_id': inst_id,
+        'class_id': class_id,
+        'role': role,
+        'created_by': uid,
+        'created_at': datetime.utcnow().isoformat(),
+        'used': False,
+        'one_time': True # or configurable
+    })
+    
+    return jsonify({'code': code})
+
+@app.route('/institution/nudge', methods=['POST'])
+@require_role(['teacher', 'admin'])
+def send_nudge():
+    uid = session['uid']
+    user_data = get_user_data(uid)
+    inst_id = user_data.get('institution_id')
+    
+    student_uid = request.json.get('student_uid')
+    message = request.json.get('message', 'Your teacher has sent you a reminder to stay on track!')
+    
+    # Create notification
+    db.collection('institutions').document(inst_id).collection('notifications').add({
+        'recipient_uid': student_uid,
+        'sender_uid': uid,
+        'sender_name': user_data.get('name', 'Teacher'),
+        'message': message,
+        'type': 'nudge',
+        'read': False,
+        'created_at': datetime.utcnow().isoformat()
+    })
+    
+    return jsonify({'success': True, 'message': 'Nudge sent!'})
+
+@app.route('/institution/broadcast', methods=['POST'])
+@require_role(['teacher', 'admin'])
+def broadcast_message():
+    uid = session['uid']
+    user_data = get_user_data(uid)
+    inst_id = user_data.get('institution_id')
+    
+    message = request.form.get('message')
+    class_id = request.form.get('class_id')  # Optional: target specific class
+    
+    if not message:
+        return jsonify({'error': 'Message required'}), 400
+    
+    # Get target students
+    if class_id:
+        class_doc = db.collection('classes').document(class_id).get()
+        if class_doc.exists:
+            student_uids = class_doc.to_dict().get('students', [])
+        else:
+            student_uids = []
+    else:
+        # Broadcast to all students in institution
+        users_ref = db.collection('users').where('institution_id', '==', inst_id).where('role', '==', 'student')
+        student_uids = [u.id for u in users_ref.stream()]
+    
+    # Create notification for each student
+    batch = db.batch()
+    notif_ref = db.collection('institutions').document(inst_id).collection('notifications')
+    
+    for student_uid in student_uids:
+        batch.set(notif_ref.document(), {
+            'recipient_uid': student_uid,
+            'sender_uid': uid,
+            'sender_name': user_data.get('name', 'Teacher'),
+            'message': message,
+            'type': 'broadcast',
+            'read': False,
+            'created_at': datetime.utcnow().isoformat()
+        })
+    
+    batch.commit()
+    
+    flash(f'Message sent to {len(student_uids)} students!', 'success')
+    return redirect(url_for('institution_dashboard'))
+
+@app.route('/institution/class/<class_id>/syllabus', methods=['GET', 'POST'])
+@require_role(['teacher', 'admin'])
+def manage_class_syllabus(class_id):
+    uid = session['uid']
+    user_data = get_user_data(uid)
+    inst_id = user_data.get('institution_id')
+    
+    # Verify class belongs to institution
+    class_doc = db.collection('classes').document(class_id).get()
+    if not class_doc.exists or class_doc.to_dict().get('institution_id') != inst_id:
+        abort(403)
+    
+    class_data = class_doc.to_dict()
+    
+    if request.method == 'POST':
+        # Handle exclusion toggle
+        subject = request.form.get('subject')
+        chapter = request.form.get('chapter')
+        action = request.form.get('action')  # 'exclude' or 'include'
+        
+        exclusion_key = f"{subject}::{chapter}"
+        exclusions_ref = db.collection('classes').document(class_id).collection('excluded_chapters').document('current')
+        
+        exclusions_doc = exclusions_ref.get()
+        exclusions = exclusions_doc.to_dict().get('chapters', {}) if exclusions_doc.exists else {}
+        
+        if action == 'exclude':
+            exclusions[exclusion_key] = True
+        else:
+            exclusions.pop(exclusion_key, None)
+        
+        exclusions_ref.set({'chapters': exclusions})
+        
+        flash(f'Chapter {chapter} {"excluded" if action == "exclude" else "included"}!', 'success')
+        return redirect(url_for('manage_class_syllabus', class_id=class_id))
+    
+    # Get current exclusions
+    exclusions_doc = db.collection('classes').document(class_id).collection('excluded_chapters').document('current').get()
+    exclusions = exclusions_doc.to_dict().get('chapters', {}) if exclusions_doc.exists else {}
+    
+    # Get syllabus (simplified - you'd fetch based on class metadata)
+    # For now, using a sample structure
+    syllabus = get_syllabus('highschool', 'CBSE', '10')  # Placeholder
+    
+    context = {
+        'user': user_data,
+        'class_id': class_id,
+        'class_data': class_data,
+        'syllabus': syllabus,
+        'exclusions': exclusions
+    }
+    
+    return render_template('class_syllabus.html', **context)
+
+@app.route('/institution/student/<student_uid>')
+@require_role(['teacher', 'admin'])
+def student_detail(student_uid):
+    uid = session['uid']
+    user_data = get_user_data(uid)
+    inst_id = user_data.get('institution_id')
+    
+    # Get student data
+    student_doc = db.collection('users').document(student_uid).get()
+    if not student_doc.exists:
+        abort(404)
+    
+    student_data = student_doc.to_dict()
+    
+    # Verify student belongs to same institution
+    if student_data.get('institution_id') != inst_id:
+        abort(403)
+    
+    # Calculate progress
+    progress_data = calculate_academic_progress(student_data)
+    
+    # Get recent results
+    results = student_data.get('exam_results', [])
+    recent_results = sorted(results, key=lambda x: x.get('date', ''), reverse=True)[:5]
+    
+    # Get study sessions (if available)
+    sessions_ref = db.collection('users').document(student_uid).collection('study_sessions').order_by('start_time', direction=firestore.Query.DESCENDING).limit(10)
+    sessions = [s.to_dict() for s in sessions_ref.stream()]
+    
+    context = {
+        'user': user_data,
+        'student': student_data,
+        'student_uid': student_uid,
+        'progress_data': progress_data,
+        'recent_results': recent_results,
+        'sessions': sessions
+    }
+    
+    return render_template('student_detail.html', **context)
+
+@app.route('/institution/students')
+@require_role(['teacher', 'admin'])
+def all_students():
+    uid = session['uid']
+    user_data = get_user_data(uid)
+    inst_id = user_data.get('institution_id')
+    
+    if not inst_id:
+        flash('No institution assigned.', 'error')
+        return redirect(url_for('profile_dashboard'))
+    
+    # Get all students in institution
+    students_ref = db.collection('users').where('institution_id', '==', inst_id).where('role', '==', 'student')
+    students_docs = list(students_ref.stream())
+    
+    students_list = []
+    for s_doc in students_docs:
+        s_data = s_doc.to_dict()
+        s_data['uid'] = s_doc.id
+        
+        # Calculate quick stats
+        progress = calculate_academic_progress(s_data)
+        s_data['progress_overall'] = progress.get('overall', 0)
+        
+        # Last login
+        last_login = s_data.get('last_login_date', '')
+        if last_login:
+            try:
+                last_date = datetime.fromisoformat(last_login).date() if isinstance(last_login, str) else last_login
+                days_ago = (date.today() - last_date).days
+                s_data['days_inactive'] = days_ago
+            except:
+                s_data['days_inactive'] = 999
+        else:
+            s_data['days_inactive'] = 999
+        
+        # Get class names
+        class_ids = s_data.get('class_ids', [])
+        class_names = []
+        for cid in class_ids:
+            c_doc = db.collection('classes').document(cid).get()
+            if c_doc.exists:
+                class_names.append(c_doc.to_dict().get('name', cid))
+        s_data['class_names'] = ', '.join(class_names) if class_names else 'No class'
+        
+        students_list.append(s_data)
+    
+    # Sort by name
+    students_list.sort(key=lambda x: x.get('name', ''))
+    
+    context = {
+        'user': user_data,
+        'students': students_list,
+        'total_students': len(students_list)
+    }
+    
+    return render_template('all_students.html', **context)
+
+@app.route('/institution/settings')
+@require_role(['admin'])
+def institution_settings():
+    uid = session['uid']
+    user_data = get_user_data(uid)
+    inst_id = user_data.get('institution_id')
+    
+    if not inst_id:
+        flash('No institution assigned.', 'error')
+        return redirect(url_for('profile_dashboard'))
+    
+    # Get institution data
+    inst_doc = db.collection('institutions').document(inst_id).get()
+    inst_data = inst_doc.to_dict() if inst_doc.exists else {}
+    
+    # Get all classes
+    classes_ref = db.collection('classes').where('institution_id', '==', inst_id)
+    classes = [{'id': c.id, **c.to_dict()} for c in classes_ref.stream()]
+    
+    context = {
+        'user': user_data,
+        'institution': inst_data,
+        'institution_id': inst_id,
+        'classes': classes
+    }
+    
+    return render_template('institution_settings.html', **context)
+
+# ============================================================================
+# STUDENT-SIDE NOTIFICATIONS
+# ============================================================================
+
+@app.route('/api/notifications')
+@require_login
+def get_notifications():
+    """API endpoint for students to fetch their notifications"""
+    uid = session['uid']
+    user_data = get_user_data(uid)
+    inst_id = user_data.get('institution_id')
+    
+    if not inst_id:
+        return jsonify({'notifications': []})
+    
+    # Get unread notifications
+    notifs_ref = db.collection('institutions').document(inst_id).collection('notifications')\
+        .where('recipient_uid', '==', uid)\
+        .where('read', '==', False)\
+        .order_by('created_at', direction=firestore.Query.DESCENDING)\
+        .limit(10)
+    
+    notifications = []
+    for n in notifs_ref.stream():
+        n_data = n.to_dict()
+        n_data['id'] = n.id
+        notifications.append(n_data)
+    
+    return jsonify({'notifications': notifications})
+
+@app.route('/api/notifications/<notif_id>/mark_read', methods=['POST'])
+@require_login
+def mark_notification_read(notif_id):
+    """Mark a notification as read"""
+    uid = session['uid']
+    user_data = get_user_data(uid)
+    inst_id = user_data.get('institution_id')
+    
+    if not inst_id:
+        return jsonify({'error': 'No institution'}), 400
+    
+    notif_ref = db.collection('institutions').document(inst_id).collection('notifications').document(notif_id)
+    notif_doc = notif_ref.get()
+    
+    if notif_doc.exists:
+        notif_data = notif_doc.to_dict()
+        # Verify this notification belongs to the user
+        if notif_data.get('recipient_uid') == uid:
+            notif_ref.update({'read': True})
+            return jsonify({'success': True})
+    
+    return jsonify({'error': 'Not found'}), 404
+
+
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5000)

@@ -96,6 +96,9 @@
             <div class="progress-strip">
                 <div class="progress-strip-header">
                     <h4>Overall Academic Progress</h4>
+                    <div style="display:inline;">
+                        <h3 style="height: 10px;">Daily Streak: {{ streak }} Days</h3>
+                    </div>
                     <span>{{ overall_progress }}%</span>
                 </div>
                 <div class="progress-bar-track">
@@ -167,6 +170,9 @@
             }
         })();
     </script>
+
+    <!-- Notification System -->
+    {% include 'notifications_snippet.html' %}
 
 </body>
 

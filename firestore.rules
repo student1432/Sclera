@@ -1,0 +1,76 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // --- HELPER FUNCTIONS ---
+    function isSignedIn() {
+      return request.auth != null;
+    }
+    
+    function hasRole(role) {
+      return isSignedIn() && request.auth.token.role == role;
+    }
+    
+    function isTenant(instId) {
+      return isSignedIn() && request.auth.token.institution_id == instId;
+    }
+
+    function isTeacherOrAdmin(instId) {
+       return isTenant(instId) && (hasRole('teacher') || hasRole('admin'));
+    }
+
+    function isAdmin(instId) {
+       return isTenant(instId) && hasRole('admin');
+    }
+
+    // --- USERS ---
+    // Students can read/write their own profile.
+    // Teachers/Admins can read students in their institution.
+    match /users/{userId} {
+      allow read: if (isSignedIn() && request.auth.uid == userId) || 
+                  (isTeacherOrAdmin(resource.data.institution_id));
+      allow write: if isSignedIn() && request.auth.uid == userId;
+
+      // Subcollections (e.g., study_todos)
+      match /{document=**} {
+        allow read, write: if isSignedIn() && request.auth.uid == userId;
+      }
+    }
+
+    // --- INSTITUTIONS ---
+    match /institutions/{instId} {
+      allow read: if isTenant(instId);
+      allow write: if isAdmin(instId);
+
+      // Level 1 Exclusions
+      match /syllabus_exclusions/{docId} {
+        allow read: if isTenant(instId);
+        allow write: if isAdmin(instId);
+      }
+      
+      // Notifications
+      match /notifications/{notifId} {
+        allow read: if isTenant(instId);
+        allow write: if isTeacherOrAdmin(instId);
+      }
+    }
+
+    // --- CLASSES ---
+    match /classes/{classId} {
+      allow read: if isTenant(resource.data.institution_id);
+      allow write: if isTeacherOrAdmin(resource.data.institution_id);
+
+      // Level 2 Exclusions
+      match /excluded_chapters/{docId} {
+        allow read: if isTenant(get(/databases/$(database)/documents/classes/$(classId)).data.institution_id);
+        allow write: if isTeacherOrAdmin(get(/databases/$(database)/documents/classes/$(classId)).data.institution_id);
+      }
+      
+      // Class Metadata
+      match /class_metadata/{docId} {
+         allow read: if isTenant(get(/databases/$(database)/documents/classes/$(classId)).data.institution_id);
+         allow write: if isTeacherOrAdmin(get(/databases/$(database)/documents/classes/$(classId)).data.institution_id);
+      }
+    }
+  }
+}
