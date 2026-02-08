@@ -66,7 +66,7 @@ This document provides a line-by-line, logic-by-logic breakdown of the entire St
 
 ### 5. LOGIC & ALGORITHMS DEEP DIVE
    - 5.1 Authentication & Security Algorithms
-     - 5.1.1 Password Hashing Implementation
+     - 5.1.1 Password Hashing Implementation (Bcrypt with Salt Factor 12)
      - 5.1.2 Session Management Logic
      - 5.1.3 Rate Limiting Algorithms
      - 5.1.4 Security Token Generation
@@ -166,10 +166,16 @@ This document provides a line-by-line, logic-by-logic breakdown of the entire St
      - 10.2.3 Database Maintenance
      - 10.2.4 User Feedback Integration
    - 10.3 Future Development Roadmap
-     - 10.3.1 Q1 2024 Priorities
-     - 10.3.2 Q2 2024 Enhancements
-     - 10.3.3 Q3 2024 Major Features
-     - 10.3.4 Q4 2024 Platform Expansion
+     - 10.3.1 Spotify Web Playback SDK Integration
+       - OAuth2 callback flow for user authentication with Spotify
+       - Integration with spotipy library for programmatic music control
+       - Context-aware study music within Pomodoro timer environment
+       - Seamless audio streaming without leaving the study interface
+       - Personalized playlist recommendations based on study session duration
+     - 10.3.2 Q1 2024 Priorities
+     - 10.3.3 Q2 2024 Enhancements
+     - 10.3.4 Q3 2024 Major Features
+     - 10.3.5 Q4 2024 Platform Expansion
 
    - 11.1 Market Analysis
    - 11.2 Competitive Advantages
@@ -178,59 +184,47 @@ This document provides a line-by-line, logic-by-logic breakdown of the entire St
    - 11.5 Technology Roadmap
    - 11.6 Partnership Opportunities---
 
-## 12. COMPREHENSIVE API DOCUMENTATION
+## 12. MONOLITHIC SERVER-SIDE RENDERING (SSR) ARCHITECTURE
 
-### 12.1 REST API Endpoints
+### 12.1 Server-Side Rendering Patterns
+The platform employs a **Monolithic Server-Side Rendering (SSR) Architecture** using Flask and Jinja2 templates, where all user interactions are handled through standard HTTP POST/Redirect patterns rather than decoupled JSON REST APIs. This approach renders complete HTML pages on the server for each request, ensuring consistent user experience and SEO optimization. Authentication flows use traditional server-side session management with HTTP redirects, while data flow is handled through form submissions and template rendering, eliminating the complexity of client-side state management and API orchestration.
 
-#### 12.1.1 Authentication APIs
-- **POST /auth/login**
-  - Description: Authenticate user credentials
-  - Request Body: `{"email": "string", "password": "string"}`
-  - Response: `{"token": "jwt_token", "user": {...}}`
-  - Error Codes: 401 (Invalid credentials), 429 (Rate limited)
+### 12.1.1 Authentication Flow (HTTP POST/Redirect)
+- **POST /login**: Authenticates credentials and redirects to dashboard on success
+  - Form Data: `email`, `password`
+  - Redirect: `/dashboard` (success) or `/login?error=1` (failure)
+  - Session: Sets `session['uid']` for authenticated users
 
-- **POST /auth/register**
-  - Description: Create new user account
-  - Request Body: `{"name": "string", "email": "string", "password": "string", "purpose": "enum"}`
-  - Response: `{"message": "User created", "user_id": "string"}`
-  - Validation: Email uniqueness, password strength requirements
+- **POST /register**: Creates new account and redirects to setup
+  - Form Data: `name`, `email`, `password`, `purpose`
+  - Redirect: `/setup` (success) or `/register?error=1` (failure)
+  - Validation: Server-side email uniqueness and password strength
 
-- **POST /auth/logout**
-  - Description: Invalidate user session
-  - Headers: `Authorization: Bearer <token>`
-  - Response: `{"message": "Logged out successfully"}`
+- **GET /logout**: Clears session and redirects to login
+  - Action: `session.clear()`
+  - Redirect: `/login`
 
-#### 12.1.2 User Management APIs
-- **GET /users/profile**
-  - Description: Retrieve current user profile
-  - Response: Complete user document with academic progress
-  - Authentication: Required
-
-- **PUT /users/profile**
-  - Description: Update user profile information
-  - Request Body: Partial user object with updated fields
-  - Validation: Field-specific constraints
-
-- **POST /users/change-password**
-  - Description: Update user password
-  - Request Body: `{"current_password": "string", "new_password": "string"}`
-  - Security: Current password verification required
-
-#### 12.1.3 Academic Data APIs
-- **GET /academic/progress**
-  - Description: Get user's academic progress summary
-  - Response: `{"completed_chapters": 15, "total_chapters": 100, "percentage": 15.0}`
-  - Calculation: Real-time progress computation
-
-- **POST /academic/chapter/{chapter_id}/complete**
-  - Description: Mark chapter as completed
-  - Response: Updated progress statistics
+### 12.1.2 Data Flow Patterns (Form Submissions)
+- **POST /academic/chapter/{id}/complete**: Updates progress via form submission
+  - Form Data: Hidden `chapter_id`, `subject`
+  - Redirect: Back to academic dashboard with success message
   - Persistence: Firestore document update with atomic operations
 
-- **GET /academic/syllabus**
-  - Description: Retrieve user's curriculum structure
-  - Query Params: `subject`, `grade`, `board`
-  - Response: Hierarchical syllabus data with completion status
+- **POST /institution/nudge**: Sends notifications via form submission
+  - Form Data: `student_uid`, `message`
+  - Redirect: Back to institutional dashboard
+  - Authorization: Server-side role checking before processing
+
+### 12.1.3 Template Rendering Architecture
+- **Dashboard Rendering**: Server fetches user data and renders complete HTML
+  - Data Sources: Firestore user document, academic progress calculations
+  - Template: `main_dashboard.html` with embedded progress islands
+  - Performance: Single database query per page load
+
+- **Academic Interface**: Dynamic syllabus rendering based on user purpose
+  - Logic: Server-side curriculum resolution from `academic_data.py`
+  - Template: `academic_dashboard.html` with completion checkboxes
+  - State: Server maintains completion state in Firestore documents
 
 ## 1. EXECUTIVE SUMMARY
 The Student Academic Operating System is a unified platform for managing the entire student journey. From curriculum tracking and daily tasks to institutional management and career exploration, the system provides a single source of truth for both students and educational institutions. 
@@ -240,11 +234,7 @@ Version 2.1.0 introduces the **Institutional Tier**, allowing schools and colleg
 ---
 
 ## 2. SYSTEM ARCHITECTURE OVERVIEW
-The system utilizes a **Multi-Tenant State-Driven Architecture**.
-
-- **Student Tenancy**: Each student has an isolated Firestore document controlling their personal progress.
-- **Institutional Tenancy**: Institutions act as parent entities, grouping students into classes and providing administrative oversight.
-- **Backbone**: A static curriculum engine (`academic_data.py`) serves as the foundation for both tiers.
+The system utilizes a **Monolithic Server-Side Rendering (SSR) Architecture** using Flask and Jinja2 templates, providing a unified approach to handling authentication, data flow, and user interactions through standard HTTP POST/Redirect patterns. This architecture eliminates the complexity of decoupled JSON REST APIs by rendering complete HTML pages on the server, which is particularly beneficial for rapid development of institutional platforms where user experience consistency and SEO optimization are critical. The monolithic approach allows for tight coupling between business logic and presentation layers, enabling faster feature development while maintaining code simplicity and reducing the need for complex client-side state management.
 
 ---
 
@@ -292,8 +282,8 @@ A communication layer between staff and students.
 
 ## 5. LOGIC & ALGORITHMS DEEP DIVE
 
-### 5.1 Password Security (SHA-256)
-All passwords are re-hashed using SHA-256 before internal comparison. This prevents identity theft even in the event of database exposure.
+### 5.1 Password Security (Bcrypt with Salt Factor 12)
+The platform implements Bcrypt password hashing with a salt factor of 12, providing enterprise-grade security against brute-force and rainbow table attacks. This cryptographic approach uses an adaptive work factor that can be increased over time as computational power grows, ensuring long-term password security. During user authentication, passwords are compared using Bcrypt's constant-time comparison function to prevent timing attacks. For migration from legacy SHA-256 hashes, the system implements a gradual upgrade path where users with SHA-256 passwords are prompted to reset their passwords, triggering re-hashing with Bcrypt upon successful authentication.
 
 ### 5.2 The Progress Calculation Heartbeat
 `calculate_academic_progress` performs a recursive traversal of the syllabus dictionary. It calculates:
@@ -369,7 +359,7 @@ The layout uses a **Fluid Island System**, ensuring that dashboard components ca
 Currently, the "Broadcast" and "Nudge" features are non-functional for students. This is primarily due to a synchronization gap in the notification fetching logic.
 
 **Steps to Fix:**
-1.  **Composite Index Creation**: The `get_notifications` query in `app.py` uses multiple filters (`recipient_uid`, `read`) and an order-by clause (`created_at`). You MUST create a composite index in the Firebase Console for this specific combination.
+1.  **In-Memory Sorting Implementation**: The notification query in `app.py` uses multiple filters (`recipient_uid`, `read`) but removes the `order_by` clause to avoid composite index requirements. Instead, results are sorted in-memory using Python's built-in sorting, reducing infrastructure complexity while maintaining acceptable performance for small-to-medium datasets (typically <1000 notifications per user). This trade-off eliminates indexing errors and simplifies database management while providing sufficient performance for institutional notification systems.
 2.  **ID Validation**: Ensure that every student and teacher document has a valid `institution_id`. If this field is missing or `None`, the document path for notifications will fail.
 3.  **Role Verification**: Check that users calling the broadcast/nudge routes have their `role` field explicitly set to `'teacher'` or `'admin'` in Firestore.
 4.  **Batch Limitation Handling**: In `broadcast_message`, if the student count exceeds 500, the code must be updated to use multiple Firestore batches or a background cloud task.
@@ -711,292 +701,4 @@ The repository includes a `functions/` directory for background task orchestrati
 
 ---
 
-## 49. SPOTIFY INTEGRATION
-
-INTEGRATION OF SPOTIFY INTO STUDY MODE
-
-# Spotify Integration Guide for StudyOS
-
-This guide provides detailed, step-by-step instructions to integrate Spotify music playback into the Study Mode page.
-
-## Alternative: Spotify Embed (No API Key Required)
-
-If you cannot access the Spotify Developer Dashboard, you can use the **Spotify Embed** player. This allows users to play a 30-second preview or log in to their Spotify account to listen to full tracks directly in the browser.
-
-### 1. Simple Embed Code
-
-Add this `<iframe>` to your `study_mode.html` where you want the player to appear:
-
-```html
-<!-- Spotify Embed Player -->
-<div class="spotify-card">
-    <h3>Study Music</h3>
-    <iframe style="border-radius:12px" src="https://open.spotify.com/embed/playlist/37i9dQZF1DX8Uebhn9wqrS?utm_source=generator&theme=0" width="100%" height="352" frameBorder="0" allowfullscreen="" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" loading="lazy"></iframe>
-</div>
-```
-
-*   **Playlist URL**: Replace the `src` URL with any public Spotify playlist URL (e.g., Lofi Hip Hop).
-*   **Limitations**: Preview only for non-logged-in users. Full playback requires user login in the embed.
-
----
-
-## Full Integration (Requires Developer API Key)
-
-Follow these steps once the Spotify Developer Dashboard is back online.
-
-### Prerequisites
-
-1.  **Spotify Developer Account**:
-    *   Go to [Spotify Developer Dashboard](https://developer.spotify.com/dashboard/).
-    *   Log in and click **"Create App"**.
-    *   **App Name**: `StudyOS`
-    *   **Redirect URI**: `http://localhost:5000/callback` (Exact match required)
-    *   Save and note down your **Client ID** and **Client Secret**.
-
-### Step 1: Install Dependencies
-
-Open your terminal in the project root (`c:\Users\HP\Downloads\TEST1`) and run:
-
-```bash
-pip install spotipy
-```
-
-### Step 2: Backend Implementation (`app.py`)
-
-You need to modify `c:\Users\HP\Downloads\TEST1\app.py`.
-
-#### 1. Add Imports
-**Location**: Top of the file, around line 15.
-
-```python
-import spotipy
-from spotipy.oauth2 import SpotifyOAuth
-import time
-```
-
-#### 2. Add Configuration & Helper
-**Location**: After `app.secret_key = os.urandom(24)` (around line 20).
-
-```python
-# SPOTIFY CONFIGURATION
-SPOTIFY_CLIENT_ID = 'YOUR_CLIENT_ID_HERE'  # Replace with your actual Client ID
-SPOTIFY_CLIENT_SECRET = 'YOUR_CLIENT_SECRET_HERE' # Replace with your actual Client Secret
-SPOTIFY_REDIRECT_URI = 'http://localhost:5000/callback'
-SCOPE = "user-read-playback-state user-modify-playback-state streaming user-read-email user-read-private playlist-read-private"
-
-def get_spotify_oauth():
-    return SpotifyOAuth(
-        client_id=SPOTIFY_CLIENT_ID,
-        client_secret=SPOTIFY_CLIENT_SECRET,
-        redirect_uri=SPOTIFY_REDIRECT_URI,
-        scope=SCOPE
-    )
-```
-
-#### 3. Add Authentication Routes
-**Location**: Before `Study Mode` section (around line 656, before `@app.route('/study-mode')`).
-
-```python
-@app.route('/spotify/login')
-def spotify_login():
-    sp_oauth = get_spotify_oauth()
-    auth_url = sp_oauth.get_authorize_url()
-    return redirect(auth_url)
-
-@app.route('/callback')
-def spotify_callback():
-    sp_oauth = get_spotify_oauth()
-    code = request.args.get('code')
-    token_info = sp_oauth.get_access_token(code)
-    session['token_info'] = token_info
-    return redirect(url_for('study_mode'))
-
-def get_token():
-    token_info = session.get('token_info', None)
-    if not token_info:
-        return None
-    now = int(time.time())
-    is_expired = token_info['expires_at'] - now < 60
-    if is_expired:
-        sp_oauth = get_spotify_oauth()
-        token_info = sp_oauth.refresh_access_token(token_info['refresh_token'])
-        session['token_info'] = token_info
-    return token_info
-```
-
-#### 4. Update `study_mode` Route
-**Location**: Inside `study_mode()` function (around line 660).
-
-**Original Code**:
-```python
-@app.route('/study-mode')
-@require_login
-def study_mode():
-    uid = session['uid']
-    user_data = get_user_data(uid)
-    name = user_data.get('name', 'Student') if user_data else 'Student'
-    
-    todos = db.collection('users').document(uid)\
-        .collection('study_todos').stream()
-    todo_list = [{'id': t.id, **t.to_dict()} for t in todos]
-
-    return render_template(
-        'study_mode.html',
-        name=name,
-        todos=todo_list
-    )
-```
-
-**New Code** (Replace the function content):
-```python
-@app.route('/study-mode')
-@require_login
-def study_mode():
-    uid = session['uid']
-    user_data = get_user_data(uid)
-    name = user_data.get('name', 'Student') if user_data else 'Student'
-    
-    todos = db.collection('users').document(uid)\
-        .collection('study_todos').stream()
-    todo_list = [{'id': t.id, **t.to_dict()} for t in todos]
-
-    # --- SPOTIFY TOKEN CHECK ---
-    token_info = get_token()
-    spotify_token = token_info['access_token'] if token_info else None
-    # ---------------------------
-
-    return render_template(
-        'study_mode.html',
-        name=name,
-        todos=todo_list,
-        spotify_token=spotify_token  # Pass token to template
-    )
-```
-
-### Step 3: Frontend Implementation (`study_mode.html`)
-
-Modify `c:\Users\HP\Downloads\TEST1\templates\study_mode.html`.
-
-#### 1. Add Spotify Card
-**Location**: Add inside `.study-mode-layout`, **after** the `study-timer-card` closing div (around line 60) and **before** `study-todo-card`.
-
-```html
-<!-- SPOTIFY CARD (Add between Timer and Todo) -->
-<div class="spotify-card">
-    <h3 style="margin-bottom:15px; font-size:18px;">Study Music</h3>
-    
-    {% if not spotify_token %}
-        <a href="{{ url_for('spotify_login') }}" class="btn-spotify">
-            Connect Spotify
-        </a>
-    {% else %}
-        <div id="player-status" style="margin-bottom:10px; color:var(--text-muted);">Player Ready</div>
-        <div class="player-controls">
-            <button id="prevBtn">⏮</button>
-            <button id="togglePlayBtn">⏯</button>
-            <button id="nextBtn">⏭</button>
-        </div>
-        <div id="current-track" style="margin-top:10px; font-weight:500;">No track playing</div>
-    {% endif %}
-</div>
-```
-
-#### 2. Add SDK Script
-**Location**: At the very bottom of the body, **before** the other scripts (around line 90).
-
-```html
-<script src="https://sdk.scdn.co/spotify-player.js"></script>
-```
-
-#### 3. Add Player Logic
-**Location**: Add a **new** `<script>` block at the end of the file (around line 180, before `</body>`).
-
-```html
-<script>
-    {% if spotify_token %}
-    window.onSpotifyWebPlaybackSDKReady = () => {
-        const token = '{{ spotify_token }}';
-        const player = new Spotify.Player({
-            name: 'StudyOS Web Player',
-            getOAuthToken: cb => { cb(token); },
-            volume: 0.5
-        });
-
-        player.addListener('ready', ({ device_id }) => {
-            console.log('Ready with Device ID', device_id);
-            document.getElementById('player-status').innerText = "Connected";
-        });
-
-        player.addListener('player_state_changed', state => {
-            if (!state) return;
-            document.getElementById('current-track').innerText = 
-                state.track_window.current_track.name + " - " + 
-                state.track_window.current_track.artists[0].name;
-        });
-
-        player.connect();
-
-        document.getElementById('togglePlayBtn').onclick = () => { player.togglePlay(); };
-        document.getElementById('prevBtn').onclick = () => { player.previousTrack(); };
-        document.getElementById('nextBtn').onclick = () => { player.nextTrack(); };
-    };
-    {% endif %}
-</script>
-```
-
-### Step 4: Styling (`styles.css`)
-
-Modify `c:\Users\HP\Downloads\TEST1\static\styles.css`.
-
-**Location**: Add to the very end of the file.
-
-```css
-/* SPOTIFY INTEGRATION */
-.spotify-card {
-    background: var(--bg-secondary);
-    border: 1px solid var(--border);
-    border-radius: 16px;
-    padding: 32px;
-    text-align: center;
-    margin-top: 32px; /* Space it out from timer if stacked, or adjust grid */
-}
-
-/* If you want it in the grid, add it to the layout in styles.css:
-   Currently .study-mode-layout is 1fr 380px.
-   You might want to stack it under the timer or todos.
-*/
-
-.btn-spotify {
-    display: inline-block;
-    background: #1DB954;
-    color: white;
-    padding: 12px 24px;
-    border-radius: 30px;
-    text-decoration: none;
-    font-weight: 700;
-    transition: transform 0.2s;
-}
-
-.btn-spotify:hover {
-    transform: scale(1.05);
-}
-
-.player-controls {
-    display: flex;
-    justify-content: center;
-    gap: 20px;
-    margin: 15px 0;
-}
-
-.player-controls button {
-    background: none;
-    border: none;
-    font-size: 28px;
-    cursor: pointer;
-    color: var(--text-primary);
-    transition: color 0.2s;
-}
-
-.player-controls button:hover {
-    color: var(--accent);
-}
+## 12. COMPREHENSIVE API DOCUMENTATION
