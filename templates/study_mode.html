@@ -169,6 +169,19 @@
                 body: JSON.stringify({ text: todoInput.value })
             }).then(() => location.reload());
         };
+
+        /* NOTIFICATION ACTIONS */
+        document.querySelectorAll('.notification-dismiss').forEach(btn => {
+            btn.onclick = () => {
+                const notifId = btn.dataset.id;
+                fetch(`/notifications/${notifId}/dismiss`, { method: 'POST' })
+                    .then(() => {
+                        btn.closest('.notification-item').style.opacity = '0.5';
+                        btn.disabled = true;
+                        btn.textContent = '✓';
+                    });
+            };
+        });
     </script>
     <script>
         (function () {
@@ -193,6 +206,7 @@
             }
         })();
     </script>
+    {% include 'notifications_snippet.html' %}
 </body>
 
 </html>

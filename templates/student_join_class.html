@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Join Class - Student | StudyOS</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+<body>
+    <div class="container">
+        <div class="form-card">
+            <h1>Join a Class</h1>
+            <p class="text-muted" style="margin-top:-8px;">Enter the multi-use class invite code from your teacher</p>
+
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    {% for category, message in messages %}
+                        <div class="alert alert-{{ category }}">{{ message }}</div>
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
+
+            <form method="POST" action="{{ url_for('student_join_class') }}">
+                <div class="form-group">
+                    <label for="invite_code">Invite Code</label>
+                    <input type="text" id="invite_code" name="invite_code" maxlength="12" placeholder="E.g. XYZ123" required>
+                </div>
+                <button type="submit" class="btn btn-primary">Join Class</button>
+            </form>
+
+            <p class="link-text">Not a student? <a href="{{ url_for('login_teacher') }}">Teacher login</a></p>
+            <p class="link-text">Admin? <a href="{{ url_for('login_admin') }}">Admin login</a></p>
+            <p class="link-text"><a href="{{ url_for('logout') }}">Logout</a></p>
+        </div>
+    </div>
+</body>
+</html>
