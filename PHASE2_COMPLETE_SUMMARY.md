@@ -211,7 +211,24 @@ Status:
 
 ---
 
-## 📊 Data Flow Diagrams
+## 📊 Data Flow Diagrams & AI Logic
+
+### AI Progress Engine (Formulae)
+1. **Momentum**: `(Latest_Exam_% - Exam_4_Steps_Back_%)`
+   - *Result > 0*: Improving trend.
+   - *Result < -5*: Triggers "Declining" risk status.
+2. **Readiness**: `(Syllabus_Completion * 0.4) + (Average_Exam_Score * 0.6)`
+3. **Consistency**: `Min(100, Session_Count * 15)`
+
+### Institutional Behavior Heatmap
+- **Data Source**: 30-day window of student `study_sessions`.
+- **Dimensions**: 7 Days × 24 Hours.
+- **Aggregation**: `Key = weekday-hour`.
+- **UI Levels**:
+  - 0: Inactive
+  - 1-5: Low
+  - 6-10: Mid
+  - 10+: Peak
 
 ### Exclusion Hierarchy
 ```
