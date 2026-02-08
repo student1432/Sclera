@@ -1,0 +1,463 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Master Academic Library | StudyOS</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <style>
+        .library-container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .search-container {
+            margin-bottom: 30px;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            background: var(--bg-primary);
+            padding: 10px 0;
+        }
+
+        .search-input {
+            width: 100%;
+            padding: 15px 20px;
+            border-radius: 10px;
+            border: 1px solid var(--border);
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+            font-size: 16px;
+            box-shadow: 0 4px 12px var(--shadow);
+            transition: border-color 0.3s;
+        }
+
+        .search-input:focus {
+            outline: none;
+            border-color: var(--accent);
+        }
+
+        .library-section {
+            margin-bottom: 40px;
+            display: none;
+        }
+
+        .library-section.active {
+            display: block;
+        }
+
+        .library-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 20px;
+        }
+
+        .library-card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 24px;
+            cursor: pointer;
+            transition: transform 0.2s, border-color 0.2s;
+        }
+
+        .library-card:hover {
+            transform: translateY(-4px);
+            border-color: var(--accent);
+        }
+
+        .board-tag {
+            display: inline-block;
+            padding: 4px 10px;
+            background: var(--bg-tertiary);
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 600;
+            margin-bottom: 12px;
+            color: var(--text-secondary);
+        }
+
+        .library-item-title {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+
+        .library-item-meta {
+            font-size: 13px;
+            color: var(--text-muted);
+        }
+
+        /* Modal Styles for Drill-down */
+        .library-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(4px);
+            z-index: 1000;
+            overflow-y: auto;
+            padding: 40px 20px;
+        }
+
+        .modal-content {
+            background: var(--bg-primary);
+            max-width: 900px;
+            margin: 0 auto;
+            border-radius: 16px;
+            border: 1px solid var(--border);
+            padding: 32px;
+            position: relative;
+        }
+
+        .close-modal {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            font-size: 24px;
+            cursor: pointer;
+            color: var(--text-muted);
+        }
+
+        .collapsible-header {
+            padding: 15px;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            margin-bottom: 8px;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .collapsible-content {
+            padding: 0 15px;
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease-out;
+        }
+
+        .collapsible-content.expanded {
+            max-height: 2000px;
+            padding: 15px;
+        }
+
+        .topic-item {
+            padding: 12px;
+            border-left: 2px solid var(--border);
+            margin-bottom: 15px;
+            background: var(--bg-tertiary);
+            border-radius: 0 8px 8px 0;
+        }
+
+        .topic-name {
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+
+        .topic-overview {
+            font-size: 13px;
+            color: var(--text-secondary);
+        }
+
+        .no-results {
+            text-align: center;
+            padding: 40px;
+            color: var(--text-muted);
+            display: none;
+        }
+
+        .filter-pill-container {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        .filter-pill {
+            padding: 6px 14px;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            font-size: 13px;
+            cursor: pointer;
+            transition: all 0.2s;
+            color: var(--text-primary);
+        }
+
+        .filter-pill.active {
+            background: var(--accent);
+            color: var(--bg-primary);
+            border-color: var(--accent);
+        }
+    </style>
+</head>
+
+<body>
+    <div class="dashboard-layout">
+        {% include '_library_sidebar.html' %}
+
+        <main class="main-content">
+            <div class="library-container">
+                <header class="content-header">
+                    <h1>Academic Master Library</h1>
+                    <p>Browse standards, boards, grades, and subjects from our comprehensive academic database.</p>
+                </header>
+
+                <div class="search-container">
+                    <input type="text" id="librarySearch" class="search-input"
+                        placeholder="Search for subjects, chapters or topics...">
+                </div>
+
+                <div id="highschool" class="library-section active">
+                    <div class="filter-pill-container" id="gradeFilters">
+                        <button class="filter-pill active" onclick="filterByGrade('all')">All Grades</button>
+                        <button class="filter-pill" onclick="filterByGrade('9')">Grade 9</button>
+                        <button class="filter-pill" onclick="filterByGrade('10')">Grade 10</button>
+                        <button class="filter-pill" onclick="filterByGrade('11')">Grade 11</button>
+                        <button class="filter-pill" onclick="filterByGrade('12')">Grade 12</button>
+                    </div>
+
+                    <div class="library-grid" id="highschoolGrid">
+                        <!-- Cards will be populated by JS -->
+                    </div>
+                </div>
+
+                <div id="exams" class="library-section">
+                    <div class="library-grid" id="examsGrid">
+                        <!-- Exam cards will be populated by JS -->
+                    </div>
+                </div>
+
+                <div id="noResults" class="no-results">
+                    No matching academic data found.
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Drill-down Modal -->
+    <div id="libraryModal" class="library-modal">
+        <div class="modal-content">
+            <span class="close-modal" onclick="closeModal()">&times;</span>
+            <div id="modalBody">
+                <!-- Content injected by JS -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const libraryData = {{ library_data | tojson }};
+        let currentSection = 'highschool';
+        let currentGradeFilter = 'all';
+
+        function showLibrarySection(sectionId) {
+            currentSection = sectionId;
+            document.querySelectorAll('.library-section').forEach(s => s.classList.remove('active'));
+            document.getElementById(sectionId).classList.add('active');
+
+            document.querySelectorAll('.library-sidebar .nav-item').forEach(item => {
+                if (item.getAttribute('onclick')?.includes(sectionId)) {
+                    item.classList.add('active');
+                } else {
+                    item.classList.remove('active');
+                }
+            });
+
+            renderLibrary();
+        }
+
+        function filterByGrade(grade) {
+            currentGradeFilter = grade;
+            document.querySelectorAll('#gradeFilters .filter-pill').forEach(pill => {
+                if (pill.textContent.includes(grade === 'all' ? 'All' : grade)) {
+                    pill.classList.add('active');
+                } else {
+                    pill.classList.remove('active');
+                }
+            });
+            renderLibrary();
+        }
+
+        function renderLibrary() {
+            const hsGrid = document.getElementById('highschoolGrid');
+            const examsGrid = document.getElementById('examsGrid');
+            const searchTerm = document.getElementById('librarySearch').value.toLowerCase();
+
+            hsGrid.innerHTML = '';
+            examsGrid.innerHTML = '';
+
+            let hasAnyVisible = false;
+
+            // Render Highschool
+            if (libraryData.highschool) {
+                for (const [board, grades] of Object.entries(libraryData.highschool)) {
+                    for (const [grade, subjects] of Object.entries(grades)) {
+                        if (currentGradeFilter !== 'all' && grade !== currentGradeFilter) continue;
+
+                        for (const [subjectName, subjectData] of Object.entries(subjects)) {
+                            const chapters = subjectData.chapters || {};
+                            const chapterList = Object.keys(chapters);
+
+                            // Search filter
+                            const matchesSearch = subjectName.toLowerCase().includes(searchTerm) ||
+                                board.toLowerCase().includes(searchTerm) ||
+                                chapterList.some(c => c.toLowerCase().includes(searchTerm));
+
+                            if (searchTerm && !matchesSearch) continue;
+
+                            const card = document.createElement('div');
+                            card.className = 'library-card';
+                            card.onclick = () => showDrillDown('highschool', board, grade, subjectName);
+                            card.innerHTML = `
+                                <div class="board-tag">${board} • Grade ${grade}</div>
+                                <div class="library-item-title">${subjectName}</div>
+                                <div class="library-item-meta">${chapterList.length} Chapters</div>
+                            `;
+                            hsGrid.appendChild(card);
+                            hasAnyVisible = true;
+                        }
+                    }
+                }
+            }
+
+            // Render Exams
+            if (libraryData.exams) {
+                for (const [examName, subjects] of Object.entries(libraryData.exams)) {
+                    for (const [subjectName, subjectData] of Object.entries(subjects)) {
+                        const chapters = subjectData.chapters || {};
+                        const chapterList = Object.keys(chapters);
+
+                        const matchesSearch = subjectName.toLowerCase().includes(searchTerm) ||
+                            examName.toLowerCase().includes(searchTerm) ||
+                            chapterList.some(c => c.toLowerCase().includes(searchTerm));
+
+                        if (searchTerm && !matchesSearch) continue;
+
+                        const card = document.createElement('div');
+                        card.className = 'library-card';
+                        card.onclick = () => showDrillDown('exams', examName, null, subjectName);
+                        card.innerHTML = `
+                            <div class="board-tag">${examName}</div>
+                            <div class="library-item-title">${subjectName}</div>
+                            <div class="library-item-meta">${chapterList.length} Chapters</div>
+                        `;
+                        examsGrid.appendChild(card);
+                        hasAnyVisible = true;
+                    }
+                }
+            }
+
+            document.getElementById('noResults').style.display = hasAnyVisible ? 'none' : 'block';
+        }
+
+        function showDrillDown(category, boardOrExam, grade, subjectName) {
+            const modal = document.getElementById('libraryModal');
+            const body = document.getElementById('modalBody');
+
+            let syllabus;
+            if (category === 'highschool') {
+                syllabus = libraryData.highschool[boardOrExam][grade][subjectName];
+            } else {
+                syllabus = libraryData.exams[boardOrExam][subjectName];
+            }
+
+            let html = `
+                <div class="board-tag">${boardOrExam} ${grade ? '• Grade ' + grade : ''}</div>
+                <h1 style="margin-bottom: 20px;">${subjectName}</h1>
+                <div class="syllabus-structure">
+            `;
+
+            if (syllabus && syllabus.chapters) {
+                for (const [chapterName, chapterData] of Object.entries(syllabus.chapters)) {
+                    const topics = chapterData.topics || [];
+                    html += `
+                        <div class="collapsible-item">
+                            <div class="collapsible-header" onclick="toggleCollapsible(this)">
+                                <span>${chapterName}</span>
+                                <span class="chevron">▼</span>
+                            </div>
+                            <div class="collapsible-content">
+                                ${topics.map(t => `
+                                    <div class="topic-item">
+                                        <div class="topic-name">${t.name}</div>
+                                        <div class="topic-overview">${t.overview || 'Standard academic curriculum topic.'}</div>
+                                    </div>
+                                `).join('')}
+                                ${topics.length === 0 ? '<p class="text-muted">No topics listed for this chapter.</p>' : ''}
+                            </div>
+                        </div>
+                    `;
+                }
+            }
+
+            html += `</div>`;
+            body.innerHTML = html;
+            modal.style.display = 'block';
+            document.body.style.overflow = 'hidden';
+        }
+
+        function toggleCollapsible(header) {
+            const content = header.nextElementSibling;
+            const chevron = header.querySelector('.chevron');
+            content.classList.toggle('expanded');
+            chevron.textContent = content.classList.contains('expanded') ? '▲' : '▼';
+        }
+
+        function closeModal() {
+            document.getElementById('libraryModal').style.display = 'none';
+            document.body.style.overflow = 'auto';
+        }
+
+        function initSidebarLinks() {
+            // Check hash in URL
+            if (window.location.hash === '#exams') {
+                showLibrarySection('exams');
+            } else {
+                showLibrarySection('highschool');
+            }
+        }
+
+        document.getElementById('librarySearch').addEventListener('input', renderLibrary);
+
+        window.onclick = function (event) {
+            const modal = document.getElementById('libraryModal');
+            if (event.target == modal) {
+                closeModal();
+            }
+        }
+
+            // theme toggle
+            (function () {
+                const root = document.documentElement;
+                const toggle = document.getElementById("themeToggle");
+
+                const savedTheme = localStorage.getItem("studyos-theme");
+                if (savedTheme) {
+                    root.setAttribute("data-theme", savedTheme);
+                }
+
+                if (toggle) {
+                    toggle.addEventListener("click", () => {
+                        const next =
+                            root.getAttribute("data-theme") === "dark"
+                                ? "light"
+                                : "dark";
+
+                        root.setAttribute("data-theme", next);
+                        localStorage.setItem("studyos-theme", next);
+                    });
+                }
+            })();
+
+        // Initialize
+        initSidebarLinks();
+    </script>
+</body>
+
+</html>

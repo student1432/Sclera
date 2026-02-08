@@ -1,0 +1,25 @@
+<aside class="sidebar library-sidebar">
+    <div class="sidebar-header">
+        <a href="{{ url_for('profile_resume') }}">{{ name }}</a>
+        <div class="sidebar-subtitle">Master Library</div>
+    </div>
+    <nav class="sidebar-nav">
+
+        <a href="#highschool" class="nav-item active" onclick="showLibrarySection('highschool')">
+            <span class="nav-icon"></span> High School
+        </a>
+        <a href="#exams" class="nav-item" onclick="showLibrarySection('exams')">
+            <span class="nav-icon"></span> Competitive Exams
+        </a>
+    </nav>
+    <div class="sidebar-footer">
+        <a id="themeToggle" class="nav-item" style="cursor:pointer;">
+            Toggle theme
+        </a>
+        <a href="{{ url_for('profile_dashboard') }}" class="nav-item">
+            <span class="nav-icon"></span> Back to Home
+        </a>
+        <a href="{{ url_for('academic_dashboard') }}" class="nav-item">My Academic Path</a>
+        <a href="{{ url_for('logout') }}" class="nav-item">Logout</a>
+    </div>
+</aside>
