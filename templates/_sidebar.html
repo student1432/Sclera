@@ -1,25 +1,28 @@
 <aside class="sidebar">
     <div class="sidebar-header">
-        <a href="{{ url_for('profile_resume') }}">{{ name }}</a>
+        <a href="{{ url_for('profile_resume') }}">{{ name or (user.get('name') if user else None) or 'Student' }}</a>
     </div>
     <nav class="sidebar-nav">
+        {% set p = request.path %}
         <a href="{{ url_for('profile_dashboard') }}"
-            class="nav-item {% if active_nav == 'home' %}active{% endif %}">Home</a>
+            class="nav-item {% if p == '/dashboard' or p == '/profile' or p == '/' %}active{% endif %}">Home</a>
         <a href="{{ url_for('academic_dashboard') }}"
-            class="nav-item {% if active_nav == 'academic' %}active{% endif %}">Academic</a>
+            class="nav-item {% if p.startswith('/academic') %}active{% endif %}">Academic</a>
+        <a href="{{ url_for('study_mode') }}"
+            class="nav-item {% if p.startswith('/study-mode') %}active{% endif %}">Study Mode</a>
         <a href="{{ url_for('interests_dashboard') }}"
-            class="nav-item {% if active_nav == 'interests' %}active{% endif %}">Interests</a>
+            class="nav-item {% if p.startswith('/interests') or p.startswith('/career') or p.startswith('/course') or p.startswith('/internship') or p.startswith('/careers') or p.startswith('/courses') or p.startswith('/internships') %}active{% endif %}">Interests</a>
         <a href="{{ url_for('master_library') }}"
-            class="nav-item {% if active_nav == 'library' %}active{% endif %}">Master Library</a>
+            class="nav-item {% if p.startswith('/master-library') %}active{% endif %}">Master Library</a>
         <a href="{{ url_for('statistics_dashboard') }}"
-            class="nav-item {% if active_nav == 'statistics' %}active{% endif %}">Statistics</a>
+            class="nav-item {% if p.startswith('/statistics') %}active{% endif %}">Statistics</a>
     </nav>
     <div class="sidebar-footer">
         <a id="themeToggle" class="nav-item" style="cursor:pointer;">
             Toggle theme
         </a>
-        <a href="{{ url_for('about') }}" class="nav-item">Settings</a>
-        <a href="{{ url_for('about') }}" class="nav-item">Contact</a>
+        <a href="{{ url_for('settings') }}" class="nav-item">Settings</a>
+        <a href="{{ url_for('contact') }}" class="nav-item">Contact</a>
         <a href="{{ url_for('logout') }}" class="nav-item">Logout</a>
     </div>
 </aside>

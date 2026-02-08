@@ -1,26 +1,68 @@
-from flask import Flask, render_template, request, redirect, url_for, session, flash, jsonify
+from flask import Flask, render_template, request, redirect, url_for, session, flash, jsonify, abort
 from firebase_config import auth, db
 from firebase_admin import auth as admin_auth
-from datetime import datetime
+from datetime import datetime, date, timedelta
 from templates.academic_data import get_syllabus, get_available_subjects, ACADEMIC_SYLLABI
+from utils import (
+    PasswordManager, login_rate_limiter, logger, validate_schema,
+    user_registration_schema, user_login_schema, CacheManager
+)
+from config import config
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
+from flask_talisman import Talisman
+from flask_mail import Mail, Message
 import os
-import hashlib
 from google.cloud.firestore import Increment
 import uuid
 from functools import wraps
-from flask import render_template, request, redirect, url_for, abort, jsonify
 from firebase_admin import firestore
-from datetime import datetime
-from datetime import date, datetime, timedelta
 from collections import defaultdict
 import random
 import string
+from marshmallow import ValidationError
+import traceback
 
 
 
+# Initialize Flask app with configuration
+env = os.environ.get('FLASK_ENV', 'production')
 app = Flask(__name__)
-app.secret_key = os.urandom(24)
+config[env].init_app(app)
+
+# Initialize rate limiter
+disable_rate_limits = (
+    env == 'development' or
+    os.environ.get('DISABLE_RATE_LIMITS', 'False').lower() == 'true'
+)
+limiter = Limiter(
+    app=app,
+    key_func=get_remote_address,
+    default_limits=[config[env].RATE_LIMIT_DEFAULT],
+    enabled=(not disable_rate_limits),
+    storage_uri="memory://"
+)
+
+# Initialize security headers with Talisman
+Talisman(app, 
+    force_https=config[env].SESSION_COOKIE_SECURE,
+    strict_transport_security=True,
+    strict_transport_security_max_age=31536000,
+    content_security_policy={
+        'default-src': "'self'",
+        'script-src': ["'self'", "'unsafe-inline'", "https://cdn.tailwindcss.com", "https://cdnjs.cloudflare.com", "https://cdn.jsdelivr.net"],
+        'style-src': ["'self'", "'unsafe-inline'", "https://cdn.tailwindcss.com"],
+        'img-src': ["'self'", "data:", "https:"],
+        'font-src': ["'self'", "https://cdnjs.cloudflare.com"],
+        'connect-src': "'self'",
+    },
+    referrer_policy='strict-origin-when-cross-origin'
+)
+
 user_ref = None
+
+# Initialize Flask-Mail
+mail = Mail(app)
 
 # ============================================================================
 # UTILITY FUNCTIONS
@@ -42,10 +84,12 @@ TEST_TYPES = [
 
 
 def hash_password(password):
-    return hashlib.sha256(password.encode()).hexdigest()
+    """DEPRECATED: Use PasswordManager.hash_password() instead"""
+    return PasswordManager.hash_password(password)
 
 def verify_password(stored_hash, provided_password):
-    return stored_hash == hash_password(provided_password)
+    """DEPRECATED: Use PasswordManager.verify_password() instead"""
+    return PasswordManager.verify_password(provided_password, stored_hash)
 
 def require_login(f):
     def wrapper(*args, **kwargs):
@@ -317,13 +361,34 @@ def index():
     return redirect(url_for('signup'))
 
 @app.route('/signup', methods=['GET', 'POST'])
+@limiter.limit(config[env].RATE_LIMIT_SIGNUP)
 def signup():
     if request.method == 'POST':
-        name = request.form.get('name')
+        # Validate input using schema
+        data = {
+            'name': request.form.get('name'),
+            'email': request.form.get('email'),
+            'password': request.form.get('password'),
+            'purpose': request.form.get('purpose')
+        }
+        
+        is_valid, result = validate_schema(user_registration_schema, data)
+        if not is_valid:
+            flash(f'Validation error: {result}', 'error')
+            return redirect(url_for('signup'))
+        
+        name = result['name']
         age = request.form.get('age')
-        email = request.form.get('email')
-        password = request.form.get('password')
-        purpose = request.form.get('purpose')
+        email = result['email']
+        password = result['password']
+        purpose = result['purpose']
+        
+        # Check password strength
+        is_strong, msg = PasswordManager.is_strong_password(password)
+        if not is_strong:
+            flash(f'Password not strong enough: {msg}', 'error')
+            return redirect(url_for('signup'))
+        
         try:
             try:
                 admin_auth.get_user_by_email(email)
@@ -331,9 +396,10 @@ def signup():
                 return redirect(url_for('login'))
             except admin_auth.UserNotFoundError:
                 pass
+            
             user = admin_auth.create_user(email=email, password=password)
             uid = user.uid
-            password_hash = hash_password(password)
+            password_hash = PasswordManager.hash_password(password)
             user_data = {
                 'uid': uid, 'name': name, 'age': age, 'email': email,
                 'password_hash': password_hash, 'purpose': purpose,
@@ -348,6 +414,8 @@ def signup():
             }
             db.collection('users').document(uid).set(user_data)
             session['uid'] = uid
+            logger.security_event("user_registered", user_id=uid, ip_address=request.remote_addr)
+            
             if purpose == 'highschool':
                 return redirect(url_for('setup_highschool'))
             elif purpose == 'exam':
@@ -358,7 +426,8 @@ def signup():
                 flash('Invalid purpose selected', 'error')
                 return redirect(url_for('signup'))
         except Exception as e:
-            flash(f'Error creating account: {str(e)}', 'error')
+            logger.error("signup_error", error=str(e), email=email)
+            flash(f'Error creating account: An error occurred during registration', 'error')
             return redirect(url_for('signup'))
     return render_template('signup.html')
 
@@ -401,15 +470,38 @@ def setup_after_tenth():
     return render_template('setup_after_tenth.html')
 
 @app.route('/login', methods=['GET', 'POST'])
+@limiter.limit(config[env].RATE_LIMIT_LOGIN)
 def login():
     if request.method == 'POST':
-        email = request.form.get('email')
-        password = request.form.get('password')
+        # Get client IP for rate limiting
+        client_ip = request.remote_addr
+        
+        # Check rate limiting
+        if not login_rate_limiter.is_allowed(client_ip):
+            flash('Too many login attempts. Please try again later.', 'error')
+            logger.security_event("login_rate_limited", ip_address=client_ip)
+            return redirect(url_for('login'))
+        
+        # Validate input
+        data = {
+            'email': request.form.get('email'),
+            'password': request.form.get('password')
+        }
+        
+        is_valid, result = validate_schema(user_login_schema, data)
+        if not is_valid:
+            flash('Invalid email or password format', 'error')
+            return redirect(url_for('login'))
+        
+        email = result['email']
+        password = result['password']
+        
         try:
             user = admin_auth.get_user_by_email(email)
             uid = user.uid
             user_doc = db.collection('users').document(uid).get()
             if not user_doc.exists:
+                login_rate_limiter.record_attempt(client_ip)
                 flash('Invalid email or password', 'error')
                 return redirect(url_for('login'))
             user_data = user_doc.to_dict()
@@ -417,10 +509,24 @@ def login():
             if not stored_hash:
                 flash('Please contact support to reset your password', 'error')
                 return redirect(url_for('login'))
-            if not verify_password(stored_hash, password):
+            if not PasswordManager.verify_password(password, stored_hash):
+                login_rate_limiter.record_attempt(client_ip)
+                logger.security_event("failed_login", user_id=uid, ip_address=client_ip)
                 flash('Invalid email or password', 'error')
                 return redirect(url_for('login'))
+            
+            # Check if this is a legacy SHA-256 hash and upgrade to bcrypt
+            if PasswordManager._is_legacy_hash(stored_hash):
+                new_hash = PasswordManager.hash_password(password)
+                db.collection('users').document(uid).update({'password_hash': new_hash})
+                logger.security_event("password_hash_upgraded", user_id=uid, ip_address=client_ip)
+            
+            # Successful login - reset rate limiter
+            login_rate_limiter.reset_attempts(client_ip)
             session['uid'] = uid
+            session.permanent = True
+            
+            logger.security_event("successful_login", user_id=uid, ip_address=client_ip)
             
             user_ref = db.collection('users').document(uid)
             
@@ -451,10 +557,12 @@ def login():
             flash('Login successful!', 'success')
             return redirect(url_for('profile_dashboard'))         
         except admin_auth.UserNotFoundError:
+            login_rate_limiter.record_attempt(client_ip)
             flash('Invalid email or password', 'error')
             return redirect(url_for('login'))
         except Exception as e:
-            flash(f'Login error: {str(e)}', 'error')
+            logger.error("login_error", error=str(e), email=email, ip=client_ip)
+            flash('Login error: An error occurred during login', 'error')
             return redirect(url_for('login'))
     return render_template('login.html')
 
@@ -1266,6 +1374,182 @@ def about():
     user_data = get_user_data(uid)
     return render_template('about.html', user=user_data, name=user_data.get('name') if user_data else 'Student')
 
+@app.route('/settings', methods=['GET', 'POST'])
+@require_login
+def settings():
+    """User settings page for account preferences and academic configuration"""
+    uid = session['uid']
+    user_data = get_user_data(uid) or {}
+    
+    if request.method == 'POST':
+        action = request.form.get('action', 'general')
+        
+        if action == 'general':
+            # Handle appearance and notification settings
+            theme = request.form.get('theme', 'dark')
+            email_notifications = request.form.get('email_notifications') == 'on'
+            
+            updates = {
+                'settings': {
+                    'theme': theme,
+                    'email_notifications': email_notifications
+                }
+            }
+            db.collection('users').document(uid).update(updates)
+            flash('General settings updated successfully!', 'success')
+            
+        elif action == 'academic':
+            # Handle academic configuration change with WARNING
+            confirm_delete = request.form.get('confirm_delete') == 'on'
+            if not confirm_delete:
+                flash('You must confirm data deletion to change academic settings.', 'error')
+                return redirect(url_for('settings'))
+            
+            new_purpose = request.form.get('purpose')
+            new_board = request.form.get('board')
+            new_grade = request.form.get('grade')
+            
+            # Fields to clear when changing academic config
+            updates = {
+                'purpose': new_purpose,
+                'chapters_completed': {},  # Clear all progress
+                'exam_results': [],        # Clear exam results
+                'time_studied': 0,         # Reset study time
+                'highschool': None,
+                'exam': None,
+                'after_tenth': None,
+            }
+            
+            # Set new academic data based on purpose
+            if new_purpose == 'highschool':
+                updates['highschool'] = {'board': new_board, 'grade': new_grade}
+            elif new_purpose == 'exam':
+                exam_type = request.form.get('exam_type', 'JEE')
+                updates['exam'] = {'type': exam_type}
+            elif new_purpose == 'after_tenth':
+                stream = request.form.get('stream', 'Science')
+                updates['after_tenth'] = {
+                    'grade': new_grade,
+                    'stream': stream,
+                    'subjects': []
+                }
+            
+            db.collection('users').document(uid).update(updates)
+            flash('Academic configuration updated. All previous progress has been reset.', 'success')
+            
+        elif action == 'account':
+            # Handle account updates
+            name = request.form.get('name')
+            if name:
+                db.collection('users').document(uid).update({'name': name})
+                flash('Profile name updated!', 'success')
+                
+        return redirect(url_for('settings'))
+    
+    # Get current settings or defaults
+    current_settings = user_data.get('settings', {})
+    
+    # Get available options for academic configuration
+    available_boards = ['CBSE', 'ICSE', 'State Board']
+    available_grades = ['9', '10', '11', '12']
+    available_exams = ['JEE', 'NEET', 'SAT', 'ACT', 'GRE', 'GMAT', 'CAT', 'UPSC', 'SSC', 'Bank PO', 'Other']
+    available_streams = ['Science (PCM)', 'Science (PCB)', 'Commerce', 'Arts', 'Diploma', 'Vocational']
+    
+    return render_template('settings.html', 
+                         user=user_data, 
+                         name=user_data.get('name') or 'Student',
+                         settings=current_settings,
+                         available_boards=available_boards,
+                         available_grades=available_grades,
+                         available_exams=available_exams,
+                         available_streams=available_streams)
+
+@app.route('/contact', methods=['GET', 'POST'])
+@require_login
+def contact():
+    """Contact/Support page for user inquiries - sends email to support team"""
+    uid = session['uid']
+    user_data = get_user_data(uid) or {}
+    
+    if request.method == 'POST':
+        subject = request.form.get('subject')
+        message = request.form.get('message')
+        category = request.form.get('category', 'general')
+        
+        if not subject or not message:
+            flash('Please fill in all required fields.', 'error')
+            return redirect(url_for('contact'))
+        
+        # Build email content
+        email_body = f"""
+New Support Request from StudyOS
+
+User Details:
+- Name: {user_data.get('name', 'Unknown')}
+- Email: {user_data.get('email', 'Unknown')}
+- User ID: {uid}
+- Category: {category}
+
+Subject: {subject}
+
+Message:
+{message}
+
+---
+This email was sent from the StudyOS contact form.
+        """
+        
+        try:
+            # Send email to support (sample email - user will change later)
+            msg = Message(
+                subject=f"[StudyOS Support] {subject}",
+                sender=app.config.get('MAIL_DEFAULT_SENDER', 'noreply@studyos.app'),
+                recipients=['support@studyos.example.com'],  # Sample email - change this
+                body=email_body
+            )
+            mail.send(msg)
+            
+            # Also store in Firestore as backup
+            ticket = {
+                'uid': uid,
+                'user_email': user_data.get('email'),
+                'user_name': user_data.get('name'),
+                'subject': subject,
+                'message': message,
+                'category': category,
+                'status': 'open',
+                'created_at': datetime.utcnow().isoformat(),
+                'email_sent': True
+            }
+            db.collection('support_tickets').add(ticket)
+            
+            flash('Your message has been sent! We will get back to you within 24-48 hours.', 'success')
+            logger.info("support_ticket_created", user_id=uid, subject=subject, category=category)
+            
+        except Exception as e:
+            logger.error("contact_email_error", error=str(e), user_id=uid)
+            # Still store ticket even if email fails
+            ticket = {
+                'uid': uid,
+                'user_email': user_data.get('email'),
+                'user_name': user_data.get('name'),
+                'subject': subject,
+                'message': message,
+                'category': category,
+                'status': 'open',
+                'created_at': datetime.utcnow().isoformat(),
+                'email_sent': False,
+                'email_error': str(e)
+            }
+            db.collection('support_tickets').add(ticket)
+            flash('Your message has been saved. Our team will review it shortly.', 'success')
+        
+        return redirect(url_for('contact'))
+    
+    return render_template('contact.html', 
+                         user=user_data, 
+                         name=user_data.get('name') or 'Student')
+
 # ============================================================================
 # ADMIN DASHBOARD ROUTES (TENANT APP)
 # ============================================================================
@@ -1859,8 +2143,76 @@ def mark_notification_read(notif_id):
             return jsonify({'success': True})
     
     return jsonify({'error': 'Not found'}), 404
+# ============================================================================
+# ERROR HANDLERS
+# ============================================================================
 
+@app.errorhandler(400)
+def bad_request(error):
+    """Handle bad request errors"""
+    logger.warning("bad_request", error=str(error), path=request.path)
+    if request.is_json:
+        return jsonify({'error': 'Bad request', 'message': str(error)}), 400
+    return render_template('error.html', error_code=400, error_message="Bad request"), 400
+
+@app.errorhandler(403)
+def forbidden(error):
+    """Handle forbidden errors"""
+    logger.security_event("forbidden_access", user_id=session.get('uid'), ip_address=request.remote_addr)
+    if request.is_json:
+        return jsonify({'error': 'Forbidden', 'message': 'Access denied'}), 403
+    return render_template('error.html', error_code=403, error_message="Access denied"), 403
+
+@app.errorhandler(404)
+def not_found(error):
+    """Handle 404 errors"""
+    logger.warning("page_not_found", path=request.path, ip=request.remote_addr)
+    if request.is_json:
+        return jsonify({'error': 'Not found', 'message': 'Resource not found'}), 404
+    return render_template('error.html', error_code=404, error_message="Page not found"), 404
+
+@app.errorhandler(429)
+def rate_limit_handler(error):
+    """Handle rate limit exceeded"""
+    logger.security_event("rate_limit_exceeded", user_id=session.get('uid'), ip_address=request.remote_addr)
+    if request.is_json:
+        return jsonify({'error': 'Too many requests', 'message': 'Rate limit exceeded. Please try again later.'}), 429
+    return render_template('error.html', error_code=429, error_message="Too many requests. Please try again later."), 429
+
+@app.errorhandler(500)
+def internal_error(error):
+    """Handle internal server errors"""
+    logger.error("internal_server_error", error=str(error), path=request.path, traceback=traceback.format_exc())
+    if request.is_json:
+        return jsonify({'error': 'Internal server error', 'message': 'Something went wrong'}), 500
+    return render_template('error.html', error_code=500, error_message="Internal server error"), 500
+
+# ============================================================================
+# REQUEST LOGGING
+# ============================================================================
+
+@app.before_request
+def log_request():
+    """Log all incoming requests"""
+    logger.debug("request_started", 
+                 method=request.method,
+                 path=request.path,
+                 ip=request.remote_addr,
+                 user_agent=str(request.user_agent))
+
+@app.after_request
+def log_response(response):
+    """Log all responses"""
+    logger.info("request_completed",
+                method=request.method,
+                path=request.path,
+                status_code=response.status_code,
+                ip=request.remote_addr)
+    return response
 
 
 if __name__ == '__main__':
-    app.run(debug=True, host='0.0.0.0', port=5000)
+    env = os.environ.get('FLASK_ENV', 'production')
+    debug = env == 'development'
+    logger.info("application_startup", environment=env, debug=debug)
+    app.run(debug=debug, host='0.0.0.0', port=5000)

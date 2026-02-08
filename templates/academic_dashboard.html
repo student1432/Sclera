@@ -188,24 +188,13 @@
                     <!-- POMODORO TIMER ISLAND (client-side only) -->
                     <div class="study-island">
                         <div class="study-island-header">
-                            <h3>Study Mode</h3>
-
-
-                            <!--Add Study Mode after refining-->
-                            <a href="{{ url_for('study_mode') }}" class="btn btn-primary">
-                                Enter Study Mode →
-                            </a>
-
+                            <h3 style="width: 100%; text-align: center;">Study Mode</h3>
                         </div>
-                        <div class="pomodoro-container">
-                            <div class="pomodoro-display" id="pomodoroDisplay">25:00</div>
-                            <div class="pomodoro-controls">
-                                <button class="btn" id="pomStart">Start</button>
-                                <button class="btn" id="pomReset">Reset</button>
-                                <button class="btn btn-small" id="pomShort">5 min</button>
-                                <button class="btn btn-small" id="pomLong">15 min</button>
-                            </div>
-                        </div>
+
+                        <!--Add Study Mode after refining-->
+                        <a href="{{ url_for('study_mode') }}" class="btn btn-primary" style="width: 100%;">
+                            Enter Study Mode →
+                        </a>                        
                     </div>
 
                     <!-- RESULTS ISLAND -->
