@@ -120,10 +120,15 @@
                 remaining--;
                 render();
 
+                const now = new Date();
                 fetch('/study-mode/time', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ seconds: 1 })
+                    body: JSON.stringify({
+                        seconds: 1,
+                        local_hour: now.getHours(),
+                        local_weekday: (now.getDay() + 6) % 7 // Match Python weekday (0=Mon, 6=Sun)
+                    })
                 });
 
                 if (remaining <= 0) {

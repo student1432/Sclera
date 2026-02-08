@@ -792,7 +792,11 @@ def study_mode():
 @require_login
 def study_time():
     uid = session['uid']
-    seconds = int(request.json['seconds'])
+    data = request.json
+    seconds = int(data.get('seconds', 0))
+    local_hour = data.get('local_hour')
+    local_weekday = data.get('local_weekday')
+
     db.collection('users').document(uid).set({
         'study_mode': {'total_seconds': Increment(seconds)}
     }, merge=True)
@@ -803,11 +807,18 @@ def study_time():
     hour_id = now.strftime("%Y-%m-%d-%H")
     session_ref = db.collection('users').document(uid).collection('study_sessions').document(hour_id)
 
-    session_ref.set({
+    session_update = {
         'start_time': now.isoformat(),
         'duration_seconds': Increment(seconds),
         'last_updated': now.isoformat()
-    }, merge=True)
+    }
+
+    if local_hour is not None:
+        session_update['local_hour'] = local_hour
+    if local_weekday is not None:
+        session_update['local_weekday'] = local_weekday
+
+    session_ref.set(session_update, merge=True)
 
     return jsonify(ok=True)
 
@@ -1363,15 +1374,24 @@ def institution_dashboard():
 
             for s in sessions_ref:
                 s_data = s.to_dict()
-                start_time_str = s_data.get('start_time')
-                if start_time_str:
-                    try:
-                        dt = datetime.fromisoformat(start_time_str)
-                        # Key: "DayIndex-Hour" (e.g., "0-14" for Monday 2 PM)
-                        key = f"{dt.weekday()}-{dt.hour}"
-                        heatmap_data[key] += 1
-                    except:
-                        pass
+
+                # Priority: use recorded local hour/weekday from client
+                l_hour = s_data.get('local_hour')
+                l_weekday = s_data.get('local_weekday')
+
+                if l_hour is not None and l_weekday is not None:
+                    key = f"{l_weekday}-{l_hour}"
+                    heatmap_data[key] += 1
+                else:
+                    # Fallback to parsing UTC start_time
+                    start_time_str = s_data.get('start_time')
+                    if start_time_str:
+                        try:
+                            dt = datetime.fromisoformat(start_time_str)
+                            key = f"{dt.weekday()}-{dt.hour}"
+                            heatmap_data[key] += 1
+                        except:
+                            pass
 
     # --- 3. ISLAND B: PREDICTIVE ENGINE (AI Logic) ---
     at_risk_students = []
