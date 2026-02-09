@@ -1,10 +1,42 @@
 <!DOCTYPE html>
 <html lang="en" data-theme="dark">
-
 <head>
     <meta charset="UTF-8">
     <title>Statistics</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        .chart-container {
+            position: relative;
+            width: 100%;
+            min-height: 200px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px 0;
+        }
+        canvas {
+            display: block;
+            max-width: 100%;
+            max-height: 100%;
+        }
+        .chart-wrapper {
+            position: relative;
+            height: 300px;
+            margin: 20px 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        .study-island {
+            display: flex;
+            flex-direction: column;
+            background: var(--bg-tertiary);
+            border-radius: 12px;
+            padding: 20px;
+            min-height: 200px;
+        }
+    </style>
 </head>
 
 <body>
@@ -84,8 +116,7 @@
                 </div>
 
                 <!-- 5. Subject Analytics (Spans Full Width) - LARGEST -->
-                <div class="study-island"
-                    style="grid-column: 1 / -1; min-height: 500px; display:flex; flex-direction:column;">
+                <div class="study-island" style="grid-column: 1 / -1; min-height: 500px; display:flex; flex-direction:column;">
                     <div class="study-island-header" style="margin-bottom: 20px;">
                         <h3>Subject-wise Performance</h3>
                         <select id="subjectSelect"
@@ -95,7 +126,7 @@
                             {% endfor %}
                         </select>
                     </div>
-                    <div style="flex:1; position:relative; min-height: 350px; width:100%;">
+                    <div class="chart-wrapper">
                         <canvas id="subjectChart"></canvas>
                     </div>
                     {% if not subjects %}
@@ -110,149 +141,129 @@
     </div>
 </body>
 
+</body>
+
 <script>
-    (function () {
-        const root = document.documentElement;
-        const toggle = document.getElementById("themeToggle");
-
-        const savedTheme = localStorage.getItem("studyos-theme");
-        if (savedTheme) {
-            root.setAttribute("data-theme", savedTheme);
-        }
-
-        if (toggle) {
-            toggle.addEventListener("click", () => {
-                const next =
-                    root.getAttribute("data-theme") === "dark"
-                        ? "light"
-                        : "dark";
-
-                root.setAttribute("data-theme", next);
-                localStorage.setItem("studyos-theme", next);
+    // Simple chart initialization
+    document.addEventListener('DOMContentLoaded', function() {
+        // Data from server
+        const examAvgData = JSON.parse('{{ exam_avg | tojson | safe }}');
+        const timelineData = JSON.parse('{{ timeline | tojson | safe }}');
+        const subjectPerformance = JSON.parse('{{ subject_performance | tojson | safe }}');
+        
+        // Bar Chart
+        const barCtx = document.getElementById('barChart');
+        if (barCtx) {
+            const barLabels = Object.keys(examAvgData);
+            const barData = Object.values(examAvgData);
+            
+            new Chart(barCtx, {
+                type: 'bar',
+                data: {
+                    labels: barLabels,
+                    datasets: [{
+                        label: "Average %",
+                        data: barData,
+                        backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                        borderColor: 'rgba(75, 192, 192, 1)',
+                        borderWidth: 1,
+                        borderRadius: 4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false }
+                    },
+                    scales: {
+                        y: { beginAtZero: true, max: 100 }
+                    }
+                }
             });
         }
-    })();
+
+        // Line Chart - Exam Progress Over Time
+        const lineCtx = document.getElementById('lineChart');
+        if (lineCtx) {
+            const labels = timelineData.map(d => d.date);
+            const data = timelineData.map(d => d.percentage);
+            
+            new Chart(lineCtx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Exam Progress %',
+                        data: data,
+                        borderColor: 'rgba(153, 102, 255, 1)',
+                        backgroundColor: 'rgba(153, 102, 255, 0.2)',
+                        borderWidth: 2,
+                        tension: 0.4,
+                        fill: true
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false }
+                    },
+                    scales: {
+                        y: { beginAtZero: true, max: 100 }
+                    }
+                }
+            });
+        }
+
+        // Subject Chart
+        const subjectSelect = document.getElementById('subjectSelect');
+        const subjectCtx = document.getElementById('subjectChart');
+        
+        function updateSubjectChart() {
+            if (!subjectSelect || !subjectCtx) return;
+            
+            const subjectName = subjectSelect.value;
+            const dataPoints = subjectPerformance[subjectName] || [];
+            const labels = dataPoints.map(d => d.date);
+            const values = dataPoints.map(d => d.percentage);
+
+            // Destroy existing chart if it exists
+            if (window.subjectChart && typeof window.subjectChart.destroy === 'function') {
+                window.subjectChart.destroy();
+            }
+
+            window.subjectChart = new Chart(subjectCtx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: subjectName + ' Performance (%)',
+                        data: values,
+                        borderColor: '#8b5cf6',
+                        backgroundColor: 'rgba(139, 92, 246, 0.1)',
+                        fill: true,
+                        tension: 0.3
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: { beginAtZero: true, max: 100 }
+                    }
+                }
+            });
+        }
+
+        // Initial render and event listener
+        if (subjectSelect && subjectCtx) {
+            updateSubjectChart();
+            subjectSelect.addEventListener('change', updateSubjectChart);
+        }
+    });
 </script>
-
-
 
 </html>
-
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
-<script>
-    const barData = {
-        labels: {{ exam_avg.keys() | list | tojson }},
-    datasets: [{
-        label: "Average %",
-        data: {{ exam_avg.values() | list | tojson }},
-        backgroundColor: 'rgba(75, 192, 192, 0.2)',
-        borderColor: 'rgba(75, 192, 192, 1)',
-        borderWidth: 1
-    }]
-};
-
-    new Chart(document.getElementById('barChart'), {
-        type: 'bar',
-        data: barData,
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            scales: {
-                y: {
-                    beginAtZero: true,
-                    max: 100
-                }
-            }
-        }
-    });
-
-    const lineData = {
-        labels: {{ timeline | map(attribute = 'date') | list | tojson }},
-    datasets: [{
-        label: "Progress %",
-        data: {{ timeline | map(attribute = 'percentage') | list | tojson }},
-        fill: false,
-        element: {
-        line: {
-            tension: 0.3
-        }
-    }
-        }]
-    };
-
-    new Chart(document.getElementById('lineChart'), {
-        type: 'line',
-        data: lineData,
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            scales: {
-                y: {
-                    beginAtZero: true,
-                    max: 100
-                }
-            }
-        }
-    });
-
-    // --- SUBJECT ANALYTICS CHART ---
-    const subjectPerformance = {{ subject_performance | tojson }};
-    const ctxSubj = document.getElementById('subjectChart').getContext('2d');
-    let subjectChart = null;
-
-    function renderSubjectChart(subjectName) {
-        // If chart exists, destroy it before re-rendering
-        if (subjectChart) {
-            subjectChart.destroy();
-        }
-
-        const dataPoints = subjectPerformance[subjectName] || [];
-        const labels = dataPoints.map(d => d.date);
-        const values = dataPoints.map(d => d.percentage);
-
-        subjectChart = new Chart(ctxSubj, {
-            type: 'line', // Can change to 'bar' if preferred
-            data: {
-                labels: labels,
-                datasets: [{
-                    label: subjectName + ' Performance (%)',
-                    data: values,
-                    borderColor: '#8b5cf6', // A nice purple accent
-                    backgroundColor: 'rgba(139, 92, 246, 0.1)',
-                    fill: true,
-                    tension: 0.3
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                scales: {
-                    y: {
-                        beginAtZero: true,
-                        max: 100,
-                        title: { display: true, text: 'Percentage' }
-                    }
-                },
-                plugins: {
-                    legend: {
-                        display: true
-                    }
-                }
-            }
-        });
-    }
-
-    // Initial Render
-    const subjectSelect = document.getElementById('subjectSelect');
-    if (subjectSelect && subjectSelect.value) {
-        renderSubjectChart(subjectSelect.value);
-
-        // Listen for changes
-        subjectSelect.addEventListener('change', function () {
-            renderSubjectChart(this.value);
-        });
-    }
-</script>
 
 {% endblock %}

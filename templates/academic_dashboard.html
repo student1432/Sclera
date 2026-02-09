@@ -312,55 +312,12 @@
                     }, 1000);
                 }
             });
+           
+        })()
 
-            resetBtn.addEventListener('click', function () {
-                clearInterval(interval);
-                running = false;
-                remaining = totalSeconds;
-                startBtn.textContent = 'Start';
-                render();
-            });
-
-            shortBtn.addEventListener('click', function () {
-                clearInterval(interval); running = false;
-                totalSeconds = 5 * 60; remaining = totalSeconds;
-                startBtn.textContent = 'Start'; render();
-            });
-
-            longBtn.addEventListener('click', function () {
-                clearInterval(interval); running = false;
-                totalSeconds = 15 * 60; remaining = totalSeconds;
-                startBtn.textContent = 'Start'; render();
-            });
-        })();
     </script>
-
-    <script>
-        (function () {
-            const root = document.documentElement;
-            const toggle = document.getElementById("themeToggle");
-
-            const savedTheme = localStorage.getItem("studyos-theme");
-            if (savedTheme) {
-                root.setAttribute("data-theme", savedTheme);
-            }
-
-            if (toggle) {
-                toggle.addEventListener("click", () => {
-                    const next =
-                        root.getAttribute("data-theme") === "dark"
-                            ? "light"
-                            : "dark";
-
-                    root.setAttribute("data-theme", next);
-                    localStorage.setItem("studyos-theme", next);
-                });
-            }
-        })();
-    </script>
-
-    <!-- Notification System -->
-    {% include 'notifications_snippet.html' %}
+     <!-- Notification System -->
+            {% include 'notifications_snippet.html' %}
 </body>
 
 </html>
