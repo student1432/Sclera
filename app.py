@@ -3368,5 +3368,6 @@ def log_response(response):
 if __name__ == '__main__':
     env = os.environ.get('FLASK_ENV', 'production')
     debug = env == 'development'
-    logger.info("application_startup", environment=env, debug=debug)
-    app.run(debug=debug, host='0.0.0.0', port=5000)
+    port = int(os.environ.get('PORT', 5000))  # Use PORT env var for deployment, default to 5000 for local dev
+    logger.info("application_startup", environment=env, debug=debug, port=port)
+    app.run(debug=debug, host='0.0.0.0', port=port)
