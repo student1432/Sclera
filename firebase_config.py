@@ -1,5 +1,5 @@
 import firebase_admin
-from firebase_admin import credentials, firestore, auth
+from firebase_admin import credentials, firestore, auth, storage
 import os
 import json
 
@@ -15,6 +15,10 @@ else:
     else:
         raise FileNotFoundError("Firebase credentials not found!")
 
-firebase_admin.initialize_app(cred)
+# Initialize Firebase with storage bucket
+firebase_admin.initialize_app(cred, {
+    'storageBucket': os.environ.get('FIREBASE_STORAGE_BUCKET', 'studyos-12345.appspot.com')  # Replace with your actual bucket
+})
+
 auth = auth 
 db = firestore.client()

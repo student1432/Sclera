@@ -466,7 +466,7 @@
             const root = document.documentElement;
             const toggle = document.getElementById("themeToggle");
 
-            const savedTheme = localStorage.getItem("studyos-theme");
+            const savedTheme = localStorage.getItem("sclera-theme");
             if (savedTheme) {
                 root.setAttribute("data-theme", savedTheme);
             }
@@ -479,7 +479,7 @@
                             : "dark";
 
                     root.setAttribute("data-theme", next);
-                    localStorage.setItem("studyos-theme", next);
+                    localStorage.setItem("sclera-theme", next);
                 });
             }
         })();

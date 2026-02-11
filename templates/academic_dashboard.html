@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Academic — Student Platform</title>
+    <title>Academic — Sclera</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
 </head>
 
@@ -315,6 +315,29 @@
            
         })()
 
+    </script>
+    <script>
+        (function () {
+            const root = document.documentElement;
+            const toggle = document.getElementById("themeToggle");
+
+            const savedTheme = localStorage.getItem("sclera-theme");
+            if (savedTheme) {
+                root.setAttribute("data-theme", savedTheme);
+            }
+
+            if (toggle) {
+                toggle.addEventListener("click", () => {
+                    const next =
+                        root.getAttribute("data-theme") === "dark"
+                            ? "light"
+                            : "dark";
+
+                    root.setAttribute("data-theme", next);
+                    localStorage.setItem("sclera-theme", next);
+                });
+            }
+        })();
     </script>
      <!-- Notification System -->
             {% include 'notifications_snippet.html' %}

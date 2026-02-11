@@ -54,6 +54,11 @@ class Config:
     MAIL_PASSWORD = os.environ.get('MAIL_PASSWORD', '')
     MAIL_DEFAULT_SENDER = os.environ.get('MAIL_DEFAULT_SENDER', 'noreply@studyos.app')
     
+    # AI Configuration (Gemini API)
+    GEMINI_API_KEY = os.environ.get('GEMINI_API_KEY')
+    if not GEMINI_API_KEY:
+        raise ValueError("GEMINI_API_KEY environment variable must be set for AI features")
+    
     # Environment
     ENV = os.environ.get('FLASK_ENV', 'production')
     DEBUG = ENV == 'development'

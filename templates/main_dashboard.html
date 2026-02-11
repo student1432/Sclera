@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Home — StudyOS</title>
+    <title>Home — Sclera</title>
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
     <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -35,9 +35,21 @@
                     style="text-decoration:none;">
                     <h3>Academic</h3>
                     <p>Your syllabus, chapters &amp; study progress</p>
-                    <div class="island-chart" style="width: 240px; height: 240px; margin: 0 auto; position: relative;">
-                        <canvas id="academicDonut" width="240" height="240" style="display: block;"></canvas>
-                        <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 24px; font-weight: bold; color: var(--text-primary);">{{ overall_progress }}%</div>
+                    <div class="academic-content">
+                        <div class="island-chart" style="flex-shrink: 0;">
+                            <canvas id="academicDonut" width="320" height="320" style="display: block;"></canvas>
+                            <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 28px; font-weight: bold; color: var(--text-primary); text-align: center; line-height: 1; white-space: nowrap; margin-top: 2px;">{{ overall_progress }}%</div>
+                        </div>
+                        <div class="academic-legend">
+                            <div class="legend-item">
+                                <span class="legend-label">Total Chapters:</span>
+                                <span class="legend-value">{{ total_chapters|default('0') }}</span>
+                            </div>
+                            <div class="legend-item">
+                                <span class="legend-label">Completed Chapters:</span>
+                                <span class="legend-value">{{ completed_chapters|default('0') }}</span>
+                            </div>
+                        </div>
                     </div>
                 </a>
 
@@ -45,12 +57,25 @@
                 <div class="dashboard-top-right">
 
                     <!-- Profile Island -->
-                    <a href="{{ url_for('profile_resume') }}" class="island" style="text-decoration:none;">
+                    <a href="{{ url_for('profile_resume') }}" class="island island-profile-split" style="text-decoration:none;">
                         <h3>Profile</h3>
-                        <div class="island-profile-snapshot">
-                            <p><strong>{{ name }}</strong></p>
-                            <p>{{ purpose_display }}{% if academic_summary %} · {{ academic_summary }}{% endif %}</p>
-                            <span class="snapshot-cta">View full profile →</span>
+                        <div class="profile-content-split">
+                            <div class="profile-picture-section">
+                                {% if profile_picture %}
+                                <img src="{{ url_for('serve_profile_picture', filename=profile_picture.split('/')[1]) }}" alt="Profile picture" class="profile-pic-large">
+                                {% else %}
+                                <div class="profile-pic-placeholder">
+                                    <span class="material-symbols-outlined">person</span>
+                                </div>
+                                {% endif %}
+                            </div>
+                            <div class="profile-info-section">
+                                <div class="island-profile-snapshot">
+                                    <p><strong>{{ name }}</strong></p>
+                                    <p>{{ purpose_display }}{% if academic_summary %} · {{ academic_summary }}{% endif %}</p>
+                                    <span class="snapshot-cta">View full profile →</span>
+                                </div>
+                            </div>
                         </div>
                     </a>
 
@@ -88,15 +113,28 @@
                 </div>
 
                 {% if subject_progress %}
-                <div class="subject-mini-bars">
+                <div class="subject-mini-donuts">
                     {% for subject, pct in subject_progress.items() %}
-                    <div class="subject-mini-bar">
-                        <div class="subject-mini-bar-label">
-                            <span>{{ subject }}</span>
-                            <span>{{ pct }}%</span>
-                        </div>
-                        <div class="subject-mini-bar-track">
-                            <div class="subject-mini-bar-fill" style="width:{{ pct }}%"></div>
+                    <div class="subject-donut-container">
+                        <div class="subject-donut-label">{{ subject }}</div>
+                        <div class="subject-chart-and-legend">
+                            <div class="subject-donut-wrapper">
+                                <svg class="subject-donut" viewBox="0 0 36 36" xmlns="http://www.w3.org/2000/svg">
+                                    <circle class="subject-donut-bg" cx="18" cy="18" r="16" fill="none" stroke-width="3"/>
+                                    <circle class="subject-donut-progress" cx="18" cy="18" r="16" fill="none" stroke-width="3" style="stroke-dasharray: 100.53; stroke-dashoffset: 0;"/>
+                                </svg>
+                                <div class="subject-donut-center">{{ pct }}%</div>
+                            </div>
+                            <div class="subject-legend">
+                                <div class="subject-legend-item">
+                                    <span class="subject-legend-label">Total:</span>
+                                    <span class="subject-legend-value">{{ chapters_by_subject.get(subject, {}).get('total', 0) }}</span>
+                                </div>
+                                <div class="subject-legend-item">
+                                    <span class="subject-legend-label">Done:</span>
+                                    <span class="subject-legend-value">{{ chapters_by_subject.get(subject, {}).get('completed', 0) }}</span>
+                                </div>
+                            </div>
                         </div>
                     </div>
                     {% endfor %}
@@ -108,26 +146,43 @@
     </div>
 
     <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            // Simple chart initialization
+        let academicChart = null;
+        
+        function updateAcademicChart() {
             const canvas = document.getElementById('academicDonut');
             if (!canvas) return;
             
-            // Set canvas dimensions
-            canvas.width = 240;
-            canvas.height = 240;
+            // Get responsive dimensions from CSS
+            const container = canvas.parentElement;
+            const computedStyle = getComputedStyle(container);
+            const width = parseInt(computedStyle.width);
+            const height = parseInt(computedStyle.height);
+            
+            // Set canvas dimensions to match container
+            canvas.width = width;
+            canvas.height = height;
             
             // Get the context
             const ctx = canvas.getContext('2d');
             const progress = JSON.parse('{{ overall_progress | tojson | safe }}');
             
+            // Get theme-aware colors
+            const rootStyles = getComputedStyle(document.documentElement);
+            const progressFill = rootStyles.getPropertyValue('--progress-fill').trim();
+            const progressTrack = rootStyles.getPropertyValue('--progress-track').trim();
+            
+            // Destroy existing chart if it exists
+            if (academicChart) {
+                academicChart.destroy();
+            }
+            
             // Create the chart
-            new Chart(ctx, {
+            academicChart = new Chart(ctx, {
                 type: 'doughnut',
                 data: {
                     datasets: [{
                         data: [progress, Math.max(1, 100 - progress)],
-                        backgroundColor: ['#666666', '#27272a'],
+                        backgroundColor: [progressFill, progressTrack],
                         borderWidth: 0
                     }]
                 },
@@ -141,6 +196,26 @@
                     }
                 }
             });
+        }
+        
+        document.addEventListener('DOMContentLoaded', function() {
+            updateAcademicChart();
+
+            // Animate subject donut charts
+            const donutProgressCircles = document.querySelectorAll('.subject-donut-progress');
+            donutProgressCircles.forEach(circle => {
+                const container = circle.closest('.subject-donut-container');
+                const percentageText = container.querySelector('.subject-donut-center');
+                const percentage = parseInt(percentageText.textContent);
+                
+                // Circumference of circle (2 * π * r)
+                const radius = 16;
+                const circumference = 2 * Math.PI * radius;
+                
+                // Set stroke-dasharray and stroke-dashoffset
+                circle.style.strokeDasharray = `${circumference}`;
+                circle.style.strokeDashoffset = `${circumference - (percentage / 100) * circumference}`;
+            });
         });
     </script>
 
@@ -149,7 +224,7 @@
             const root = document.documentElement;
             const toggle = document.getElementById("themeToggle");
 
-            const savedTheme = localStorage.getItem("studyos-theme");
+            const savedTheme = localStorage.getItem("sclera-theme");
             if (savedTheme) {
                 root.setAttribute("data-theme", savedTheme);
             }
@@ -162,7 +237,10 @@
                             : "dark";
 
                     root.setAttribute("data-theme", next);
-                    localStorage.setItem("studyos-theme", next);
+                    localStorage.setItem("sclera-theme", next);
+                    
+                    // Update chart colors for new theme
+                    setTimeout(updateAcademicChart, 10);
                 });
             }
         })();
@@ -170,6 +248,24 @@
 
     <!-- Notification System -->
     {% include 'notifications_snippet.html' %}
+
+    <!-- AI Planning Prompt Strip (only show if user has consented to AI) -->
+    {% if user.get('ai_consent') %}
+    <div class="ai-dashboard-prompt">
+        <div class="ai-prompt-content">
+            <div class="ai-prompt-text">
+                <h4>Plan Your Studies with AI</h4>
+                <p>Get personalized study plans and resolve doubts with our AI assistant.</p>
+            </div>
+            <div class="ai-prompt-action">
+                <a href="{{ url_for('ai_assistant') }}" class="btn btn-small">
+                    <span class="material-symbols-outlined" style="font-size: 16px;">smart_toy</span>
+                    Try AI Assistant
+                </a>
+            </div>
+        </div>
+    </div>
+    {% endif %}
 
 </body>
 

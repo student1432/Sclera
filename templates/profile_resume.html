@@ -23,6 +23,40 @@
             {% endwith %}
 
             <div class="profile-container">
+                {% if profile_banner %}
+                <!-- Hero Banner Section -->
+                <div class="profile-hero-banner">
+                    <img src="{{ url_for('serve_profile_banner', filename=profile_banner.split('/')[1]) }}" alt="Profile banner" class="hero-banner-image">
+                    {% if profile_picture %}
+                    <div class="profile-picture-hero">
+                        <img src="{{ url_for('serve_profile_picture', filename=profile_picture.split('/')[1]) }}" alt="Profile picture" class="hero-profile-pic">
+                    </div>
+                    {% endif %}
+                    <div class="hero-banner-overlay">
+                        <h1 class="hero-name">{{ name }}</h1>
+                        <p class="hero-subtitle">{{ purpose_display }}{% if academic_summary %} · {{ academic_summary }}{% endif %}</p>
+                        <div class="hero-edit-button">
+                            <a href="{{ url_for('profile_edit') }}" class="btn btn-small">Edit Profile</a>
+                        </div>
+                    </div>
+                </div>
+                {% elif profile_picture %}
+                <!-- Fallback: Profile picture only -->
+                <div class="profile-hero-fallback">
+                    <div class="profile-picture-large">
+                        <img src="{{ url_for('serve_profile_picture', filename=profile_picture.split('/')[1]) }}" alt="Profile picture" class="profile-pic-banner">
+                    </div>
+                    <div class="hero-fallback-content">
+                        <h1 class="profile-name">{{ name }}</h1>
+                        <p class="profile-subtitle">{{ purpose_display }}</p>
+                        <p class="profile-academic">{{ academic_summary }}</p>
+                        <div class="fallback-edit-button">
+                            <a href="{{ url_for('profile_edit') }}" class="btn btn-small">Edit Profile</a>
+                        </div>
+                    </div>
+                </div>
+                {% else %}
+                <!-- No banner or picture -->
                 <div class="profile-header-section">
                     <h1 class="profile-name">{{ name }}</h1>
                     <p class="profile-subtitle">{{ purpose_display }}</p>
@@ -31,6 +65,7 @@
                         <a href="{{ url_for('profile_edit') }}" class="btn">Edit Profile</a>
                     </div>
                 </div>
+                {% endif %}
 
                 <div class="profile-section">
                     <h3>About</h3>
@@ -96,7 +131,7 @@
             const root = document.documentElement;
             const toggle = document.getElementById("themeToggle");
 
-            const savedTheme = localStorage.getItem("studyos-theme");
+            const savedTheme = localStorage.getItem("sclera-theme");
             if (savedTheme) {
                 root.setAttribute("data-theme", savedTheme);
             }
@@ -109,7 +144,7 @@
                             : "dark";
 
                     root.setAttribute("data-theme", next);
-                    localStorage.setItem("studyos-theme", next);
+                    localStorage.setItem("sclera-theme", next);
                 });
             }
         })();

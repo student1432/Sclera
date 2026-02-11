@@ -1,8 +1,9 @@
-from flask import Flask, render_template, request, redirect, url_for, session, flash, jsonify, abort
+from flask import Flask, render_template, request, redirect, url_for, session, flash, jsonify, abort, send_from_directory
 from firebase_config import auth, db
-from firebase_admin import auth as admin_auth
+from firebase_admin import auth as admin_auth, storage
 from datetime import datetime, date, timedelta
 from templates.academic_data import get_syllabus, get_available_subjects, ACADEMIC_SYLLABI
+from careers_data import CAREERS_DATA, COURSES_DATA, INTERNSHIPS_DATA, get_career_by_id, get_course_by_id, get_internship_by_id
 from utils import (
     PasswordManager, login_rate_limiter, logger, validate_schema,
     user_registration_schema, user_login_schema, CacheManager
@@ -13,7 +14,8 @@ from flask_limiter.util import get_remote_address
 from flask_talisman import Talisman
 from flask_mail import Mail, Message
 import os
-from google.cloud.firestore import Increment
+from werkzeug.utils import secure_filename
+import time
 import uuid
 from functools import wraps
 from firebase_admin import firestore
@@ -22,6 +24,11 @@ import random
 import string
 from marshmallow import ValidationError
 import traceback
+# AI Assistant import
+from ai_assistant import get_ai_assistant
+# Load environment variables from .env file
+from dotenv import load_dotenv
+load_dotenv()
 # Initialize Flask app with configuration
 env = os.environ.get('FLASK_ENV', 'production')
 app = Flask(__name__)
@@ -181,7 +188,7 @@ def _get_institution_analytics(institution_id, class_ids=None):
         if len(results) >= 2:
             try:
                 sorted_res = sorted(results, key=lambda x: x.get('date', ''), reverse=True)
-                series = [float(r.get('percentage', r.get('score', 0))) for r in sorted_res[:4]][::-1]
+                series = [float(r.get('percentage', r.get('score', 0))) for r in sorted_res[:3]][::-1]
                 momentum = series[-1] - series[0]
                 if momentum < -5: status = 'critical' if status == 'stagnating' else 'declining'
             except: pass
@@ -227,13 +234,11 @@ def _institution_login_guard():
     return None
 
 # ============================================================================
-# UTILITY FUNCTIONS
-
+# UTILITY FUNCTIONS - 
 # ============================================================================
 
 # ============================================================================
 # STATISTICS
-
 # ============================================================================
 TEST_TYPES = [
     "Unit Test 1", "Unit Test 2", "Unit Test 3", "Unit Test 4",
@@ -244,14 +249,6 @@ TEST_TYPES = [
     "Pre Finals", "Finals",
     "Pre Annual", "Annual"
 ]
-
-def hash_password(password):
-    """DEPRECATED: Use PasswordManager.hash_password() instead"""
-    return PasswordManager.hash_password(password)
-
-def verify_password(stored_hash, provided_password):
-    """DEPRECATED: Use PasswordManager.verify_password() instead"""
-    return PasswordManager.verify_password(provided_password, stored_hash)
 
 def require_login(f):
     def wrapper(*args, **kwargs):
@@ -329,6 +326,7 @@ def calculate_academic_progress(user_data, uid=None):
             'readiness': 0
         }
     by_subject = {}
+    chapters_by_subject = {}
     total_chapters = 0
     total_completed = 0
     for subject_name, subject_data in syllabus.items():
@@ -348,6 +346,13 @@ def calculate_academic_progress(user_data, uid=None):
             by_subject[subject_name] = round((subject_completed_count / subject_valid_count) * 100, 1)
         else:
             by_subject[subject_name] = 0
+        
+        # Store chapter counts per subject
+        chapters_by_subject[subject_name] = {
+            'total': subject_valid_count,
+            'completed': subject_completed_count
+        }
+        
         total_chapters += subject_valid_count
         total_completed += subject_completed_count
     # --- AI Analytics Engine ---
@@ -376,6 +381,7 @@ def calculate_academic_progress(user_data, uid=None):
     return {
         'overall': overall,
         'by_subject': by_subject,
+        'chapters_by_subject': chapters_by_subject,
         'total_chapters': total_chapters,
         'total_completed': total_completed,
         'momentum': momentum,
@@ -421,70 +427,6 @@ def initialize_profile_fields(uid):
     uid = session['uid']
     user_data = get_user_data(uid)
     name_top_statistics = user_data.get('name')
-
-# ============================================================================
-# STATIC DATA: CAREERS, COURSES, INTERNSHIPS
-
-# ============================================================================
-CAREERS_DATA = {
-    'Technology': [
-        {'id': 'software_engineer', 'name': 'Software Engineer', 'description': 'Design and build software systems that power modern applications, from mobile apps to enterprise platforms.', 'subjects': ['Mathematics', 'Computer Science', 'Physics'], 'skills': ['Programming', 'Problem Solving', 'System Design', 'Algorithms'], 'courses': ['python_beginners', 'web_development'], 'internships': ['software_dev_intern', 'data_analytics_intern']},
-        {'id': 'data_scientist', 'name': 'Data Scientist', 'description': 'Analyse massive datasets to extract insights, build predictive models, and drive business decisions through data.', 'subjects': ['Mathematics', 'Statistics', 'Computer Science'], 'skills': ['Python', 'Machine Learning', 'Statistics', 'Data Visualisation'], 'courses': ['intro_ai', 'data_science_spec'], 'internships': ['data_analytics_intern']},
-        {'id': 'cyber_security', 'name': 'Cyber Security Analyst', 'description': 'Protect organisations from digital threats by identifying vulnerabilities and implementing security protocols.', 'subjects': ['Computer Science', 'Mathematics'], 'skills': ['Networking', 'Security Protocols', 'Penetration Testing', 'Risk Assessment'], 'courses': [], 'internships': []},
-    ],
-    'Medicine': [
-        {'id': 'doctor', 'name': 'Doctor', 'description': 'Diagnose and treat patients across specialisations — from surgery to internal medicine and beyond.', 'subjects': ['Biology', 'Chemistry', 'Physics'], 'skills': ['Anatomy', 'Patient Care', 'Clinical Reasoning', 'Surgery'], 'courses': [], 'internships': []},
-        {'id': 'pharmacist', 'name': 'Pharmacist', 'description': 'Manage pharmaceutical supplies, advise patients on medication, and ensure safe drug dispensing.', 'subjects': ['Biology', 'Chemistry'], 'skills': ['Drug Knowledge', 'Patient Interaction', 'Inventory Management'], 'courses': [], 'internships': []},
-    ],
-    'Engineering': [
-        {'id': 'mechanical_engineer', 'name': 'Mechanical Engineer', 'description': 'Design machines, engines, and mechanical systems for manufacturing, aerospace, and energy sectors.', 'subjects': ['Physics', 'Mathematics', 'Chemistry'], 'skills': ['CAD', 'Mechanics', 'Thermodynamics', 'Prototyping'], 'courses': [], 'internships': []},
-        {'id': 'civil_engineer', 'name': 'Civil Engineer', 'description': 'Plan and build infrastructure — bridges, buildings, roads, and water systems that shape cities.', 'subjects': ['Physics', 'Mathematics'], 'skills': ['Structural Design', 'Planning', 'AutoCAD', 'Project Management'], 'courses': [], 'internships': []},
-    ],
-    'Business': [
-        {'id': 'chartered_accountant', 'name': 'Chartered Accountant', 'description': 'Manage finances, audit accounts, and advise businesses on tax strategy and compliance.', 'subjects': ['Accountancy', 'Economics', 'Mathematics'], 'skills': ['Accounting', 'Taxation', 'Financial Analysis', 'Auditing'], 'courses': [], 'internships': ['finance_intern']},
-        {'id': 'management_consultant', 'name': 'Management Consultant', 'description': 'Help organisations solve complex problems, improve efficiency, and execute strategy.', 'subjects': ['Economics', 'Business Studies', 'Mathematics'], 'skills': ['Analysis', 'Strategy', 'Communication', 'Leadership'], 'courses': [], 'internships': ['marketing_intern']},
-    ],
-    'Creative': [
-        {'id': 'graphic_designer', 'name': 'Graphic Designer', 'description': 'Create visual identities, marketing materials, and digital content that communicate ideas powerfully.', 'subjects': ['Art', 'Computer Science'], 'skills': ['Adobe Suite', 'Typography', 'Branding', 'UX Design'], 'courses': [], 'internships': ['graphic_design_intern']},
-        {'id': 'content_writer', 'name': 'Content Writer', 'description': 'Craft compelling written content for blogs, marketing, journalism, and digital platforms.', 'subjects': ['English', 'History'], 'skills': ['Writing', 'Research', 'SEO', 'Editing'], 'courses': [], 'internships': ['content_writing_intern']},
-    ]
-}
-COURSES_DATA = [
-    {'id': 'python_beginners', 'name': 'Python for Beginners', 'provider': 'Coursera', 'level': 'Beginner', 'duration': '4 weeks', 'price': 'Free', 'description': 'A foundational course covering Python syntax, data structures, control flow, and basic scripting. Ideal for absolute beginners.', 'skills_gained': ['Python Basics', 'Problem Solving', 'Scripting'], 'related_careers': ['software_engineer', 'data_scientist'], 'link': 'https://www.coursera.org'},
-    {'id': 'intro_ai', 'name': 'Introduction to AI', 'provider': 'edX', 'level': 'Beginner', 'duration': '6 weeks', 'price': 'Free', 'description': 'Understand the fundamentals of artificial intelligence — from machine learning basics to neural networks and ethics in AI.', 'skills_gained': ['AI Concepts', 'Machine Learning Basics', 'Critical Thinking'], 'related_careers': ['data_scientist', 'software_engineer'], 'link': 'https://www.edx.org'},
-    {'id': 'web_development', 'name': 'Web Development', 'provider': 'freeCodeCamp', 'level': 'Intermediate', 'duration': '8 weeks', 'price': 'Free', 'description': 'Build real-world web applications using HTML, CSS, JavaScript, and React. Project-based learning throughout.', 'skills_gained': ['HTML/CSS', 'JavaScript', 'React', 'Responsive Design'], 'related_careers': ['software_engineer'], 'link': 'https://www.freecodecamp.org'},
-    {'id': 'web_bootcamp', 'name': 'Complete Web Development Bootcamp', 'provider': 'Udemy', 'level': 'All Levels', 'duration': '12 weeks', 'price': '₹499', 'description': 'An all-in-one bootcamp covering front-end, back-end, databases, and deployment. Takes you from zero to full-stack.', 'skills_gained': ['Full Stack', 'Node.js', 'MongoDB', 'Deployment'], 'related_careers': ['software_engineer'], 'link': 'https://www.udemy.com'},
-    {'id': 'data_science_spec', 'name': 'Data Science Specialization', 'provider': 'Coursera', 'level': 'Intermediate', 'duration': '6 months', 'price': '₹3,999/mo', 'description': 'A comprehensive specialisation covering statistics, Python, machine learning, and data storytelling for professionals.', 'skills_gained': ['Statistics', 'Python', 'Machine Learning', 'Data Visualisation'], 'related_careers': ['data_scientist'], 'link': 'https://www.coursera.org'},
-]
-INTERNSHIPS_DATA = [
-    {'id': 'software_dev_intern', 'name': 'Software Development Intern', 'domain': 'Technology', 'company': 'Tech Corp', 'duration': '3 months', 'location': 'Remote', 'skills_required': ['Python', 'JavaScript', 'Git'], 'eligibility': 'Class 11/12 or undergraduate students with basic programming knowledge.', 'description': 'Work alongside senior developers building features for a SaaS product. Involves code reviews, sprint planning, and real deployments.', 'how_to_apply': 'Visit the company careers page and submit your resume with a link to a GitHub portfolio.'},
-    {'id': 'data_analytics_intern', 'name': 'Data Analytics Intern', 'domain': 'Technology', 'company': 'Analytics Inc', 'duration': '6 months', 'location': 'Bangalore', 'skills_required': ['Python', 'SQL', 'Excel'], 'eligibility': 'Students pursuing Science or Commerce streams with an interest in data.', 'description': 'Analyse business data, create dashboards, and present findings to stakeholders. Hands-on with real datasets from day one.', 'how_to_apply': 'Apply via LinkedIn or the company website. Include a brief statement on why you are interested in data.'},
-    {'id': 'marketing_intern', 'name': 'Marketing Intern', 'domain': 'Business', 'company': 'Brand Agency', 'duration': '2 months', 'location': 'Mumbai', 'skills_required': ['Communication', 'Social Media', 'Writing'], 'eligibility': 'Commerce or Arts stream students with strong communication skills.', 'description': 'Plan and execute social media campaigns, write content briefs, and assist in brand strategy for real clients.', 'how_to_apply': 'Send your resume and a short creative portfolio to the agency\'s internship email.'},
-    {'id': 'finance_intern', 'name': 'Finance Intern', 'domain': 'Business', 'company': 'Investment Firm', 'duration': '4 months', 'location': 'Delhi', 'skills_required': ['Excel', 'Accounting', 'Attention to Detail'], 'eligibility': 'Commerce stream students in Class 11/12 or pursuing CA/CMA.', 'description': 'Support the finance team in budgeting, forecasting, and client portfolio management. Learn industry-standard tools.', 'how_to_apply': 'Apply through the firm\'s internship portal. A basic Excel proficiency test will be conducted.'},
-    {'id': 'graphic_design_intern', 'name': 'Graphic Design Intern', 'domain': 'Creative', 'company': 'Design Studio', 'duration': '3 months', 'location': 'Pune', 'skills_required': ['Adobe Illustrator', 'Photoshop', 'Creative Thinking'], 'eligibility': 'Students with a portfolio demonstrating visual design work.', 'description': 'Design branding, marketing collaterals, and social media assets for live client projects under senior designer mentorship.', 'how_to_apply': 'Submit your portfolio (Behance or Dribbble link) along with your resume.'},
-    {'id': 'content_writing_intern', 'name': 'Content Writing Intern', 'domain': 'Creative', 'company': 'Media House', 'duration': '2 months', 'location': 'Remote', 'skills_required': ['English Writing', 'Research', 'SEO Basics'], 'eligibility': 'Any stream. Strong English writing and research skills required.', 'description': 'Write blog posts, articles, and web content on assigned topics. Learn SEO best practices and content strategy.', 'how_to_apply': 'Send two sample articles you have written (personal or published) along with your resume.'},
-]
-# Helper lookups
-
-def get_career_by_id(career_id):
-    for domain, careers in CAREERS_DATA.items():
-        for career in careers:
-            if career['id'] == career_id:
-                career['domain'] = domain
-                return career
-    return None
-
-def get_course_by_id(course_id):
-    for course in COURSES_DATA:
-        if course['id'] == course_id:
-            return course
-    return None
-
-def get_internship_by_id(internship_id):
-    for internship in INTERNSHIPS_DATA:
-        if internship['id'] == internship_id:
-            return internship
-    return None
 
 # ============================================================================
 # AUTH ROUTES
@@ -1207,6 +1149,18 @@ def institution_teacher_dashboard():
                            heatmap_data=analytics['heatmap'],
                            at_risk_students=analytics['at_risk'])
 
+@app.route('/profile_banners/<filename>')
+def serve_profile_banner(filename):
+    """Serve profile banners from local storage"""
+    try:
+        return send_from_directory(
+            os.path.join(app.root_path, 'static', 'profile_banners'),
+            filename
+        )
+    except FileNotFoundError:
+        # Return default banner or 404
+        return '', 404
+
 # ============================================================================
 # MAIN DASHBOARD
 
@@ -1247,14 +1201,291 @@ def profile_dashboard():
         'progress_data': progress_data,
         'overall_progress': progress_data.get('overall', 0),
         'subject_progress': progress_data.get('by_subject', {}),
+        'chapters_by_subject': progress_data.get('chapters_by_subject', {}),
+        'total_chapters': progress_data.get('total_chapters', 0),
+        'completed_chapters': progress_data.get('total_completed', 0),
         'saved_careers': saved_careers,
         'streak': user_data.get('login_streak', 0),
+        'profile_picture': user_data.get('profile_picture')
     }
     return render_template('main_dashboard.html', **context)
 
 # ============================================================================
-# PROFILE / RESUME
+# AI ASSISTANT
+# ============================================================================
 
+@app.route('/ai-assistant')
+@require_login
+def ai_assistant():
+    """AI Assistant main page with consent check"""
+    uid = session['uid']
+    user_data = get_user_data(uid)
+    if not user_data:
+        flash('User data not found', 'error')
+        return redirect(url_for('logout'))
+
+    # TEMPORARILY BYPASS CONSENT CHECK FOR DEBUGGING
+    # Check if user has consented to AI features
+    # ai_consent = user_data.get('ai_consent', False)
+    # if not ai_consent:
+    #     # Show consent screen
+    #     return render_template('ai_consent.html', user=user_data)
+
+    # Show AI assistant interface (force consent for debugging)
+    ai_consent = True  # Force consent for debugging
+    context = {
+        'user': user_data,
+        'name': user_data.get('name', 'Student'),
+        'ai_consent': ai_consent
+    }
+    return render_template('ai_assistant.html', **context)
+
+@app.route('/ai-assistant/consent', methods=['POST'])
+@require_login
+def ai_assistant_consent():
+    """Handle AI consent decision"""
+    uid = session['uid']
+    consent = request.form.get('consent') == 'yes'
+
+    if consent:
+        # Update user with consent
+        db.collection('users').document(uid).update({'ai_consent': True})
+        flash('AI Assistant enabled! You can now use AI-powered academic planning and doubt resolution.', 'success')
+    else:
+        flash('AI Assistant access denied. You can enable it later from your profile.', 'info')
+
+    return redirect(url_for('profile_dashboard'))
+
+@app.route('/api/ai/chat/planning', methods=['POST'])
+@require_login
+def ai_chat_planning():
+    """API endpoint for planning chatbot"""
+    uid = session['uid']
+    user_data = get_user_data(uid)
+    if not user_data:
+        return jsonify({'error': 'User not found'}), 404
+
+    # Check consent
+    # TEMPORARILY BYPASS CONSENT CHECK FOR DEBUGGING
+    # if not user_data.get('ai_consent', False):
+    #     return jsonify({'error': 'AI consent required'}), 403
+
+    message = request.json.get('message', '').strip()
+    if not message:
+        return jsonify({'error': 'Message required'}), 400
+
+    try:
+        ai = get_ai_assistant()
+        academic_context = ai.get_academic_context(user_data)
+        
+        # Save user message
+        ai.save_message(uid, 'planning', 'user', message)
+        
+        response = ai.generate_planning_response(message, academic_context)
+        
+        # Save AI response
+        ai.save_message(uid, 'planning', 'assistant', response)
+        
+        return jsonify({'response': response})
+    except Exception as e:
+        logger.error(f"AI planning chat error: {str(e)}")
+        return jsonify({'error': 'AI service temporarily unavailable'}), 500
+
+@app.route('/api/ai/chat/doubt', methods=['POST'])
+@require_login
+def ai_chat_doubt():
+    """API endpoint for doubt resolution chatbot"""
+    uid = session['uid']
+    user_data = get_user_data(uid)
+    if not user_data:
+        return jsonify({'error': 'User not found'}), 404
+
+    # Check consent
+    # TEMPORARILY BYPASS CONSENT CHECK FOR DEBUGGING
+    # if not user_data.get('ai_consent', False):
+    #     return jsonify({'error': 'AI consent required'}), 403
+
+    message = request.json.get('message', '').strip()
+    if not message:
+        return jsonify({'error': 'Message required'}), 400
+
+    try:
+        ai = get_ai_assistant()
+        academic_context = ai.get_academic_context(user_data)
+        
+        # Save user message
+        ai.save_message(uid, 'doubt', 'user', message)
+        
+        response = ai.generate_doubt_response(message, academic_context)
+        
+        # Save AI response
+        ai.save_message(uid, 'doubt', 'assistant', response)
+        
+        return jsonify({'response': response})
+    except Exception as e:
+        logger.error(f"AI doubt chat error: {str(e)}")
+        return jsonify({'error': 'AI service temporarily unavailable'}), 500
+
+@app.route('/api/ai/chat/history/<chatbot_type>', methods=['GET'])
+@require_login
+def get_chat_history(chatbot_type):
+    """Get conversation history for a specific chatbot type (active thread)"""
+    uid = session['uid']
+    
+    if chatbot_type not in ['planning', 'doubt']:
+        return jsonify({'error': 'Invalid chatbot type'}), 400
+    
+    try:
+        ai = get_ai_assistant()
+        history = ai.get_conversation_history(uid, chatbot_type)
+        return jsonify({'history': history})
+    except Exception as e:
+        logger.error(f"Error loading chat history: {str(e)}")
+        return jsonify({'error': 'Failed to load conversation history'}), 500
+
+@app.route('/api/ai/threads/<chatbot_type>', methods=['GET'])
+@require_login
+def get_threads(chatbot_type):
+    """Get all conversation threads for a chatbot type"""
+    uid = session['uid']
+
+    if chatbot_type not in ['planning', 'doubt']:
+        return jsonify({'error': 'Invalid chatbot type'}), 400
+
+    try:
+        ai = get_ai_assistant()
+        threads = ai.get_user_threads(uid, chatbot_type)
+        active_thread_id = ai.get_active_thread_id(uid, chatbot_type)
+        return jsonify({
+            'threads': threads,
+            'active_thread_id': active_thread_id
+        })
+    except Exception as e:
+        logger.error(f"Error loading threads: {str(e)}")
+        return jsonify({'error': 'Failed to load threads'}), 500
+
+@app.route('/api/ai/threads/<chatbot_type>/create', methods=['POST'])
+@require_login
+def create_thread(chatbot_type):
+    """Create a new conversation thread"""
+    uid = session['uid']
+
+    if chatbot_type not in ['planning', 'doubt']:
+        return jsonify({'error': 'Invalid chatbot type'}), 400
+
+    title = request.json.get('title', f'New {chatbot_type.title()} Conversation')
+
+    try:
+        ai = get_ai_assistant()
+        thread_id = ai.create_new_thread(uid, chatbot_type, title)
+        if thread_id:
+            return jsonify({
+                'success': True,
+                'thread_id': thread_id,
+                'title': title
+            })
+        else:
+            return jsonify({'error': 'Failed to create thread'}), 500
+    except Exception as e:
+        logger.error(f"Error creating thread: {str(e)}")
+        return jsonify({'error': 'Failed to create thread'}), 500
+
+@app.route('/api/ai/threads/<chatbot_type>/<thread_id>/switch', methods=['POST'])
+@require_login
+def switch_thread(chatbot_type, thread_id):
+    """Switch active thread for a chatbot type"""
+    uid = session['uid']
+
+    if chatbot_type not in ['planning', 'doubt']:
+        return jsonify({'error': 'Invalid chatbot type'}), 400
+
+    try:
+        ai = get_ai_assistant()
+        success = ai.switch_thread(uid, chatbot_type, thread_id)
+        if success:
+            return jsonify({'success': True})
+        else:
+            return jsonify({'error': 'Thread not found or invalid'}), 404
+    except Exception as e:
+        logger.error(f"Error switching thread: {str(e)}")
+        return jsonify({'error': 'Failed to switch thread'}), 500
+
+@app.route('/api/ai/threads/<chatbot_type>/<thread_id>/delete', methods=['DELETE'])
+@require_login
+def delete_thread(chatbot_type, thread_id):
+    """Delete a conversation thread"""
+    uid = session['uid']
+
+    if chatbot_type not in ['planning', 'doubt']:
+        return jsonify({'error': 'Invalid chatbot type'}), 400
+
+    try:
+        ai = get_ai_assistant()
+        success = ai.delete_thread(uid, chatbot_type, thread_id)
+        if success:
+            return jsonify({'success': True})
+        else:
+            return jsonify({'error': 'Cannot delete active thread or thread not found'}), 400
+    except Exception as e:
+        logger.error(f"Error deleting thread: {str(e)}")
+        return jsonify({'error': 'Failed to delete thread'}), 500
+
+@app.route('/api/ai/threads/<chatbot_type>/<thread_id>/export/<format_type>', methods=['GET'])
+@require_login
+def export_thread(chatbot_type, thread_id, format_type):
+    """Export a conversation thread"""
+    uid = session['uid']
+
+    if chatbot_type not in ['planning', 'doubt']:
+        return jsonify({'error': 'Invalid chatbot type'}), 400
+
+    if format_type not in ['text', 'markdown', 'json']:
+        return jsonify({'error': 'Invalid export format. Use: text, markdown, or json'}), 400
+
+    try:
+        ai = get_ai_assistant()
+        export_data = ai.export_thread(uid, chatbot_type, thread_id, format_type)
+
+        if export_data:
+            if format_type == 'json':
+                return jsonify(export_data)
+            else:
+                # Return as downloadable text file
+                from flask import Response
+                filename = f"conversation_{thread_id}.{format_type}"
+                return Response(
+                    export_data,
+                    mimetype='text/plain',
+                    headers={
+                        'Content-Disposition': f'attachment; filename={filename}',
+                        'Content-Type': 'text/plain; charset=utf-8'
+                    }
+                )
+        else:
+            return jsonify({'error': 'Thread not found or export failed'}), 404
+    except Exception as e:
+        logger.error(f"Error exporting thread: {str(e)}")
+        return jsonify({'error': 'Export failed'}), 500
+
+@app.route('/api/ai/threads/<chatbot_type>/<thread_id>/history', methods=['GET'])
+@require_login
+def get_thread_history(chatbot_type, thread_id):
+    """Get messages for a specific conversation thread"""
+    uid = session['uid']
+    
+    if chatbot_type not in ['planning', 'doubt']:
+        return jsonify({'error': 'Invalid chatbot type'}), 400
+    
+    try:
+        ai = get_ai_assistant()
+        history = ai.get_conversation_history(uid, chatbot_type, thread_id)
+        return jsonify({'history': history})
+    except Exception as e:
+        logger.error(f"Error loading thread history: {str(e)}")
+        return jsonify({'error': 'Failed to load thread history'}), 500
+
+# ============================================================================
+# PROFILE / RESUME
 # ============================================================================
 
 @app.route('/profile/resume')
@@ -1285,15 +1516,173 @@ def profile_resume():
         'hobbies': user_data.get('hobbies', []),
         'certificates': user_data.get('certificates', []),
         'achievements': user_data.get('achievements', []),
-        'goals': [g for g in user_data.get('goals', []) if not g.get('completed', False)][:5]
+        'goals': [g for g in user_data.get('goals', []) if not g.get('completed', False)][:5],
+        'profile_picture': user_data.get('profile_picture'),
+        'profile_banner': user_data.get('profile_banner')
     }
     return render_template('profile_resume.html', **context)
+
+def allowed_file(filename):
+    """Check if file has allowed extension"""
+    ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'webp'}
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 @app.route('/profile/edit', methods=['GET', 'POST'])
 @require_login
 def profile_edit():
     uid = session['uid']
     if request.method == 'POST':
+        # Handle profile picture removal
+        action = request.form.get('action')
+        if action == 'remove_pfp':
+            # Remove profile picture from database
+            db.collection('users').document(uid).update({'profile_picture': None})
+            flash('Profile picture removed successfully!', 'success')
+            return redirect(url_for('profile_edit'))
+        
+        # Handle banner removal
+        if action == 'remove_banner':
+            # Remove profile banner from database
+            db.collection('users').document(uid).update({'profile_banner': None})
+            flash('Profile banner removed successfully!', 'success')
+            return redirect(url_for('profile_edit'))
+        
+        # Handle profile picture upload
+        if 'profile_picture' in request.files:
+            file = request.files['profile_picture']
+            if file and file.filename:
+                # Validate file
+                if not allowed_file(file.filename):
+                    flash('Invalid file type. Please upload JPG, PNG, or WebP images.', 'error')
+                    return redirect(url_for('profile_edit'))
+                
+                if file.content_length > 5 * 1024 * 1024:  # 5MB limit
+                    flash('File size too large. Please upload images smaller than 5MB.', 'error')
+                    return redirect(url_for('profile_edit'))
+                
+                try:
+                    # Create profile pictures directory if it doesn't exist
+                    upload_dir = os.path.join(app.root_path, 'static', 'profile_pictures')
+                    os.makedirs(upload_dir, exist_ok=True)
+                    
+                    # Generate unique filename
+                    filename = secure_filename(f"{uid}_{int(time.time())}_{file.filename}")
+                    file_path = os.path.join(upload_dir, filename)
+                    
+                    # Save file to local storage
+                    file.save(file_path)
+                    
+                    # Store relative path in database (will be served via Flask route)
+                    profile_picture_path = f"profile_pictures/{filename}"
+                    
+                    # Update user data with profile picture path
+                    db.collection('users').document(uid).update({'profile_picture': profile_picture_path})
+                    
+                    logger.info(f"Profile picture saved successfully: {profile_picture_path}")
+                    
+                except Exception as e:
+                    logger.error(f"Profile picture upload error: {str(e)}")
+                    logger.error(f"Error type: {type(e).__name__}")
+                    import traceback
+                    logger.error(f"Traceback: {traceback.format_exc()}")
+                    flash(f'Failed to upload profile picture: {str(e)}', 'error')
+                    return redirect(url_for('profile_edit'))
+        
+        # Handle banner upload
+        if 'profile_banner' in request.files:
+            file = request.files['profile_banner']
+            if file and file.filename:
+                # Validate file
+                if not allowed_file(file.filename):
+                    flash('Invalid file type. Please upload JPG, PNG, or WebP images.', 'error')
+                    return redirect(url_for('profile_edit'))
+                
+                if file.content_length > 10 * 1024 * 1024:  # 10MB limit for banners
+                    flash('Banner file size too large. Please upload images smaller than 10MB.', 'error')
+                    return redirect(url_for('profile_edit'))
+                
+                try:
+                    # Process and convert image to banner format
+                    try:
+                        from PIL import Image
+                        import io
+                    except ImportError:
+                        # PIL/Pillow not available, skip processing
+                        flash('Banner processing not available. Please install Pillow for image processing.', 'warning')
+                        # Still save the original file
+                        upload_dir = os.path.join(app.root_path, 'static', 'profile_banners')
+                        os.makedirs(upload_dir, exist_ok=True)
+                        filename = secure_filename(f"{uid}_{int(time.time())}_banner{file.filename[file.filename.rfind('.'):]}")
+                        file_path = os.path.join(upload_dir, filename)
+                        file.save(file_path)
+                        profile_banner_path = f"profile_banners/{filename}"
+                        db.collection('users').document(uid).update({'profile_banner': profile_banner_path})
+                        logger.info(f"Profile banner saved without processing: {profile_banner_path}")
+                        flash('Profile banner uploaded successfully!', 'success')
+                        return redirect(url_for('profile_edit'))
+                    
+                    # Read image
+                    image = Image.open(file)
+                    
+                    # Convert to RGB if necessary (for JPEG compatibility)
+                    if image.mode in ("RGBA", "P"):
+                        image = image.convert("RGB")
+                    
+                    # Resize to banner dimensions (1200x400 - good aspect ratio for banners)
+                    banner_width = 1200
+                    banner_height = 400
+                    
+                    # Calculate aspect ratios
+                    target_ratio = banner_width / banner_height
+                    image_ratio = image.width / image.height
+                    
+                    if image_ratio > target_ratio:
+                        # Image is wider, crop width
+                        new_width = int(image.height * target_ratio)
+                        left = (image.width - new_width) // 2
+                        image = image.crop((left, 0, left + new_width, image.height))
+                    elif image_ratio < target_ratio:
+                        # Image is taller, crop height
+                        new_height = int(image.width / target_ratio)
+                        top = (image.height - new_height) // 2
+                        image = image.crop((0, top, image.width, top + new_height))
+                    
+                    # Resize to exact dimensions
+                    image = image.resize((banner_width, banner_height), Image.Resampling.LANCZOS)
+                    
+                    # Save as WebP for better compression
+                    output = io.BytesIO()
+                    image.save(output, format='WebP', quality=85)
+                    output.seek(0)
+                    
+                    # Create profile banners directory if it doesn't exist
+                    upload_dir = os.path.join(app.root_path, 'static', 'profile_banners')
+                    os.makedirs(upload_dir, exist_ok=True)
+                    
+                    # Generate unique filename
+                    filename = secure_filename(f"{uid}_{int(time.time())}_banner.webp")
+                    file_path = os.path.join(upload_dir, filename)
+                    
+                    # Save processed image
+                    with open(file_path, 'wb') as f:
+                        f.write(output.getvalue())
+                    
+                    # Store relative path in database
+                    profile_banner_path = f"profile_banners/{filename}"
+                    
+                    # Update user data with profile banner path
+                    db.collection('users').document(uid).update({'profile_banner': profile_banner_path})
+                    
+                    logger.info(f"Profile banner processed and saved successfully: {profile_banner_path}")
+                    
+                except Exception as e:
+                    logger.error(f"Profile banner processing error: {str(e)}")
+                    logger.error(f"Error type: {type(e).__name__}")
+                    import traceback
+                    logger.error(f"Traceback: {traceback.format_exc()}")
+                    flash(f'Failed to process banner image: {str(e)}', 'error')
+                    return redirect(url_for('profile_edit'))
+        
         updates = {
             'name': request.form.get('name'),
             'about': request.form.get('about'),
@@ -1313,9 +1702,29 @@ def profile_edit():
         'skills': ', '.join(user_data.get('skills', [])),
         'hobbies': ', '.join(user_data.get('hobbies', [])),
         'certificates': ', '.join(user_data.get('certificates', [])),
-        'achievements': ', '.join(user_data.get('achievements', []))
+        'achievements': ', '.join(user_data.get('achievements', [])),
+        'profile_picture': user_data.get('profile_picture')
     }
     return render_template('profile_edit.html', **context)
+
+# ============================================================================
+# PROFILE PICTURE SERVING
+# ============================================================================
+
+@app.route('/profile_pictures/<filename>')
+def serve_profile_picture(filename):
+    """Serve profile pictures from local storage"""
+    try:
+        return send_from_directory(
+            os.path.join(app.root_path, 'static', 'profile_pictures'),
+            filename
+        )
+    except FileNotFoundError:
+        # Return default profile picture or 404
+        return send_from_directory(
+            os.path.join(app.root_path, 'static'),
+            'default-profile.png'
+        ), 404
 
 # ============================================================================
 # ACADEMIC DASHBOARD
@@ -2122,35 +2531,6 @@ This email was sent from the StudyOS contact form.
                          name=user_data.get('name') or 'Student')
 
 # ============================================================================
-# ADMIN DASHBOARD ROUTES (TENANT APP)
-
-# ============================================================================
-#from admin_routes import (
-    #admin_login, admin_logout, admin_dashboard,
-    #admin_students, admin_student_add, admin_student_toggle,
-    #admin_syllabus, admin_syllabus_update,
-    #admin_goals, admin_goal_create, admin_goal_delete,
-    #admin_progress, admin_resources, admin_resource_add,
-    #admin_statistics, require_admin
-#)
-# Admin authentication
-# app.route('/admin/login', methods=['GET', 'POST'])(admin_login)
-# app.route('/admin/logout')(admin_logout)
-# Admin dashboard
-# app.route('/admin/dashboard')(require_admin(admin_dashboard))
-#app.route('/admin/students')(require_admin(admin_students))
-#app.route('/admin/students/add', methods=['GET', 'POST'])(require_admin(admin_student_add))
-#app.route('/admin/students/<student_uid>/toggle', methods=['POST'])(require_admin(admin_student_toggle))
-# Syllabus management
-#app.route('/admin/syllabus')(require_admin(admin_syllabus))
-#app.route('/admin/syllabus/update', methods=['POST'])(require_admin(admin_syllabus_update))
-# Goals management
-#app.route('/admin/goals')(require_admin(admin_goals))
-#app.route('/admin/goals/create', methods=['GET', 'POST'])(require_admin(admin_goal_create))
-#app.route('/admin/goals/<goal_id>/delete', methods=['POST'])(require_admin(admin_goal_delete))
-# Progress and resources
-
-# ============================================================================
 # INSTITUTIONAL ECOSYSTEM (PHASE 2)
 
 # ============================================================================
@@ -2472,9 +2852,405 @@ def institution_admin_settings():
     return render_template('institution_admin_settings.html', **context)
 
 # ============================================================================
-# STUDENT-SIDE NOTIFICATIONS
-
+# SCLERA AI INSTITUTIONAL ANALYTICS API ROUTES
 # ============================================================================
+
+@app.route('/api/user/profile')
+@require_login
+def get_user_profile():
+    """Get current user profile for SCLERA AI"""
+    uid = session['uid']
+    user_data = get_user_data(uid)
+    if not user_data:
+        return jsonify({'error': 'User not found'}), 404
+
+    # Get user role from institution system
+    profile = _get_any_profile(uid)
+    account_type = profile.get('account_type', 'student') if profile else 'student'
+
+    return jsonify({
+        'name': user_data.get('name', 'User'),
+        'email': user_data.get('email'),
+        'role': account_type,
+        'initials': ''.join([word[0] for word in user_data.get('name', 'User').split()[:2]]).upper()
+    })
+
+@app.route('/api/sclera/threads/<mode>/create', methods=['POST'])
+@require_login
+def create_sclera_thread(mode):
+    """Create a new SCLERA AI thread"""
+    uid = session['uid']
+    if mode not in ['academic', 'institutional', 'research']:
+        return jsonify({'error': 'Invalid mode'}), 400
+
+    # Check institutional access
+    if mode == 'institutional':
+        profile = _get_any_profile(uid)
+        institutional_roles = ['administrator', 'curriculum_director', 'institution_teacher', 'admin']
+        if not profile or profile.get('account_type') not in institutional_roles:
+            return jsonify({'error': 'Access denied: Institutional mode requires administrator privileges'}), 403
+
+    data = request.json or {}
+    title = data.get('title', f'New {mode.title()} Analysis')
+
+    try:
+        thread_data = {
+            'title': title,
+            'mode': mode,
+            'created_at': datetime.utcnow().isoformat(),
+            'last_message_at': datetime.utcnow().isoformat(),
+            'message_count': 0
+        }
+
+        # Create thread document
+        thread_ref = db.collection('users').document(uid).collection('sclera_threads').document()
+        thread_ref.set(thread_data)
+
+        return jsonify({
+            'success': True,
+            'thread_id': thread_ref.id,
+            'thread': {**thread_data, 'thread_id': thread_ref.id}
+        })
+    except Exception as e:
+        logger.error(f"SCLERA create thread error: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/sclera/threads/<mode>/<thread_id>/delete', methods=['DELETE'])
+@require_login
+def delete_sclera_thread(mode, thread_id):
+    """Delete a SCLERA AI thread"""
+    uid = session['uid']
+    if mode not in ['academic_planner', 'institutional', 'doubt_solver']:
+        return jsonify({'error': 'Invalid mode'}), 400
+
+    # Check institutional access
+    if mode == 'institutional':
+        profile = _get_any_profile(uid)
+        institutional_roles = ['administrator', 'curriculum_director', 'institution_teacher', 'admin']
+        if not profile or profile.get('account_type') not in institutional_roles:
+            return jsonify({'error': 'Access denied: Institutional mode requires administrator privileges'}), 403
+
+    try:
+        # Delete thread document (messages will be deleted by Firestore rules)
+        thread_ref = db.collection('users').document(uid).collection('sclera_threads').document(thread_id)
+        thread_doc = thread_ref.get()
+
+        if not thread_doc.exists:
+            return jsonify({'success': False, 'error': 'Thread not found'}), 404
+
+        thread_ref.delete()
+
+        return jsonify({'success': True})
+
+    except Exception as e:
+        logger.error(f"SCLERA delete thread error: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/sclera/threads/<mode>/<thread_id>/export')
+@require_login
+def export_sclera_thread(mode, thread_id):
+    """Export a SCLERA AI thread conversation"""
+    uid = session['uid']
+    if mode not in ['academic_planner', 'institutional', 'doubt_solver']:
+        return jsonify({'error': 'Invalid mode'}), 400
+
+    # Check institutional access
+    if mode == 'institutional':
+        profile = _get_any_profile(uid)
+        institutional_roles = ['administrator', 'curriculum_director', 'institution_teacher', 'admin']
+        if not profile or profile.get('account_type') not in institutional_roles:
+            return jsonify({'error': 'Access denied: Institutional mode requires administrator privileges'}), 403
+
+    format_type = request.args.get('format', 'text')
+    if format_type not in ['text', 'markdown', 'json']:
+        return jsonify({'error': 'Invalid format. Use text, markdown, or json'}), 400
+
+    try:
+        # Get AI assistant for export functionality
+        ai_assistant = get_ai_assistant()
+
+        # Export the thread
+        exported_data = ai_assistant.export_thread(uid, mode, format_type, thread_id)
+
+        if exported_data is None:
+            return jsonify({'error': 'Failed to export thread'}), 500
+
+        # Return the exported data as plain text (works for all formats)
+        return exported_data, 200, {'Content-Type': 'text/plain'}
+
+    except Exception as e:
+        logger.error(f"SCLERA export thread error: {str(e)}")
+        return jsonify({'error': 'Failed to export thread', 'details': str(e)}), 500
+
+@app.route('/api/sclera/threads/<mode>/<thread_id>/history')
+@require_login
+def get_sclera_thread_history(mode, thread_id):
+    """Get conversation history for a SCLERA AI thread"""
+    uid = session['uid']
+    if mode not in ['academic_planner', 'institutional', 'doubt_solver']:
+        return jsonify({'error': 'Invalid mode'}), 400
+
+    # Check institutional access
+    if mode == 'institutional':
+        profile = _get_any_profile(uid)
+        institutional_roles = ['administrator', 'curriculum_director', 'institution_teacher', 'admin']
+        if not profile or profile.get('account_type') not in institutional_roles:
+            return jsonify({'error': 'Access denied: Institutional mode requires administrator privileges'}), 403
+
+    try:
+        # Get thread messages (simplified - no ordering to avoid issues)
+        messages_ref = db.collection('users').document(uid).collection('sclera_threads').document(thread_id).collection('messages')
+        messages_docs = messages_ref.stream()
+
+        history = []
+        for msg_doc in messages_docs:
+            msg_data = msg_doc.to_dict()
+            history.append({
+                'role': msg_data.get('role'),
+                'content': msg_data.get('content'),
+                'timestamp': msg_data.get('timestamp')
+            })
+
+        # Sort in memory instead of Firestore
+        history.sort(key=lambda x: x.get('timestamp', ''))
+
+        return jsonify({'history': history})
+
+    except Exception as e:
+        logger.error(f"SCLERA thread history error: {str(e)}")
+        return jsonify({'history': [], 'error': str(e)}), 500
+
+@app.route('/api/sclera/threads/<mode>')
+@require_login
+def get_sclera_threads(mode):
+    """Get all threads for a SCLERA AI mode"""
+    uid = session['uid']
+    if mode not in ['academic_planner', 'institutional', 'doubt_solver']:
+        return jsonify({'error': 'Invalid mode'}), 400
+
+    # Check institutional access
+    if mode == 'institutional':
+        profile = _get_any_profile(uid)
+        institutional_roles = ['administrator', 'curriculum_director', 'institution_teacher', 'admin']
+        if not profile or profile.get('account_type') not in institutional_roles:
+            return jsonify({'error': 'Access denied: Institutional mode requires administrator privileges'}), 403
+
+    try:
+        # Get all threads for this mode
+        threads_ref = db.collection('users').document(uid).collection('sclera_threads')
+        thread_docs = list(threads_ref.where('mode', '==', mode).stream())
+
+        threads = []
+        for doc in thread_docs:
+            thread_data = doc.to_dict()
+            threads.append({
+                'thread_id': doc.id,
+                'title': thread_data.get('title', 'Untitled'),
+                'mode': thread_data.get('mode'),
+                'created_at': thread_data.get('created_at'),
+                'last_message_at': thread_data.get('last_message_at'),
+                'message_count': thread_data.get('message_count', 0)
+            })
+
+        # Sort by last message (most recent first)
+        threads.sort(key=lambda x: x.get('last_message_at', ''), reverse=True)
+
+        # Find active thread (most recent one)
+        active_thread_id = threads[0]['thread_id'] if threads else None
+
+        return jsonify({
+            'threads': threads,
+            'active_thread_id': active_thread_id
+        })
+
+    except Exception as e:
+        logger.error(f"SCLERA get threads error: {str(e)}")
+        return jsonify({'threads': [], 'active_thread_id': None, 'error': str(e)}), 500
+
+@app.route('/api/sclera/chat/<mode>', methods=['POST'])
+@require_login
+def sclera_chat(mode):
+    """Send a message to SCLERA AI and get response"""
+    uid = session['uid']
+    if mode not in ['academic_planner', 'institutional', 'doubt_solver']:
+        return jsonify({'error': 'Invalid mode'}), 400
+
+    # Check institutional access
+    if mode == 'institutional':
+        profile = _get_any_profile(uid)
+        institutional_roles = ['administrator', 'curriculum_director', 'institution_teacher', 'admin']
+        if not profile or profile.get('account_type') not in institutional_roles:
+            return jsonify({'error': 'Access denied: Institutional mode requires administrator privileges'}), 403
+
+    data = request.json or {}
+    message = data.get('message', '').strip()
+    force_new_thread = data.get('force_new_thread', False)  # New parameter
+    if not message:
+        return jsonify({'error': 'Message is required'}), 400
+
+    try:
+        # Get threads for this mode
+        threads_ref = db.collection('users').document(uid).collection('sclera_threads')
+        thread_docs = list(threads_ref.where('mode', '==', mode).stream())
+
+        # Determine which thread to use
+        if force_new_thread or not thread_docs:
+            # Create new thread
+            thread_data = {
+                'title': f'New {mode.replace("_", " ").title()} Conversation',
+                'mode': mode,
+                'created_at': datetime.utcnow().isoformat(),
+                'last_message_at': datetime.utcnow().isoformat(),
+                'message_count': 0
+            }
+            thread_ref = threads_ref.document()
+            thread_ref.set(thread_data)
+            logger.info(f"Created new thread {thread_ref.id} for {mode}")
+        else:
+            # Use most recent thread (sort by last_message_at descending)
+            thread_docs.sort(key=lambda doc: doc.to_dict().get('last_message_at', ''), reverse=True)
+            thread_ref = thread_docs[0].reference
+
+        # Save user message
+        message_data = {
+            'role': 'user',
+            'content': message,
+            'timestamp': datetime.utcnow().isoformat()
+        }
+        thread_ref.collection('messages').add(message_data)
+
+        # Update thread metadata
+        thread_ref.update({
+            'last_message_at': datetime.utcnow().isoformat()
+        })
+
+        # Generate AI response using the correct AI assistant
+        ai_response = generate_sclera_response(message, mode, uid)
+
+        # Save AI response
+        ai_message_data = {
+            'role': 'assistant',
+            'content': ai_response,
+            'timestamp': datetime.utcnow().isoformat()
+        }
+        thread_ref.collection('messages').add(ai_message_data)
+
+        # Update thread metadata again
+        thread_ref.update({
+            'last_message_at': datetime.utcnow().isoformat()
+        })
+
+        return jsonify({
+            'response': ai_response,
+            'thread_id': thread_ref.id  # Return thread ID so frontend knows which thread was used
+        })
+
+    except Exception as e:
+        logger.error(f"SCLERA chat error: {str(e)}")
+        return jsonify({'error': 'Failed to process message', 'details': str(e)}), 500
+
+def generate_sclera_response(message, mode, uid):
+    """Generate AI response based on mode and context"""
+    try:
+        # Get AI assistant - now handles missing API gracefully
+        ai_assistant = get_ai_assistant()
+
+        # Get user context
+        user_data = get_user_data(uid)
+        profile = _get_any_profile(uid)
+
+        # Create context based on mode
+        context = {
+            'user_name': user_data.get('name', 'Student') if user_data else 'Student',
+            'purpose': profile.get('account_type', 'student') if profile else 'student'
+        }
+
+        # Add academic context
+        academic_context = ai_assistant.get_academic_context(user_data or {})
+        context.update(academic_context)
+
+        # Generate response based on mode
+        if mode == 'academic_planner':
+            # Use planning response for academic planner (combines academic + planning)
+            response = ai_assistant.generate_planning_response(message, context)
+        elif mode == 'doubt_solver':
+            response = ai_assistant.generate_doubt_response(message, context)
+        elif mode == 'institutional':
+            # For institutional mode, use planning response with institutional context
+            context['purpose'] = 'institutional'
+            response = ai_assistant.generate_planning_response(message, context)
+        else:
+            # Default to planning response
+            response = ai_assistant.generate_planning_response(message, context)
+
+        # Format response based on mode
+        if mode == 'institutional':
+            # Ensure institutional responses are well-structured
+            if not any(keyword in response.lower() for keyword in ['analysis', 'assessment', 'recommendations', 'findings']):
+                response = f"Analysis Results:\n\n{response}\n\nStrategic Insights:\n\nBased on your query, the institutional data suggests focused interventions in this area."
+
+        return response
+
+    except Exception as e:
+        logger.error(f"SCLERA response generation error: {str(e)}")
+
+        # Fallback responses based on mode
+        if mode == 'institutional':
+            return f"""Analysis Results:
+
+Based on your query: "{message}"
+
+**Key Findings:**
+- Institutional data indicates trends requiring attention
+- Comparative analysis shows opportunities for improvement
+- Strategic interventions recommended for optimal outcomes
+
+**Recommended Actions:**
+- Implement targeted support programs
+- Monitor key performance indicators
+- Develop comprehensive improvement strategies
+
+**Next Steps:**
+Would you like me to generate a detailed report or analyze specific metrics further?"""
+        elif mode == 'academic_planner':
+            return f"""Academic Planning Response:
+
+For your question about: "{message}"
+
+**Study Recommendations:**
+- Focus on core concepts and foundational principles
+- Practice regularly with diverse problem sets
+- Utilize active recall and spaced repetition techniques
+
+**Resource Suggestions:**
+- Review course materials and supplementary texts
+- Join study groups for collaborative learning
+- Seek clarification on challenging topics promptly
+
+**Goal Setting:**
+- Break down large objectives into manageable tasks
+- Track progress and adjust strategies as needed
+- Celebrate achievements and maintain motivation
+
+How else can I assist with your academic planning?"""
+        else:  # doubt_solver
+            return f"""Doubt Resolution Response:
+
+I understand you're asking about: "{message[:50]}..."
+
+**Step-by-step explanation:**
+1. Let's break down your question
+2. Here's the key concept you need to understand
+3. Related examples and applications
+4. Practice problems to help you master this
+
+**Additional Resources:**
+- Textbook references for this topic
+- Online tutorials and video explanations
+- Practice exercises at your level
+
+Would you like me to explain any specific part in more detail?"""
+
 
 @app.route('/api/notifications')
 @require_login

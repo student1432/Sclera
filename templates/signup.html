@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sign Up - StudyOS</title>
+    <title>Sign Up - Sclera</title>
     <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Newsreader:ital,opsz,wght@0,6..72,200..800;1,6..72,200..800&display=swap" rel="stylesheet"/>
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
@@ -138,7 +138,7 @@
 </div>
 <div class="text-center mb-12">
 <h1 class="font-serif text-4xl mb-4">Create Account</h1>
-<p class="theme-text-secondary">Join StudyOS and start your academic journey</p>
+<p class="theme-text-secondary">Join Sclera and start your academic journey</p>
 </div>
             
             {% with messages = get_flashed_messages(with_categories=true) %}
@@ -475,7 +475,7 @@ Teacher? <a href="{{ url_for('signup_teacher') }}" class="text-black hover:under
         const themeIcon = themeToggle.querySelector('span');
         
         // Load saved theme
-        const savedTheme = localStorage.getItem('studyos-theme') || 'light';
+        const savedTheme = localStorage.getItem('sclera-theme') || 'light';
         html.setAttribute('data-theme', savedTheme);
         body.setAttribute('data-theme', savedTheme);
         updateThemeIcon(savedTheme);
@@ -485,7 +485,7 @@ Teacher? <a href="{{ url_for('signup_teacher') }}" class="text-black hover:under
             const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
             html.setAttribute('data-theme', newTheme);
             body.setAttribute('data-theme', newTheme);
-            localStorage.setItem('studyos-theme', newTheme);
+            localStorage.setItem('sclera-theme', newTheme);
             updateThemeIcon(newTheme);
         });
 

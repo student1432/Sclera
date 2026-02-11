@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8"/>
     <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
-    <title>StudyOS | The Student Academic Operating System</title>
+    <title>Sclera | The Student Academic Operating System</title>
     <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Newsreader:ital,opsz,wght@0,6..72,200..800;1,6..72,200..800&display=swap" rel="stylesheet"/>
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
@@ -255,7 +255,7 @@
 <nav class="fixed top-0 w-full z-50 px-8 py-4 flex justify-between items-center backdrop-blur-xl transition-all duration-300" id="navbar">
 <div class="flex items-center gap-3">
 <div class="w-2.5 h-2.5 bg-gradient-to-r from-green-500 to-green-700 rounded-full accent-element"></div>
-<span class="text-[11px] font-bold tracking-[0.4em] uppercase">StudyOS</span>
+<span class="text-[11px] font-bold tracking-[0.4em] uppercase">Sclera</span>
 </div>
 <div class="hidden lg:flex gap-12 text-[8px] font-bold uppercase tracking-[0.5em] theme-text-secondary">
 <a class="hover:text-black transition-colors" href="#features">Features</a>
@@ -278,7 +278,7 @@ Sign Up
 <section class="min-h-screen flex flex-col justify-center px-12 lg:px-24 max-w-7xl pt-32">
 <div class="max-w-3xl">
 <h1 class="font-serif text-[clamp(3.5rem,8vw,6.5rem)] leading-[0.95] tracking-tight main-heading mb-12 text-reveal" style="transition-delay: 200ms;">
-                    StudyOS: <span class="italic font-light opacity-60">The Student Academic Operating System.</span>
+                    Sclera: <span class="italic font-light opacity-60">The Student Academic Operating System.</span>
 </h1>
 <p class="text-2xl font-light theme-text-secondary max-w-xl mb-16 leading-relaxed text-reveal" style="transition-delay: 400ms;">
                     A unified infrastructure for academics, habits, institutions, and direction.
@@ -310,7 +310,7 @@ Sign Up
 <div class="max-w-2xl">
 <span class="text-[10px] font-bold tracking-[0.5em] uppercase theme-text-secondary mb-8 block">SYSTEM SNAPSHOT</span>
 <h3 class="font-serif text-6xl lg:text-7xl mb-10 leading-tight">The Four Pillars</h3>
-<p class="text-xl theme-text-secondary font-light leading-relaxed">StudyOS's architecture is built on four core foundations designed for comprehensive academic management.</p>
+<p class="text-xl theme-text-secondary font-light leading-relaxed">Sclera's architecture is built on four core foundations designed for comprehensive academic management.</p>
 </div>
 </div>
 <div class="grid grid-cols-1 md:grid-cols-2 gap-12 max-w-5xl">
@@ -384,7 +384,7 @@ Sign Up
 <footer class="py-24 px-12 lg:px-24 bg-white border-t border-black/[0.03] flex flex-col md:flex-row justify-between items-center gap-16 relative z-20">
 <div class="flex items-center gap-4">
 <div class="fixed top-0 left-0 h-1 bg-gradient-to-r from-green-500 to-green-700 z-[100] transition-all duration-300" id="scrollIndicator" style="width: 100%; transform: translateX(-100%)"></div>
-<span class="text-[11px] font-bold tracking-[0.5em] uppercase theme-text-primary">StudyOS / v2.1.0</span>
+<span class="text-[11px] font-bold tracking-[0.5em] uppercase theme-text-primary">Sclera / v2.1.0</span>
 </div>
 <div class="flex flex-wrap justify-center gap-12 lg:gap-24">
 <a class="text-[10px] uppercase tracking-[0.4em] theme-text-secondary hover:theme-text-primary transition-colors" href="#">Ethics</a>
@@ -445,7 +445,7 @@ Sign Up
         const themeIcon = themeToggle.querySelector('span');
 
         // Load saved theme
-        const savedTheme = localStorage.getItem('studyos-theme') || 'light';
+        const savedTheme = localStorage.getItem('sclera-theme') || 'light';
         html.setAttribute('data-theme', savedTheme);
         body.setAttribute('data-theme', savedTheme);
         updateThemeIcon(savedTheme);
@@ -455,7 +455,7 @@ Sign Up
             const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
             html.setAttribute('data-theme', newTheme);
             body.setAttribute('data-theme', newTheme);
-            localStorage.setItem('studyos-theme', newTheme);
+            localStorage.setItem('sclera-theme', newTheme);
             updateThemeIcon(newTheme);
             
             // Update Grainient colors when theme changes

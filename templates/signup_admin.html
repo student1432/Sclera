@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin Sign Up - StudyOS</title>
+    <title>Admin Sign Up - Sclera</title>
     <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Newsreader:ital,opsz,wght@0,6..72,200..800;1,6..72,200..800&display=swap" rel="stylesheet"/>
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
@@ -484,7 +484,7 @@ Create Institution
         const themeIcon = themeToggle.querySelector('span');
         
         // Load saved theme
-        const savedTheme = localStorage.getItem('studyos-theme') || 'light';
+        const savedTheme = localStorage.getItem('sclera-theme') || 'light';
         html.setAttribute('data-theme', savedTheme);
         body.setAttribute('data-theme', savedTheme);
         updateThemeIcon(savedTheme);
@@ -494,7 +494,7 @@ Create Institution
             const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
             html.setAttribute('data-theme', newTheme);
             body.setAttribute('data-theme', newTheme);
-            localStorage.setItem('studyos-theme', newTheme);
+            localStorage.setItem('sclera-theme', newTheme);
             updateThemeIcon(newTheme);
         });
 

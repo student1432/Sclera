@@ -290,10 +290,10 @@
             const serverTheme = "{{ settings.get('theme', '') }}";
             if (serverTheme) {
                 root.setAttribute("data-theme", serverTheme);
-                localStorage.setItem("studyos-theme", serverTheme);
+                localStorage.setItem("sclera-theme", serverTheme);
             }
 
-            const savedTheme = localStorage.getItem("studyos-theme");
+            const savedTheme = localStorage.getItem("sclera-theme");
             if (savedTheme) {
                 root.setAttribute("data-theme", savedTheme);
             }
@@ -306,7 +306,7 @@
                             : "dark";
 
                     root.setAttribute("data-theme", next);
-                    localStorage.setItem("studyos-theme", next);
+                    localStorage.setItem("sclera-theme", next);
                 });
             }
         })();
