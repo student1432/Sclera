@@ -119,6 +119,13 @@ class AIAssistant:
             if role not in ['user', 'assistant']:
                 raise ValueError("Invalid role")
 
+            # Get user data for timezone
+            from app import get_user_data
+            from utils.timezone import get_current_time_for_user
+            user_data = get_user_data(uid)
+            if not user_data:
+                raise ValueError("User data not found")
+
             # Get active thread for this chatbot type
             active_thread_id = self.get_active_thread_id(uid, chatbot_type)
             if not active_thread_id:
@@ -130,7 +137,7 @@ class AIAssistant:
             message_data = {
                 'role': role,
                 'content': content,
-                'timestamp': datetime.utcnow().isoformat()
+                'timestamp': get_current_time_for_user(user_data)  # Use user's timezone
             }
 
             # Use flat structure: users/{uid}/ai_conversations/{chatbot_type}_{thread_id}
@@ -141,7 +148,7 @@ class AIAssistant:
             # Update thread metadata
             from firebase_admin import firestore
             thread_ref.update({
-                'last_message_at': datetime.utcnow().isoformat(),
+                'last_message_at': get_current_time_for_user(user_data),  # Use user's timezone
                 'message_count': firestore.Increment(1)
             })
 
@@ -177,6 +184,13 @@ class AIAssistant:
     def create_default_thread(self, uid: str, chatbot_type: str) -> str:
         """Create a default thread for a chatbot type"""
         try:
+            # Get user data for timezone
+            from app import get_user_data
+            from utils.timezone import get_current_time_for_user
+            user_data = get_user_data(uid)
+            if not user_data:
+                raise ValueError("User data not found")
+
             import uuid
             thread_id = str(uuid.uuid4())
 
@@ -184,8 +198,8 @@ class AIAssistant:
                 'thread_id': thread_id,
                 'title': f"{chatbot_type.title()} Assistant",
                 'chatbot_type': chatbot_type,
-                'created_at': datetime.utcnow().isoformat(),
-                'last_message_at': datetime.utcnow().isoformat(),
+                'created_at': get_current_time_for_user(user_data),  # Use user's timezone
+                'last_message_at': get_current_time_for_user(user_data),  # Use user's timezone
                 'message_count': 0
             }
 
@@ -207,6 +221,14 @@ class AIAssistant:
     def get_conversation_history(self, uid: str, chatbot_type: str, thread_id: str = None, limit: int = 50):
         """Get conversation history for a chatbot type and optional specific thread"""
         try:
+            # Get user data for timezone formatting
+            from app import get_user_data
+            from utils.timezone import format_timestamp_for_user
+            user_data = get_user_data(uid)
+            if not user_data:
+                logger.warning(f"User data not found for {uid}")
+                return []
+
             # Use provided thread_id or get active thread
             target_thread_id = thread_id or self.get_active_thread_id(uid, chatbot_type)
             if not target_thread_id:
@@ -227,7 +249,7 @@ class AIAssistant:
                 messages.append({
                     'role': msg_data['role'],
                     'content': msg_data['content'],
-                    'timestamp': msg_data['timestamp']
+                    'timestamp': msg_data['timestamp']  # Keep original UTC timestamp
                 })
 
             # Return in chronological order (oldest first)
@@ -242,6 +264,14 @@ class AIAssistant:
     def get_user_threads(self, uid: str, chatbot_type: str):
         """Get all threads for a user and chatbot type"""
         try:
+            # Get user data for timezone formatting
+            from app import get_user_data
+            from utils.timezone import format_timestamp_for_user
+            user_data = get_user_data(uid)
+            if not user_data:
+                logger.warning(f"User data not found for {uid}")
+                return []
+
             conversations_ref = self._get_db().collection('users').document(uid).collection('ai_conversations')
 
             threads = []
@@ -266,6 +296,13 @@ class AIAssistant:
     def create_new_thread(self, uid: str, chatbot_type: str, title: str = None) -> str:
         """Create a new conversation thread"""
         try:
+            # Get user data for timezone
+            from app import get_user_data
+            from utils.timezone import get_current_time_for_user
+            user_data = get_user_data(uid)
+            if not user_data:
+                raise ValueError("User data not found")
+
             import uuid
             thread_id = str(uuid.uuid4())
 
@@ -276,8 +313,8 @@ class AIAssistant:
                 'thread_id': thread_id,
                 'title': title,
                 'chatbot_type': chatbot_type,
-                'created_at': datetime.utcnow().isoformat(),
-                'last_message_at': datetime.utcnow().isoformat(),
+                'created_at': get_current_time_for_user(user_data),  # Use user's timezone
+                'last_message_at': get_current_time_for_user(user_data),  # Use user's timezone
                 'message_count': 0
             }
 
@@ -344,64 +381,61 @@ class AIAssistant:
 
         except Exception as e:
             logger.error(f"Error deleting thread: {str(e)}", exc_info=True)
-            return False
 
-    def export_thread(self, uid: str, mode: str, format_type: str = 'text', thread_id: str = None):
-        """Export a specific thread or the active thread in various formats"""
+    def rename_thread(self, uid: str, chatbot_type: str, thread_id: str, new_title: str) -> bool:
+        """Rename a conversation thread"""
         try:
-            # For sclera_threads, we need to find the thread by mode
-            if not thread_id:
-                # Find the most recent thread for this mode
-                threads_ref = self._get_db().collection('users').document(uid).collection('sclera_threads')
-                thread_docs = list(threads_ref.where('mode', '==', mode).stream())
+            # Validate inputs
+            if chatbot_type not in ['planning', 'doubt']:
+                raise ValueError("Invalid chatbot type")
+            if not new_title or not new_title.strip():
+                raise ValueError("Title cannot be empty")
 
-                if not thread_docs:
-                    logger.warning(f"No threads found for mode {mode}")
-                    return None
+            # Verify thread exists
+            thread_ref = self._get_db().collection('users').document(uid).collection('ai_conversations').document(f'{chatbot_type}_{thread_id}')
+            if not thread_ref.get().exists:
+                logger.warning(f"Thread {thread_id} does not exist for {chatbot_type}")
+                return False
 
-                # Sort by last_message_at descending and get most recent
-                thread_docs.sort(key=lambda doc: doc.to_dict().get('last_message_at', ''), reverse=True)
-                thread_id = thread_docs[0].id
-                thread_data = thread_docs[0].to_dict()
-            else:
-                # Get specific thread
-                thread_ref = self._get_db().collection('users').document(uid).collection('sclera_threads').document(thread_id)
-                thread_doc = thread_ref.get()
+            # Update thread title
+            thread_ref.update({'title': new_title.strip()})
 
-                if not thread_doc.exists:
-                    logger.warning(f"Thread document not found: {thread_id}")
-                    return None
-
-                thread_data = thread_doc.to_dict()
-
-            # Get messages for this thread
-            messages_ref = self._get_db().collection('users').document(uid).collection('sclera_threads').document(thread_id).collection('messages')
-            messages = []
-
-            for msg_doc in messages_ref.order_by('timestamp').stream():
-                msg_data = msg_doc.to_dict()
-                messages.append({
-                    'role': msg_data.get('role'),
-                    'content': msg_data.get('content'),
-                    'timestamp': msg_data.get('timestamp')
-                })
-
-            # Format the export
-            if format_type == 'text':
-                return self.format_sclera_thread_as_text(thread_data, messages)
-            elif format_type == 'markdown':
-                return self.format_sclera_thread_as_markdown(thread_data, messages)
-            elif format_type == 'json':
-                return json.dumps({
-                    'thread': thread_data,
-                    'messages': messages
-                }, indent=2)
-            else:
-                return None
+            logger.info(f"Renamed thread {thread_id} for {chatbot_type} to '{new_title.strip()}'")
+            return True
 
         except Exception as e:
-            logger.error(f"Error exporting thread: {str(e)}", exc_info=True)
-            return None
+            logger.error(f"Error renaming thread: {str(e)}", exc_info=True)
+            return False
+
+def delete_thread(self, uid: str, chatbot_type: str, thread_id: str) -> bool:
+    """Delete a conversation thread"""
+    try:
+        # Don't allow deletion of active thread
+        active_thread_id = self.get_active_thread_id(uid, chatbot_type)
+        if active_thread_id == thread_id:
+            logger.warning(f"Cannot delete active thread {thread_id}")
+            return False
+
+        # Delete thread document and all its messages
+        thread_ref = self._get_db().collection('users').document(uid).collection('ai_conversations').document(f'{chatbot_type}_{thread_id}')
+
+        # Delete all messages first
+        messages_ref = thread_ref.collection('messages')
+        from firebase_admin import firestore
+        batch = self._get_db().batch()
+        for msg_doc in messages_ref.stream():
+            batch.delete(msg_doc.reference)
+
+        # Delete thread document
+        batch.delete(thread_ref)
+        batch.commit()
+
+        logger.info(f"Deleted thread {thread_id} for {chatbot_type}")
+        return True
+
+    except Exception as e:
+        logger.error(f"Error deleting thread: {str(e)}", exc_info=True)
+        return False
 
     def format_sclera_thread_as_text(self, thread_data: dict, messages: list) -> str:
         """Format sclera thread as plain text"""

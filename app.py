@@ -8,6 +8,7 @@ from utils import (
     PasswordManager, login_rate_limiter, logger, validate_schema,
     user_registration_schema, user_login_schema, CacheManager
 )
+from utils.timezone import get_current_time_for_user
 from config import config
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
@@ -488,6 +489,7 @@ def signup():
                 'chapters_completed': {}, 'time_studied': 0,
                 'goals': [], 'tasks': [], 'todos': [], 'milestones': [],
                 'exam_results': [],
+                'timezone': 'Asia/Kolkata',  # Default timezone (IST)
                 'created_at': datetime.utcnow().isoformat()
             }
             db.collection('users').document(uid).set(user_data)
@@ -3099,8 +3101,8 @@ def sclera_chat(mode):
             thread_data = {
                 'title': f'New {mode.replace("_", " ").title()} Conversation',
                 'mode': mode,
-                'created_at': datetime.utcnow().isoformat(),
-                'last_message_at': datetime.utcnow().isoformat(),
+                'created_at': get_current_time_for_user({'uid': uid}),  # Use user's timezone
+                'last_message_at': get_current_time_for_user({'uid': uid}),  # Use user's timezone
                 'message_count': 0
             }
             thread_ref = threads_ref.document()
@@ -3115,13 +3117,14 @@ def sclera_chat(mode):
         message_data = {
             'role': 'user',
             'content': message,
-            'timestamp': datetime.utcnow().isoformat()
+            'timestamp': get_current_time_for_user({'uid': uid})  # Use user's timezone
         }
         thread_ref.collection('messages').add(message_data)
 
         # Update thread metadata
         thread_ref.update({
-            'last_message_at': datetime.utcnow().isoformat()
+            'last_message_at': get_current_time_for_user({'uid': uid}),  # Use user's timezone
+            'message_count': firestore.Increment(1)
         })
 
         # Generate AI response using the correct AI assistant
@@ -3131,13 +3134,13 @@ def sclera_chat(mode):
         ai_message_data = {
             'role': 'assistant',
             'content': ai_response,
-            'timestamp': datetime.utcnow().isoformat()
+            'timestamp': get_current_time_for_user({'uid': uid})  # Use user's timezone
         }
         thread_ref.collection('messages').add(ai_message_data)
 
         # Update thread metadata again
         thread_ref.update({
-            'last_message_at': datetime.utcnow().isoformat()
+            'last_message_at': get_current_time_for_user({'uid': uid})  # Use user's timezone
         })
 
         return jsonify({
@@ -3252,7 +3255,54 @@ I understand you're asking about: "{message[:50]}..."
 Would you like me to explain any specific part in more detail?"""
 
 
-@app.route('/api/notifications')
+@app.route('/api/sclera/threads/<mode>/<thread_id>/rename', methods=['POST'])
+@require_login
+def rename_sclera_thread(mode, thread_id):
+    """Rename a SCLERA AI conversation thread"""
+    uid = session['uid']
+    if mode not in ['academic_planner', 'institutional', 'doubt_solver']:
+        return jsonify({'error': 'Invalid mode'}), 400
+
+    # Check institutional access
+    if mode == 'institutional':
+        profile = _get_any_profile(uid)
+        institutional_roles = ['administrator', 'curriculum_director', 'institution_teacher', 'admin']
+        if not profile or profile.get('account_type') not in institutional_roles:
+            return jsonify({'error': 'Access denied: Institutional mode requires administrator privileges'}), 403
+
+    data = request.json or {}
+    new_title = data.get('title', '').strip()
+    if not new_title:
+        return jsonify({'error': 'Title is required'}), 400
+
+    # Map mode to chatbot_type for AIAssistant
+    mode_mapping = {
+        'academic_planner': 'planning',
+        'doubt_solver': 'doubt',
+        'institutional': 'planning'  # institutional uses planning responses
+    }
+    chatbot_type = mode_mapping.get(mode)
+    if not chatbot_type:
+        return jsonify({'error': 'Invalid mode'}), 400
+
+    try:
+        # Rename SCLERA thread directly in Firestore
+        thread_ref = db.collection('users').document(uid).collection('sclera_threads').document(thread_id)
+        thread_doc = thread_ref.get()
+
+        if not thread_doc.exists:
+            return jsonify({'error': 'Thread not found'}), 404
+
+        # Update the thread title
+        thread_ref.update({'title': new_title.strip()})
+
+        return jsonify({'success': True, 'message': 'Thread renamed successfully'})
+
+    except Exception as e:
+        logger.error(f"SCLERA rename thread error: {str(e)}")
+        return jsonify({'error': 'Failed to rename thread', 'details': str(e)}), 500
+
+@app.route('/api/notifications', methods=['GET'])
 @require_login
 def get_notifications():
     """API endpoint for students to fetch their notifications"""
