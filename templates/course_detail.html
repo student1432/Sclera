@@ -3,18 +3,20 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{ course.name }} — Student Platform</title>
+    <title>{{ course.name }} — Sclera</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
 </head>
 <body>
 <div class="dashboard-layout">
-    {% include '_sidebar.html' %}
 
     <main class="main-content">
-        <div class="breadcrumb">
-            <a href="{{ url_for('interests_dashboard') }}">Interests</a>
-            <span class="breadcrumb-separator">/</span>
-            <span>{{ course.name }}</span>
+        <div class="detail-header">
+            <button onclick="history.back()" class="btn btn-secondary back-btn">← Back</button>
+            <div class="breadcrumb">
+                <a href="{{ url_for('interests_dashboard') }}">Interests</a>
+                <span class="breadcrumb-separator">/</span>
+                <span>{{ course.name }}</span>
+            </div>
         </div>
 
         <div class="detail-page-layout">

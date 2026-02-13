@@ -3,15 +3,19 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Results - Student Platform</title>
+    <title>Results — Sclera</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
 </head>
 <body>
-    <div class="container">
-        <div class="dashboard-card">
-            <div class="dashboard-header">
-                <h1>Academic Results</h1>
-                <a href="{{ url_for('dashboard') }}" class="btn btn-secondary">Back to Dashboard</a>
+    <div class="dashboard-layout">
+
+        <main class="main-content">
+            <div class="detail-header">
+                <button onclick="history.back()" class="btn btn-secondary back-btn">← Back</button>
+                <div class="dashboard-header">
+                    <h1>Academic Results</h1>
+                    <a href="{{ url_for('dashboard') }}" class="btn btn-secondary">Back to Dashboard</a>
+                </div>
             </div>
             
             <div class="results-content">

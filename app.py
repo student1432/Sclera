@@ -709,7 +709,7 @@ def student_join_class():
                 'student_uids': firestore.ArrayUnion([uid])
             })
             flash('Successfully joined the class!', 'success')
-            return redirect(url_for('dashboard'))
+            return redirect(url_for('profile_dashboard'))
         except Exception as e:
             logger.error("student_join_class_error", error=str(e), invite_code=invite_code)
             flash('An error occurred while joining the class', 'error')
@@ -1203,6 +1203,8 @@ def institution_teacher_upload_file(class_id):
         file_path = os.path.join(upload_folder, f'{file_id}_{filename}')
         file.save(file_path)
         file_url = url_for('serve_upload', filename=f'{file_id}_{filename}')
+        # Get actual file size
+        file_size = os.path.getsize(file_path)
         # Save to Firestore
         db.collection('class_files').document(file_id).set({
             'id': file_id,
@@ -1212,7 +1214,7 @@ def institution_teacher_upload_file(class_id):
             'uploaded_by': uid,
             'upload_date': datetime.utcnow().isoformat(),
             'file_type': 'notes',
-            'file_size': file.content_length or 0
+            'file_size': file_size
         })
         flash('File uploaded successfully', 'success')
         return redirect(url_for('institution_teacher_dashboard'))
@@ -1288,7 +1290,10 @@ def profile_dashboard():
         'completed_chapters': progress_data.get('total_completed', 0),
         'saved_careers': saved_careers,
         'streak': user_data.get('login_streak', 0),
-        'profile_picture': user_data.get('profile_picture')
+        'profile_picture': user_data.get('profile_picture'),
+        'settings': user_data.get('settings', {}),
+        'in_institution': bool(user_data.get('institution_id')),
+        'has_class': bool(user_data.get('class_ids'))
     }
     return render_template('main_dashboard.html', **context)
 
@@ -1298,6 +1303,9 @@ def student_files():
     uid = session['uid']
     user_data = get_user_data(uid)
     class_ids = user_data.get('class_ids', [])
+    if not class_ids:
+        flash('You need to join a class to access class files.', 'info')
+        return redirect(url_for('profile_dashboard'))
     files = []
     for class_id in class_ids:
         class_files = db.collection('class_files').where('class_id', '==', class_id).stream()
@@ -1313,7 +1321,81 @@ def student_files():
     grouped_files = defaultdict(list)
     for f in files:
         grouped_files[f['class_name']].append(f)
-    return render_template('student_class_files.html', grouped_files=grouped_files)
+    return render_template('student_class_files.html', grouped_files=grouped_files, settings=user_data.get('settings', {}))
+
+@app.route('/student/class/management')
+@require_login
+def class_management():
+    uid = session['uid']
+    user_data = get_user_data(uid)
+    if not user_data:
+        flash('User data not found', 'error')
+        return redirect(url_for('profile_dashboard'))
+
+    institution_id = user_data.get('institution_id')
+    class_ids = user_data.get('class_ids', [])
+    if not institution_id or not class_ids:
+        flash('You need to be in an institution and class to access class management.', 'info')
+        return redirect(url_for('profile_dashboard'))
+
+    institution_doc = db.collection('institutions').document(institution_id).get()
+    institution_name = institution_doc.to_dict().get('name', 'Unknown') if institution_doc.exists else 'Unknown'
+
+    classes_info = []
+    for class_id in class_ids:
+        class_doc = db.collection('classes').document(class_id).get()
+        if not class_doc.exists:
+            continue
+        class_data = class_doc.to_dict()
+        teacher_uid = class_data.get('teacher_id')
+        teacher_profile = _get_teacher_profile(teacher_uid) if teacher_uid else None
+
+        # Fetch files for this class
+        files = []
+        class_files = db.collection('class_files').where('class_id', '==', class_id).stream()
+        for f in class_files:
+            f_data = f.to_dict()
+            files.append(f_data)
+
+        classes_info.append({
+            'id': class_id,
+            'name': class_data.get('name', 'Unknown'),
+            'teacher_name': teacher_profile.get('name', 'Unknown') if teacher_profile else 'Unknown',
+            'institution_name': institution_name,
+            'files': files
+        })
+
+    context = {
+        'user': user_data,
+        'name': user_data.get('name'),
+        'settings': user_data.get('settings', {}),
+        'classes_info': classes_info,
+        'in_institution': True,
+        'has_class': True
+    }
+    return render_template('class_management.html', **context)
+
+@app.route('/student/class/leave/<class_id>', methods=['POST'])
+@require_login
+def leave_class(class_id):
+    uid = session['uid']
+    user_data = get_user_data(uid)
+    if not user_data:
+        flash('User data not found', 'error')
+        return redirect(url_for('profile_dashboard'))
+
+    class_ids = user_data.get('class_ids', [])
+    if class_id not in class_ids:
+        flash('You are not enrolled in this class.', 'error')
+        return redirect(url_for('class_management'))
+
+    # Remove the class_id from user's class_ids
+    db.collection('users').document(uid).update({
+        'class_ids': firestore.ArrayRemove([class_id])
+    })
+
+    flash('You have successfully left the class.', 'success')
+    return redirect(url_for('class_management'))
 
 @app.route('/download/class_file/<file_id>', methods=['GET'])
 @require_login
@@ -1389,7 +1471,10 @@ def community_dashboard():
         'connections_data': connections_data,
         'connections_count': len(connections_data.get('accepted', [])),
         'user_bubbles': user_bubbles,
-        'bubble_invitations': bubble_invitations
+        'bubble_invitations': bubble_invitations,
+        'settings': user_data.get('settings', {}),
+        'in_institution': bool(user_data.get('institution_id')),
+        'has_class': bool(user_data.get('class_ids'))
     }
 
     return render_template('community_dashboard.html', **context)
@@ -1486,7 +1571,10 @@ def ai_assistant():
     context = {
         'user': user_data,
         'name': user_data.get('name', 'Student'),
-        'ai_consent': ai_consent
+        'ai_consent': ai_consent,
+        'settings': user_data.get('settings', {}),
+        'in_institution': bool(user_data.get('institution_id')),
+        'has_class': bool(user_data.get('class_ids'))
     }
     return render_template('ai_assistant.html', **context)
 
@@ -3001,7 +3089,10 @@ def academic_dashboard():
         'total_exams': total_exams,
         'avg_percentage': avg_percentage,
         'subjects': subjects,
-        'test_types': TEST_TYPES
+        'test_types': TEST_TYPES,
+        'settings': user_data.get('settings', {}),
+        'in_institution': bool(user_data.get('institution_id')),
+        'has_class': bool(user_data.get('class_ids'))
     }
     return render_template('academic_dashboard.html', **context)
 
@@ -3017,7 +3108,9 @@ def master_library():
         'user': user_data,
         'name': user_data.get('name'),
         'library_data': ACADEMIC_SYLLABI,
-        'active_nav': 'library'
+        'active_nav': 'library',
+        'in_institution': bool(user_data.get('institution_id')),
+        'has_class': bool(user_data.get('class_ids'))
     }
     return render_template('master_library.html', **context)
 
@@ -3062,7 +3155,9 @@ def chapter_detail(subject_name, chapter_name):
         'subject_name': subject_name,
         'chapter_name': chapter_name,
         'topics': topics,
-        'is_completed': is_completed
+        'is_completed': is_completed,
+        'in_institution': bool(user_data.get('institution_id')),
+        'has_class': bool(user_data.get('class_ids'))
     }
     return render_template('chapter_detail.html', **context)
 
@@ -3126,7 +3221,10 @@ def study_mode():
     return render_template(
         'study_mode.html',
         name=name,
-        todos=todo_list
+        todos=todo_list,
+        user=user_data,
+        in_institution=bool(user_data.get('institution_id')),
+        has_class=bool(user_data.get('class_ids'))
     )
 
 @app.route('/study-mode/time', methods=['POST'])
@@ -3387,7 +3485,10 @@ def statistics_dashboard():
         },
         subject_performance=subject_performance,
         subjects=sorted(list(subject_performance.keys())), # Only show subjects that have data
-        name=user.get('name', 'Student')
+        name=user.get('name', 'Student'),
+        user=user,
+        in_institution=bool(user.get('institution_id')),
+        has_class=bool(user.get('class_ids'))
     )
 
 # ============================================================================
@@ -3457,6 +3558,8 @@ def interests_dashboard():
         'all_careers': CAREERS_DATA,
         'all_courses': COURSES_DATA,
         'all_internships': INTERNSHIPS_DATA,
+        'in_institution': bool(user_data.get('institution_id')),
+        'has_class': bool(user_data.get('class_ids'))
     }
     return render_template('interests_dashboard.html', **context)
 
@@ -3484,6 +3587,8 @@ def career_detail(career_id):
         'is_saved': is_saved,
         'related_courses': related_courses,
         'related_internships': related_internships,
+        'in_institution': bool(user_data.get('institution_id')),
+        'has_class': bool(user_data.get('class_ids'))
     }
     return render_template('career_detail.html', **context)
 
@@ -3519,6 +3624,8 @@ def course_detail(course_id):
         'name': user_data.get('name'),
         'course': course,
         'related_careers': related_careers,
+        'in_institution': bool(user_data.get('institution_id')),
+        'has_class': bool(user_data.get('class_ids'))
     }
     return render_template('course_detail.html', **context)
 
@@ -3535,6 +3642,8 @@ def internship_detail(internship_id):
         'user': user_data,
         'name': user_data.get('name'),
         'internship': internship,
+        'in_institution': bool(user_data.get('institution_id')),
+        'has_class': bool(user_data.get('class_ids'))
     }
     return render_template('internship_detail.html', **context)
 
@@ -3568,7 +3677,7 @@ def todo():
 def about():
     uid = session['uid']
     user_data = get_user_data(uid)
-    return render_template('about.html', user=user_data, name=user_data.get('name') if user_data else 'Student')
+    return render_template('about.html', user=user_data, name=user_data.get('name') if user_data else 'Student', in_institution=bool(user_data.get('institution_id')) if user_data else False, has_class=bool(user_data.get('class_ids')) if user_data else False)
 
 @app.route('/settings', methods=['GET', 'POST'])
 @require_login
@@ -3646,7 +3755,9 @@ def settings():
                          available_boards=available_boards,
                          available_grades=available_grades,
                          available_exams=available_exams,
-                         available_streams=available_streams)
+                         available_streams=available_streams,
+                         in_institution=bool(user_data.get('institution_id')),
+                         has_class=bool(user_data.get('class_ids')))
 
 @app.route('/contact', methods=['GET', 'POST'])
 @require_login
@@ -3719,7 +3830,9 @@ This email was sent from the StudyOS contact form.
         return redirect(url_for('contact'))
     return render_template('contact.html',
                          user=user_data,
-                         name=user_data.get('name') or 'Student')
+                         name=user_data.get('name') or 'Student',
+                         in_institution=bool(user_data.get('institution_id')),
+                         has_class=bool(user_data.get('class_ids')))
 
 # ============================================================================
 # INSTITUTIONAL ECOSYSTEM (PHASE 2)

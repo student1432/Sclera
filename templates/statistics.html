@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <title>Statistics</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         .chart-container {
@@ -42,9 +43,9 @@
 <body>
     {% block content %}
 
-    <div class="dashboard-layout-statistics">
-        <!-- SIDEBAR -->
-        {% include '_sidebar.html' %}
+    <div class="dashboard-layout">
+        <!-- TOPNAV -->
+        {% include '_topnav.html' %}
 
 
         <main class="main-content">
@@ -282,7 +283,7 @@
                         : "dark";
 
                 root.setAttribute("data-theme", next);
-                localStorage.setItem("sclera-theme", next);
+                localStorage.setItem('sclera-theme', next);
             });
         }
     })();

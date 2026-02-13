@@ -3,40 +3,22 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{ chapter_name }} — Student Platform</title>
+    <title>{{ chapter_name }} — Sclera</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
 </head>
 <body>
 <div class="dashboard-layout">
 
-    <aside class="sidebar">
-        <div class="sidebar-header">
-            <a href="{{ url_for('profile_resume') }}">{{ name }}</a>
-        </div>
-        <nav class="sidebar-nav">
-            <a href="{{ url_for('profile_dashboard') }}" class="nav-item">Home</a>
-            <a href="{{ url_for('academic_dashboard') }}" class="nav-item active">Academic</a>
-            <a href="{{ url_for('interests_dashboard') }}" class="nav-item">Interests</a>
-            <a href="{{ url_for('statistics_dashboard') }}" class="nav-item">Statistics</a>
-        </nav>
-        <div class="sidebar-footer">
-            div class="sidebar-footer">
-            <a id="themeToggle" class="nav-item">
-    Toggle theme
-            </a>
-            <a href="{{ url_for('about') }}" class="nav-item">Settings</a>
-            <a href="{{ url_for('about') }}" class="nav-item">Contact</a>
-            <a href="{{ url_for('logout') }}" class="nav-item">Logout</a>
-        </div>
-    </aside>
-
     <main class="main-content">
-        <div class="breadcrumb">
-            <a href="{{ url_for('academic_dashboard') }}">Academic</a>
-            <span class="breadcrumb-separator">/</span>
-            <span style="color:var(--text-muted);">{{ subject_name }}</span>
-            <span class="breadcrumb-separator">/</span>
-            <span>{{ chapter_name }}</span>
+        <div class="detail-header">
+            <button onclick="history.back()" class="btn btn-secondary back-btn">← Back</button>
+            <div class="breadcrumb">
+                <a href="{{ url_for('academic_dashboard') }}">Academic</a>
+                <span class="breadcrumb-separator">/</span>
+                <span style="color:var(--text-muted);">{{ subject_name }}</span>
+                <span class="breadcrumb-separator">/</span>
+                <span>{{ chapter_name }}</span>
+            </div>
         </div>
 
         {% if topics %}

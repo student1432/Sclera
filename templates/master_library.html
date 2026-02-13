@@ -4,7 +4,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Master Academic Library | StudyOS</title>
+    <title>Library — Sclera</title>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Symbols+Outlined">
     <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
     <style>
         .library-container {
@@ -200,66 +201,63 @@
 
 <body>
     <div class="dashboard-layout">
-        <aside class="sidebar library-sidebar">
-            <div class="sidebar-header">
-                <a href="{{ url_for('profile_edit') }}">{{ name }}</a>
-                <div class="sidebar-subtitle">Master Library</div>
-            </div>
-            <nav class="sidebar-nav">
-
-                <a href="#highschool" class="nav-item active" onclick="showLibrarySection('highschool')">
-                    <span class="nav-icon"></span> High School
-                </a>
-                <a href="#exams" class="nav-item" onclick="showLibrarySection('exams')">
-                    <span class="nav-icon"></span> Competitive Exams
-                </a>
-            </nav>
-            <div class="sidebar-footer">
-                <a id="themeToggle" class="nav-item" style="cursor:pointer;">
-                    Toggle theme
-                </a>
-                <a href="{{ url_for('profile_dashboard') }}" class="nav-item">
-                    <span class="nav-icon"></span> Back to Home
-                </a>
-                <a href="{{ url_for('academic_dashboard') }}" class="nav-item">My Academic Path</a>
-                <a href="{{ url_for('logout') }}" class="nav-item">Logout</a>
-            </div>
-        </aside>
+        <!-- TOPNAV -->
+        {% include '_topnav.html' %}
 
         <main class="main-content">
-            <div class="library-container">
-                <header class="content-header">
-                    <h1>Academic Master Library</h1>
-                    <p>Browse standards, boards, grades, and subjects from our comprehensive academic database.</p>
-                </header>
-
-                <div class="search-container">
-                    <input type="text" id="librarySearch" class="search-input"
-                        placeholder="Search for subjects, chapters or topics...">
-                </div>
-
-                <div id="highschool" class="library-section active">
-                    <div class="filter-pill-container" id="gradeFilters">
-                        <button class="filter-pill" onclick="filterByGrade('all')">All Grades</button>
-                        <button class="filter-pill" onclick="filterByGrade('9')">Grade 9</button>
-                        <button class="filter-pill" onclick="filterByGrade('10')">Grade 10</button>
-                        <button class="filter-pill" onclick="filterByGrade('11')">Grade 11</button>
-                        <button class="filter-pill" onclick="filterByGrade('12')">Grade 12</button>
+            <div class="library-layout">
+                <!-- SECONDARY SIDEBAR -->
+                <aside class="library-sidebar">
+                    <div class="sidebar-header">
+                        <h3>Sections</h3>
                     </div>
+                    <nav class="sidebar-nav">
+                        <a href="#highschool" class="nav-item active" onclick="showLibrarySection('highschool')">
+                            <span class="nav-icon"></span> High School
+                        </a>
+                        <a href="#exams" class="nav-item" onclick="showLibrarySection('exams')">
+                            <span class="nav-icon"></span> Competitive Exams
+                        </a>
+                    </nav>
+                </aside>
 
-                    <div class="library-grid" id="highschoolGrid">
-                        <!-- Cards will be populated by JS -->
+                <!-- MAIN LIBRARY CONTENT -->
+                <div class="library-main">
+                    <div class="library-container">
+                        <header class="content-header">
+                            <h1>Academic Master Library</h1>
+                            <p>Browse standards, boards, grades, and subjects from our comprehensive academic database.</p>
+                        </header>
+
+                        <div class="search-container">
+                            <input type="text" id="librarySearch" class="search-input"
+                                placeholder="Search for subjects, chapters or topics...">
+                        </div>
+
+                        <div id="highschool" class="library-section active">
+                            <div class="filter-pill-container" id="gradeFilters">
+                                <button class="filter-pill" onclick="filterByGrade('all')">All Grades</button>
+                                <button class="filter-pill" onclick="filterByGrade('9')">Grade 9</button>
+                                <button class="filter-pill" onclick="filterByGrade('10')">Grade 10</button>
+                                <button class="filter-pill" onclick="filterByGrade('11')">Grade 11</button>
+                                <button class="filter-pill" onclick="filterByGrade('12')">Grade 12</button>
+                            </div>
+
+                            <div class="library-grid" id="highschoolGrid">
+                                <!-- Cards will be populated by JS -->
+                            </div>
+                        </div>
+
+                        <div id="exams" class="library-section">
+                            <div class="library-grid" id="examsGrid">
+                                <!-- Exam cards will be populated by JS -->
+                            </div>
+                        </div>
+
+                        <div id="noResults" class="no-results">
+                            No matching academic data found.
+                        </div>
                     </div>
-                </div>
-
-                <div id="exams" class="library-section">
-                    <div class="library-grid" id="examsGrid">
-                        <!-- Exam cards will be populated by JS -->
-                    </div>
-                </div>
-
-                <div id="noResults" class="no-results">
-                    No matching academic data found.
                 </div>
             </div>
         </main>

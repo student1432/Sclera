@@ -4,14 +4,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Profile — Student Platform</title>
+    <title>Profile Resume — Sclera</title>
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
     <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
 </head>
 
 <body>
     <div class="dashboard-layout">
 
-        {% include '_sidebar.html' %}
+        {% include '_topnav.html' %}
 
         <main class="main-content">
             {% with messages = get_flashed_messages(with_categories=true) %}
@@ -126,29 +127,6 @@
         </main>
     </div>
 
-    <script>
-        (function () {
-            const root = document.documentElement;
-            const toggle = document.getElementById("themeToggle");
-
-            const savedTheme = localStorage.getItem("sclera-theme");
-            if (savedTheme) {
-                root.setAttribute("data-theme", savedTheme);
-            }
-
-            if (toggle) {
-                toggle.addEventListener("click", () => {
-                    const next =
-                        root.getAttribute("data-theme") === "dark"
-                            ? "light"
-                            : "dark";
-
-                    root.setAttribute("data-theme", next);
-                    localStorage.setItem("sclera-theme", next);
-                });
-            }
-        })();
-    </script>
     {% include 'notifications_snippet.html' %}
 </body>
 

@@ -5,13 +5,14 @@
     <meta charset="UTF-8">
     <title>Study Mode</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Symbols+Outlined">
 </head>
 
 <body>
 
     <div class="dashboard-layout">
 
-        {% include '_sidebar.html' %}
+        {% include '_topnav.html' %}
 
         <!-- MAIN -->
         <main class="main-content">
@@ -201,7 +202,7 @@
                             : "dark";
 
                     root.setAttribute("data-theme", next);
-                    localStorage.setItem("studyos-theme", next);
+                    localStorage.setItem("sclera-theme", next);
                 });
             }
         })();

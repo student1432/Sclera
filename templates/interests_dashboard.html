@@ -4,15 +4,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Interests — Student Platform</title>
+    <title>Careers — Sclera</title>
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
     <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
 </head>
 
 <body>
     <div class="dashboard-layout">
 
-        <!-- SIDEBAR -->
-        {% include '_sidebar.html' %}
+        <!-- TOPNAV -->
+        {% include '_topnav.html' %}
 
         <!-- MAIN -->
         <main class="main-content">
@@ -25,8 +26,13 @@
             {% endif %}
             {% endwith %}
 
-            <!-- SAVED CAREERS (top) -->
-            <div class="interests-saved-careers">
+            <div class="content-header">
+                <h1>Careers</h1>
+                <p>Explore paths, courses &amp; internships</p>
+            </div>
+
+            <!-- SAVED CAREERS ISLAND -->
+            <div class="study-island" style="margin-bottom: 2rem;">
                 <h3>Your Saved Careers</h3>
                 {% if saved_careers %}
                 <div class="explore-grid">
@@ -44,53 +50,55 @@
                 {% endif %}
             </div>
 
-            <!-- EXPLORE TABS -->
-            <div class="interests-explore-tabs">
-                <button class="explore-tab active" data-tab="careers">Careers</button>
-                <button class="explore-tab" data-tab="courses">Courses</button>
-                <button class="explore-tab" data-tab="internships">Internships</button>
-            </div>
+            <!-- EXPLORE ISLAND -->
+            <div class="study-island">
+                <div class="interests-explore-tabs">
+                    <button class="explore-tab active" data-tab="careers">Careers</button>
+                    <button class="explore-tab" data-tab="courses">Courses</button>
+                    <button class="explore-tab" data-tab="internships">Internships</button>
+                </div>
 
-            <!-- CAREERS TAB -->
-            <div class="explore-section active" id="tab-careers">
-                {% for domain, career_list in all_careers.items() %}
-                <h4
-                    style="color:var(--text-muted); font-size:12px; text-transform:uppercase; letter-spacing:0.06em; margin-bottom:10px; margin-top:20px;">
-                    {{ domain }}</h4>
-                <div class="explore-grid">
-                    {% for career in career_list %}
-                    <a href="{{ url_for('career_detail', career_id=career.id) }}" class="explore-card">
-                        <h4>{{ career.name }}</h4>
-                        <p>{{ career.skills[:3]|join(', ') }}</p>
-                    </a>
+                <!-- CAREERS TAB -->
+                <div class="explore-section active" id="tab-careers">
+                    {% for domain, career_list in all_careers.items() %}
+                    <h4
+                        style="color:var(--text-muted); font-size:12px; text-transform:uppercase; letter-spacing:0.06em; margin-bottom:10px; margin-top:20px;">
+                        {{ domain }}</h4>
+                    <div class="explore-grid">
+                        {% for career in career_list %}
+                        <a href="{{ url_for('career_detail', career_id=career.id) }}" class="explore-card">
+                            <h4>{{ career.name }}</h4>
+                            <p>{{ career.skills[:3]|join(', ') }}</p>
+                        </a>
+                        {% endfor %}
+                    </div>
                     {% endfor %}
                 </div>
-                {% endfor %}
-            </div>
 
-            <!-- COURSES TAB -->
-            <div class="explore-section" id="tab-courses">
-                <div class="explore-grid">
-                    {% for course in all_courses %}
-                    <a href="{{ url_for('course_detail', course_id=course.id) }}" class="explore-card">
-                        <div class="card-domain">{{ course.provider }} · {{ course.level }}</div>
-                        <h4>{{ course.name }}</h4>
-                        <p>{{ course.duration }} · {{ course.price }}</p>
-                    </a>
-                    {% endfor %}
+                <!-- COURSES TAB -->
+                <div class="explore-section" id="tab-courses">
+                    <div class="explore-grid">
+                        {% for course in all_courses %}
+                        <a href="{{ url_for('course_detail', course_id=course.id) }}" class="explore-card">
+                            <div class="card-domain">{{ course.provider }} · {{ course.level }}</div>
+                            <h4>{{ course.name }}</h4>
+                            <p>{{ course.duration }} · {{ course.price }}</p>
+                        </a>
+                        {% endfor %}
+                    </div>
                 </div>
-            </div>
 
-            <!-- INTERNSHIPS TAB -->
-            <div class="explore-section" id="tab-internships">
-                <div class="explore-grid">
-                    {% for intern in all_internships %}
-                    <a href="{{ url_for('internship_detail', internship_id=intern.id) }}" class="explore-card">
-                        <div class="card-domain">{{ intern.domain }} · {{ intern.company }}</div>
-                        <h4>{{ intern.name }}</h4>
-                        <p>{{ intern.duration }} · {{ intern.location }}</p>
-                    </a>
-                    {% endfor %}
+                <!-- INTERNSHIPS TAB -->
+                <div class="explore-section" id="tab-internships">
+                    <div class="explore-grid">
+                        {% for intern in all_internships %}
+                        <a href="{{ url_for('internship_detail', internship_id=intern.id) }}" class="explore-card">
+                            <div class="card-domain">{{ intern.domain }} · {{ intern.company }}</div>
+                            <h4>{{ intern.name }}</h4>
+                            <p>{{ intern.duration }} · {{ intern.location }}</p>
+                        </a>
+                        {% endfor %}
+                    </div>
                 </div>
             </div>
 
@@ -114,23 +122,10 @@
     <script>
         (function () {
             const root = document.documentElement;
-            const toggle = document.getElementById("themeToggle");
 
             const savedTheme = localStorage.getItem("sclera-theme");
             if (savedTheme) {
                 root.setAttribute("data-theme", savedTheme);
-            }
-
-            if (toggle) {
-                toggle.addEventListener("click", () => {
-                    const next =
-                        root.getAttribute("data-theme") === "dark"
-                            ? "light"
-                            : "dark";
-
-                    root.setAttribute("data-theme", next);
-                    localStorage.setItem("studyos-theme", next);
-                });
             }
         })();
     </script>

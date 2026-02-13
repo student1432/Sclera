@@ -3,26 +3,22 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{ subject_name }} - Student Platform</title>
+    <title>{{ subject_name }} — Sclera</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
 </head>
 <body>
-    <div class="page-wrapper">
-        <header class="page-header">
-            <h1>{{ subject_name }}</h1>
-            <div class="header-actions">
-                <a href="{{ url_for('profile_dashboard') }}" class="btn">Profile</a>
-                <a href="{{ url_for('logout') }}" class="btn">Logout</a>
-            </div>
-        </header>
-        
-        <main class="page-content">
-            <div class="breadcrumb">
-                <a href="{{ url_for('profile_dashboard') }}">Profile</a>
-                <span class="breadcrumb-separator">/</span>
-                <a href="{{ url_for('academic_dashboard') }}">Academic</a>
-                <span class="breadcrumb-separator">/</span>
-                <span>{{ subject_name }}</span>
+    <div class="dashboard-layout">
+
+        <main class="main-content">
+            <div class="detail-header">
+                <button onclick="history.back()" class="btn btn-secondary back-btn">← Back</button>
+                <div class="breadcrumb">
+                    <a href="{{ url_for('profile_dashboard') }}">Profile</a>
+                    <span class="breadcrumb-separator">/</span>
+                    <a href="{{ url_for('academic_dashboard') }}">Academic</a>
+                    <span class="breadcrumb-separator">/</span>
+                    <span>{{ subject_name }}</span>
+                </div>
             </div>
             
             <h2>Chapters</h2>

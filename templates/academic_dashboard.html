@@ -1,18 +1,19 @@
 <!DOCTYPE html>
-<html lang="en" data-theme="dark">
+<html lang="en" data-theme="{{ settings.get('theme', 'dark') }}">
 
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Academic — Sclera</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
 </head>
 
 <body>
     <div class="dashboard-layout">
 
-        <!-- SIDEBAR -->
-        {% include '_sidebar.html' %}
+        <!-- TOPNAV -->
+        {% include '_topnav.html' %}
 
         <!-- MAIN -->
         <main class="main-content">
@@ -56,19 +57,9 @@
                                     {% endif %}
                                     <input type="hidden" name="subject_name" value="{{ subject_name }}">
                                     <input type="hidden" name="chapter_name" value="{{ chapter_name }}">
-                                    <button type="submit" class="chapter-checkbox" style="border:none;background:none;padding:0;cursor:pointer;
-                                                    display:flex;align-items:center;justify-content:center;
-                                                    width:18px;height:18px;border-radius:4px;
-                                                    flex-shrink:0;transition:all 0.2s;
-                                                    {% if ch_data.completed %}
-                                                        background:var(--tick-color);
-                                                    {% else %}
-                                                        background:var(--bg-tertiary);
-                                                        border:2px solid var(--border);
-                                                    {% endif %}">
+                                    <button type="submit" class="chapter-checkbox {% if ch_data.completed %}completed{% else %}incomplete{% endif %}">
                                         {% if ch_data.completed %}
-                                        <span style="color:var(--bg-primary);
-                                                            font-size:11px;font-weight:700;">✔</span>
+                                        <span class="chapter-tick">✔</span>
                                         {% endif %}
                                     </button>
                                     {% if not ch_data.excluded %}
@@ -319,24 +310,8 @@
     <script>
         (function () {
             const root = document.documentElement;
-            const toggle = document.getElementById("themeToggle");
-
             const savedTheme = localStorage.getItem("sclera-theme");
-            if (savedTheme) {
-                root.setAttribute("data-theme", savedTheme);
-            }
-
-            if (toggle) {
-                toggle.addEventListener("click", () => {
-                    const next =
-                        root.getAttribute("data-theme") === "dark"
-                            ? "light"
-                            : "dark";
-
-                    root.setAttribute("data-theme", next);
-                    localStorage.setItem("sclera-theme", next);
-                });
-            }
+            if (savedTheme) root.setAttribute("data-theme", savedTheme);
         })();
     </script>
      <!-- Notification System -->

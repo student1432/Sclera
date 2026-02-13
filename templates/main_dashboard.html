@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" data-theme="light">
+<html lang="en" data-theme="{{ settings.get('theme', 'dark') }}">
 
 <head>
     <meta charset="UTF-8">
@@ -13,8 +13,8 @@
 <body>
     <div class="dashboard-layout">
 
-        <!-- SIDEBAR -->
-        {% include '_sidebar.html' %}
+        <!-- TOPNAV -->
+        {% include '_topnav.html' %}
 
         <!-- MAIN -->
         <main class="main-content">
@@ -57,7 +57,7 @@
                 <div class="dashboard-top-right">
 
                     <!-- Profile Island -->
-                    <a href="{{ url_for('profile_dashboard') }}" class="island island-profile-split" style="text-decoration:none;">
+                    <a href="{{ url_for('profile_resume') }}" class="island island-profile-split" style="text-decoration:none;">
                         <h3>Profile</h3>
                         <div class="profile-content-split">
                             <div class="profile-picture-section">
@@ -217,33 +217,6 @@
                 circle.style.strokeDashoffset = `${circumference - (percentage / 100) * circumference}`;
             });
         });
-    </script>
-
-    <script>
-        (function () {
-            const root = document.documentElement;
-            const toggle = document.getElementById("themeToggle");
-
-            const savedTheme = localStorage.getItem("sclera-theme");
-            if (savedTheme) {
-                root.setAttribute("data-theme", savedTheme);
-            }
-
-            if (toggle) {
-                toggle.addEventListener("click", () => {
-                    const next =
-                        root.getAttribute("data-theme") === "dark"
-                            ? "light"
-                            : "dark";
-
-                    root.setAttribute("data-theme", next);
-                    localStorage.setItem("sclera-theme", next);
-                    
-                    // Update chart colors for new theme
-                    setTimeout(updateAcademicChart, 10);
-                });
-            }
-        })();
     </script>
 
     <!-- Notification System -->

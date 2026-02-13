@@ -8,9 +8,10 @@
     <link href="https://fonts.googleapis.com/icon?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
 </head>
 <body>
-    {% include '_sidebar.html' %}
+    <div class="dashboard-layout">
+        {% include '_topnav.html' %}
 
-    <main class="main-content">
+        <main class="main-content">
         <div class="dashboard-layout">
             <div class="main-header">
                 <h1>Study Bubbles</h1>
@@ -154,7 +155,7 @@
                     const newTheme = currentTheme === 'light' ? 'dark' : 'light';
 
                     html.setAttribute('data-theme', newTheme);
-                    localStorage.setItem('theme', newTheme);
+                    localStorage.setItem('sclera-theme', newTheme);
                 });
             }
 

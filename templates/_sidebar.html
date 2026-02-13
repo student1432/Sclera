@@ -28,7 +28,9 @@
             class="nav-item {% if p.startswith('/statistics') %}active{% endif %}">Statistics</a>
         <a href="{{ url_for('community_dashboard') }}"
             class="nav-item {% if p.startswith('/community') %}active{% endif %}">Community</a>
-        <a href="{{ url_for('student_files') }}" class="nav-item {% if p.startswith('/student') %}active{% endif %}">Class Files</a>
+        {% if in_institution and has_class %}
+        <a href="{{ url_for('class_management') }}" class="nav-item {% if p.startswith('/student/class/management') %}active{% endif %}">Class Management</a>
+        {% endif %}
     </nav>
     <div class="sidebar-footer">
         <a id="themeToggle" class="nav-item" style="cursor:pointer;">

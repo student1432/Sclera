@@ -3,15 +3,19 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tasks - Student Platform</title>
+    <title>Tasks — Sclera</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
 </head>
 <body>
-    <div class="container">
-        <div class="dashboard-card">
-            <div class="dashboard-header">
-                <h1>My Tasks</h1>
-                <a href="{{ url_for('profile_dashboard') }}" class="btn btn-secondary">Back to Profile</a>
+    <div class="dashboard-layout">
+
+        <main class="main-content">
+            <div class="detail-header">
+                <button onclick="history.back()" class="btn btn-secondary back-btn">← Back</button>
+                <div class="dashboard-header">
+                    <h1>My Tasks</h1>
+                    <a href="{{ url_for('profile_dashboard') }}" class="btn btn-secondary">Back to Profile</a>
+                </div>
             </div>
             
             {% with messages = get_flashed_messages(with_categories=true) %}
