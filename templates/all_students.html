@@ -8,13 +8,13 @@
 </head>
 
 <body>
-    <div class="dashboard-layout">
-        {% if profile.get('account_type') == 'admin' %}
-            {% include '_admin_sidebar.html' %}
-        {% else %}
-            {% include '_teacher_sidebar.html' %}
-        {% endif %}
+    {% if profile.get('account_type') == 'admin' %}
+        {% include '_admin_topnav.html' %}
+    {% else %}
+        {% include '_teacher_topnav.html' %}
+    {% endif %}
 
+    <div class="dashboard-layout">
         <main class="main-content">
             <span class="header-row">
                 <h1>All Students ({{ total_students }})

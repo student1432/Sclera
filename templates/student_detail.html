@@ -9,18 +9,18 @@
 
 <body>
     <div class="dashboard-layout">
-        <aside class="sidebar">
-            <div class="sidebar-header">
-                <a href="#">{{ profile.get('name', 'Instructor') }}</a>
-            </div>
-            <nav class="sidebar-nav">
-                <a href="{% if profile.get('account_type') == 'admin' %}{{ url_for('institution_admin_dashboard') }}{% else %}{{ url_for('institution_teacher_dashboard') }}{% endif %}" class="nav-item">← Back to Dashboard</a>
-            </nav>
-        </aside>
+        {% if profile.get('account_type') == 'admin' %}
+            {% include '_admin_topnav.html' %}
+        {% else %}
+            {% include '_teacher_topnav.html' %}
+        {% endif %}
 
         <main class="main-content">
             <div class="header-row">
-                <h1>{{ student.get('name', 'Student') }}</h1>
+                <div style="display: flex; align-items: center; gap: 16px;">
+                    <a href="{% if profile.get('account_type') == 'admin' %}{{ url_for('institution_admin_dashboard') }}{% else %}{{ url_for('institution_teacher_dashboard') }}{% endif %}" class="btn btn-secondary" style="font-size: 14px;">← Back</a>
+                    <h1>{{ student.get('name', 'Student') }}</h1>
+                </div>
                 <span class="student-meta">{{ student.get('email', '') }}</span>
             </div>
 

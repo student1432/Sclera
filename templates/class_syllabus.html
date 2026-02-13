@@ -9,7 +9,11 @@
 
 <body>
     <div class="dashboard-layout">
-        {% include '_teacher_sidebar.html' %}
+        {% if profile.get('account_type') == 'admin' %}
+            {% include '_admin_topnav.html' %}
+        {% else %}
+            {% include '_teacher_topnav.html' %}
+        {% endif %}
 
         <main class="main-content">
             <div class="header-row">

@@ -45,8 +45,8 @@
 </head>
 
 <body>
+    {% include '_teacher_topnav.html' %}
     <div class="dashboard-layout">
-        {% include '_teacher_sidebar.html' %}
 
         <main class="main-content">
             <div class="content-header">
@@ -114,8 +114,7 @@
                                     }} · Code: <strong>{{ cls.get('invite_code', 'N/A') }}</strong></div>
                             </div>
                             <div class="study-item-actions">
-                                <a href="{{ url_for('institution_teacher_upload_file', class_id=cls.id) }}"
-                                    class="btn btn-small btn-primary">Upload Files</a>
+                                <a href="{{ url_for('institution_teacher_upload_file', class_id=cls.id) }}" class="btn btn-small btn-primary">Upload Files</a>
                                 <a href="{{ url_for('manage_class_syllabus', class_id=cls.id) }}"
                                     class="btn btn-small btn-secondary">Syllabus</a>
                             </div>
@@ -207,29 +206,6 @@
                 }
             };
         });
-    </script>
-    <script>
-        (function () {
-            const root = document.documentElement;
-            const toggle = document.getElementById("themeToggle");
-
-            const savedTheme = localStorage.getItem("sclera-theme");
-            if (savedTheme) {
-                root.setAttribute("data-theme", savedTheme);
-            }
-
-            if (toggle) {
-                toggle.addEventListener("click", () => {
-                    const next =
-                        root.getAttribute("data-theme") === "dark"
-                            ? "light"
-                            : "dark";
-
-                    root.setAttribute("data-theme", next);
-                    localStorage.setItem("studyos-theme", next);
-                });
-            }
-        })();
     </script>
 </body>
 

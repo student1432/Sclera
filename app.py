@@ -61,8 +61,8 @@ Talisman(app,
     content_security_policy={
         'default-src': "'self'",
         'script-src': ["'self'", "'unsafe-inline'", "https://cdn.tailwindcss.com", "https://fonts.googleapis.com", "https://fonts.gstatic.com", "https://cdnjs.cloudflare.com", "https://cdn.jsdelivr.net"],
-        'style-src': ["'self'", "'unsafe-inline'", "https://cdn.tailwindcss.com", "https://fonts.googleapis.com", "https://fonts.gstatic.com"],
-        'font-src': ["https://fonts.googleapis.com", "https://fonts.gstatic.com"],
+        'style-src': ["'self'", "'unsafe-inline'", "https://cdn.tailwindcss.com", "https://fonts.googleapis.com", "https://fonts.gstatic.com", "https://cdnjs.cloudflare.com"],
+        'font-src': ["https://fonts.googleapis.com", "https://fonts.gstatic.com", "https://cdnjs.cloudflare.com"],
         'img-src': ["'self'", "data:", "https:"],
         'connect-src': ["'self'", "https://cdn.jsdelivr.net"],
         'frame-ancestors': "'none'",
@@ -1190,34 +1190,46 @@ def institution_teacher_upload_file(class_id):
         flash('Unauthorized', 'error')
         return redirect(url_for('institution_teacher_dashboard'))
     if request.method == 'POST':
-        file = request.files.get('file')
-        if not file or file.filename == '':
-            flash('No file selected', 'error')
+        try:
+            file = request.files.get('file')
+            if not file or file.filename == '':
+                flash('No file selected', 'error')
+                return redirect(request.url)
+            
+            filename = secure_filename(file.filename)
+            file_id = str(uuid.uuid4())
+            
+            # Save to local storage
+            upload_folder = os.path.join(app.root_path, 'uploads')
+            if not os.path.exists(upload_folder):
+                os.makedirs(upload_folder)
+            
+            file_path = os.path.join(upload_folder, f'{file_id}_{filename}')
+            file.save(file_path)
+            
+            # Get actual file size
+            file_size = os.path.getsize(file_path)
+            file_url = url_for('serve_upload', filename=f'{file_id}_{filename}')
+            
+            # Save to Firestore
+            db.collection('class_files').document(file_id).set({
+                'id': file_id,
+                'class_id': class_id,
+                'file_name': filename,
+                'file_url': file_url,
+                'uploaded_by': uid,
+                'upload_date': datetime.utcnow().isoformat(),
+                'file_type': 'notes',
+                'file_size': file_size
+            })
+            
+            flash('File uploaded successfully', 'success')
+            return redirect(url_for('institution_teacher_dashboard'))
+            
+        except Exception as e:
+            logger.error(f"File upload error: {str(e)}")
+            flash('An error occurred while uploading the file', 'error')
             return redirect(request.url)
-        filename = secure_filename(file.filename)
-        file_id = str(uuid.uuid4())
-        # Save to local storage
-        upload_folder = os.path.join(app.root_path, 'uploads')
-        if not os.path.exists(upload_folder):
-            os.makedirs(upload_folder)
-        file_path = os.path.join(upload_folder, f'{file_id}_{filename}')
-        file.save(file_path)
-        file_url = url_for('serve_upload', filename=f'{file_id}_{filename}')
-        # Get actual file size
-        file_size = os.path.getsize(file_path)
-        # Save to Firestore
-        db.collection('class_files').document(file_id).set({
-            'id': file_id,
-            'class_id': class_id,
-            'file_name': filename,
-            'file_url': file_url,
-            'uploaded_by': uid,
-            'upload_date': datetime.utcnow().isoformat(),
-            'file_type': 'notes',
-            'file_size': file_size
-        })
-        flash('File uploaded successfully', 'success')
-        return redirect(url_for('institution_teacher_dashboard'))
     # GET: render upload form
     class_data = class_doc.to_dict()
     return render_template('institution_teacher_upload.html', class_id=class_id, class_name=class_data.get('name'), profile=profile)

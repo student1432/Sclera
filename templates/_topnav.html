@@ -1,6 +1,10 @@
 <div class="notch-container">
     <div class="notch-pill">
         {% set p = request.path %}
+        {% set account_type = session.get('account_type', 'student') %}
+        
+        {% if account_type == 'student' %}
+        <!-- Student Navigation -->
         <a href="{{ url_for('profile_dashboard') }}" class="notch-item {% if p == '/dashboard' or p == '/profile' or p == '/' %}active{% endif %}">
             <span class="material-symbols-outlined">dashboard</span>
             <span class="notch-label">Home</span>
@@ -37,6 +41,69 @@
         <a href="{{ url_for('class_management') }}" class="notch-item {% if p.startswith('/student/class/management') %}active{% endif %}">
             <span class="material-symbols-outlined">class</span>
             <span class="notch-label">Class Management</span>
+        </a>
+        {% endif %}
+        
+        {% elif account_type == 'teacher' %}
+        <!-- Teacher Navigation -->
+        <a href="{{ url_for('institution_teacher_dashboard') }}" class="notch-item {% if p == '/institution/teacher/dashboard' or p == '/' %}active{% endif %}">
+            <span class="material-symbols-outlined">dashboard</span>
+            <span class="notch-label">Teacher Dashboard</span>
+        </a>
+        <a href="{{ url_for('institution_teacher_classes') }}" class="notch-item {% if p.startswith('/institution/teacher/classes') %}active{% endif %}">
+            <span class="material-symbols-outlined">class</span>
+            <span class="notch-label">My Classes</span>
+        </a>
+        <a href="{{ url_for('institution_teacher_create_class') }}" class="notch-item {% if p.startswith('/institution/teacher/classes/create') %}active{% endif %}">
+            <span class="material-symbols-outlined">add_circle</span>
+            <span class="notch-label">Create Class</span>
+        </a>
+        <a href="{{ url_for('student_files') }}" class="notch-item {% if p.startswith('/student/class/files') %}active{% endif %}">
+            <span class="material-symbols-outlined">folder</span>
+            <span class="notch-label">Class Files</span>
+        </a>
+        <a href="{{ url_for('master_library') }}" class="notch-item {% if p.startswith('/master-library') %}active{% endif %}">
+            <span class="material-symbols-outlined">local_library</span>
+            <span class="notch-label">Library</span>
+        </a>
+        <a href="{{ url_for('ai_assistant') }}" class="notch-item {% if p.startswith('/ai-assistant') %}active{% endif %}">
+            <span class="material-symbols-outlined">chat</span>
+            <span class="notch-label">AI Assistant</span>
+        </a>
+        <a href="{{ url_for('institution_teacher_settings') }}" class="notch-item {% if p.startswith('/institution/teacher/settings') %}active{% endif %}">
+            <span class="material-symbols-outlined">settings</span>
+            <span class="notch-label">Settings</span>
+        </a>
+        
+        {% elif account_type == 'admin' %}
+        <!-- Admin Navigation -->
+        <a href="{{ url_for('institution_admin_dashboard') }}" class="notch-item {% if p == '/institution/admin/dashboard' or p == '/' %}active{% endif %}">
+            <span class="material-symbols-outlined">admin_panel_settings</span>
+            <span class="notch-label">Admin Dashboard</span>
+        </a>
+        <a href="{{ url_for('institution_teacher_classes') }}" class="notch-item {% if p.startswith('/institution/teacher/classes') %}active{% endif %}">
+            <span class="material-symbols-outlined">class</span>
+            <span class="notch-label">Classes</span>
+        </a>
+        <a href="{{ url_for('institution_teacher_create_class') }}" class="notch-item {% if p.startswith('/institution/teacher/classes/create') %}active{% endif %}">
+            <span class="material-symbols-outlined">add_circle</span>
+            <span class="notch-label">Create Class</span>
+        </a>
+        <a href="{{ url_for('student_files') }}" class="notch-item {% if p.startswith('/student/class/files') %}active{% endif %}">
+            <span class="material-symbols-outlined">folder</span>
+            <span class="notch-label">Class Files</span>
+        </a>
+        <a href="{{ url_for('master_library') }}" class="notch-item {% if p.startswith('/master-library') %}active{% endif %}">
+            <span class="material-symbols-outlined">local_library</span>
+            <span class="notch-label">Library</span>
+        </a>
+        <a href="{{ url_for('ai_assistant') }}" class="notch-item {% if p.startswith('/ai-assistant') %}active{% endif %}">
+            <span class="material-symbols-outlined">chat</span>
+            <span class="notch-label">AI Assistant</span>
+        </a>
+        <a href="{{ url_for('institution_admin_settings') }}" class="notch-item {% if p.startswith('/institution/admin/settings') %}active{% endif %}">
+            <span class="material-symbols-outlined">settings</span>
+            <span class="notch-label">Admin Settings</span>
         </a>
         {% endif %}
     </div>
@@ -77,6 +144,10 @@
             <a href="{{ url_for('profile_edit') }}" class="dropdown-item">
                 <span class="material-symbols-outlined">edit</span>
                 Edit Profile
+            </a>
+            <a href="{{ url_for('student_join_class') }}" class="dropdown-item">
+                <span class="material-symbols-outlined">group_add</span>
+                Join Class
             </a>
         </div>
     </div>

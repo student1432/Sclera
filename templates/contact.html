@@ -9,7 +9,13 @@
 </head>
 <body>
     <div class="dashboard-layout">
-        {% include '_topnav.html' %}
+        {% if profile.get('account_type') == 'admin' %}
+            {% include '_admin_topnav.html' %}
+        {% elif profile.get('account_type') == 'teacher' %}
+            {% include '_teacher_topnav.html' %}
+        {% else %}
+            {% include '_topnav.html' %}
+        {% endif %}
         <main class="main-content">
             <div class="content-header">
                 <h1>Contact Support</h1>

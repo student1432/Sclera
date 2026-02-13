@@ -9,21 +9,7 @@
 
 <body>
     <div class="dashboard-layout">
-        <aside class="sidebar">
-            <div class="sidebar-header">
-                <a href="#">{{ profile.get('name', 'Admin') }}</a>
-                <span style="font-size:12px; color:var(--text-muted); display:block; margin-top:4px;">{{
-                    profile.get('account_type', 'teacher').title() }}</span>
-            </div>
-            <nav class="sidebar-nav">
-                <a href="{{ url_for('institution_admin_dashboard') }}" class="nav-item">Dashboard</a>
-                <a href="{{ url_for('all_students') }}" class="nav-item">Students</a>
-                <a href="{{ url_for('institution_settings') }}" class="nav-item active">Settings</a>
-            </nav>
-            <div class="sidebar-footer">
-                <a href="{{ url_for('logout') }}" class="nav-item">Logout</a>
-            </div>
-        </aside>
+        {% include '_topnav.html' %}
 
         <main class="main-content">
             <h1>Institution Settings</h1>
