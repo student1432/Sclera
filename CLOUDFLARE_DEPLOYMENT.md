@@ -1,4 +1,4 @@
-# StudyOS Cloudflare Deployment Guide
+# Sclera Cloudflare Deployment Guide
 
 ## Overview
 Cloudflare doesn't natively support Python Flask applications. For a full-stack Flask app with Firebase, we recommend a **hybrid deployment approach**:
@@ -248,4 +248,4 @@ curl -H "CF-RAY: 1" https://yourdomain.com
    - Set up rate limiting
    - Configure firewall rules
 
-**Your StudyOS app will be live with global CDN, SSL, and advanced security!** 🚀
+**Your Sclera app will be live with global CDN, SSL, and advanced security!** 🚀

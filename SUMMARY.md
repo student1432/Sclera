@@ -1,9 +1,9 @@
-# StudyOS: Student Academic Operating System
+# Sclera: Student Academic Operating System
 
-StudyOS is a high-fidelity academic workspace designed for high-performing students. It provides a focused, distraction-free environment that integrates academic planning, execution tracking, and career exploration.
+Sclera is a high-fidelity academic workspace designed for high-performing students. It provides a focused, distraction-free environment that integrates academic planning, execution tracking, and career exploration.
 
 ## 🎯 Core Vision
-Unlike gamified productivity apps, StudyOS is built as a **"Focused Research Operating System."** It emphasizes a professional "Dark Academic" aesthetic, generous whitespace, and structured information hierarchy to minimize cognitive load and maximize focus.
+Unlike gamified productivity apps, Sclera is built as a **"Focused Research Operating System."** It emphasizes a professional "Dark Academic" aesthetic, generous whitespace, and structured information hierarchy to minimize cognitive load and maximize focus.
 
 ## 🧱 Three-Layer Architecture
 1.  **Identity Layer:** Manages secure authentication and rich student profiles, including skills, achievements, and academic interests.
@@ -22,7 +22,7 @@ Unlike gamified productivity apps, StudyOS is built as a **"Focused Research Ope
     *   **Teacher Dashboard:** Class management, file sharing, and progress monitoring.
     *   **Predictive Risk Analytics:** Identifies at-risk students using study session patterns.
     *   **Institutional Heatmap:** Visualizes peak activity hours across the institution.
-*   **Sclera AI Assistant:** An AI-powered workspace (via Google Gemini) for academic planning, doubt resolution, and institutional analysis.
+*   **Sclera AI (The Core Intelligence):** An AI-powered workspace (via Google Gemini) for academic planning, doubt resolution, and institutional analysis.
 *   **Community & Bubbles:** Social features for forming study groups ("Bubbles"), peer connections, and academic leaderboards.
 *   **Interests & Careers:** Maps academic progress to career paths, relevant courses, and internships.
 
@@ -35,4 +35,4 @@ Unlike gamified productivity apps, StudyOS is built as a **"Focused Research Ope
 *   **Deployment:** Hybrid approach via Cloudflare and Render/Railway
 
 ## 📈 Development Status
-StudyOS has completed Phase 2 of its development, establishing a robust institutional layer and a sophisticated AI assistant system. It is production-ready with comprehensive documentation for deployment and testing.
+Sclera has completed Phase 2 of its development, establishing a robust institutional layer and a sophisticated AI assistant system. It is production-ready with comprehensive documentation for deployment and testing.

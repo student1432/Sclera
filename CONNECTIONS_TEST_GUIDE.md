@@ -1,10 +1,10 @@
-# StudyOS Connections System - Complete Test Guide
+# Sclera Connections System - Complete Test Guide
 
 ## Overview
-This guide provides comprehensive testing instructions for the StudyOS connections system, including people search, connections management, and study bubbles functionality.
+This guide provides comprehensive testing instructions for the Sclera connections system, including people search, connections management, and study bubbles functionality.
 
 ## Prerequisites
-1. **Flask App Running**: Ensure the StudyOS Flask application is running on `http://localhost:5000`
+1. **Flask App Running**: Ensure the Sclera Flask application is running on `http://localhost:5000`
 2. **Test Users**: Have at least 2-3 user accounts created for testing connections
 3. **Browser Console**: Keep browser developer tools open to monitor JavaScript errors
 4. **Network Tab**: Monitor API calls in browser network tab
@@ -13,7 +13,7 @@ This guide provides comprehensive testing instructions for the StudyOS connectio
 
 ### 1.1 Navigation & UI Loading
 **Test Steps:**
-1. Log in to StudyOS with a user account
+1. Log in to Sclera with a user account
 2. Click "Community" in the left sidebar
 3. Verify the page loads with:
    - ✅ Header: "Community - Connect with fellow students and build study groups"
