@@ -413,6 +413,7 @@ def initialize_profile_fields(uid):
         'about': '', 'skills': [], 'hobbies': [], 'certificates': [],
         'achievements': [], 'chapters_completed': {}, 'time_studied': 0,
         'goals': [], 'tasks': [], 'todos': [], 'milestones': [], 'exam_results': [],
+        'assignments': [], 'quick_todos': [],
         'connections': {
             'accepted': [],
             'pending_sent': [],
@@ -1271,6 +1272,11 @@ def profile_dashboard():
     if not user_data:
         flash('User data not found', 'error')
         return redirect(url_for('logout'))
+
+    # Refresh profile fields to ensure defaults exist
+    initialize_profile_fields(uid)
+    user_data = get_user_data(uid)
+
     purpose = user_data.get('purpose')
     academic_summary = ''
     if purpose == 'highschool' and user_data.get('highschool'):
@@ -1281,13 +1287,103 @@ def profile_dashboard():
     elif purpose == 'after_tenth' and user_data.get('after_tenth'):
         at = user_data['after_tenth']
         academic_summary = f"{at.get('stream', '')} – Grade {at.get('grade', '')}"
+
     progress_data = calculate_academic_progress(user_data)
+
+    # --- PERFORMANCE STATS ---
+    results = user_data.get('exam_results', [])
+    avg_performance = calculate_average_percentage(results)
+
+    last_exam = None
+    highest_exam = None
+    if results:
+        # Calculate percentages for all
+        for r in results:
+            try:
+                r['pct'] = round((float(r.get('score', 0)) / float(r.get('max_score', 100))) * 100, 1)
+            except:
+                r['pct'] = 0
+
+        # Last exam by date
+        sorted_by_date = sorted(results, key=lambda x: x.get('exam_date', ''), reverse=True)
+        last_exam = sorted_by_date[0]
+
+        # Highest exam by percentage
+        sorted_by_score = sorted(results, key=lambda x: x.get('pct', 0), reverse=True)
+        highest_exam = sorted_by_score[0]
+
+    # --- GOALS & TASKS STATS ---
+    goals = user_data.get('goals', [])
+    tasks = user_data.get('tasks', [])
+    assignments = user_data.get('assignments', [])
+
+    total_goals = len(goals)
+    completed_goals = sum(1 for g in goals if g.get('completed'))
+
+    total_tasks = len(tasks)
+    completed_tasks = sum(1 for t in tasks if t.get('completed'))
+
+    total_assignments = len(assignments)
+    completed_assignments = sum(1 for a in assignments if a.get('completed'))
+
+    # --- STUDY TIME GRAPH (Last 7 Days) ---
+    study_stats = []
+    today = date.today()
+    for i in range(6, -1, -1):
+        day = today - timedelta(days=i)
+        day_str = day.strftime("%Y-%m-%d")
+
+        # Sum all sessions for this day
+        day_total_seconds = 0
+        sessions = db.collection('users').document(uid).collection('study_sessions')\
+                     .where('start_time', '>=', day_str + "T00:00:00")\
+                     .where('start_time', '<=', day_str + "T23:59:59")\
+                     .stream()
+
+        for s in sessions:
+            day_total_seconds += s.to_dict().get('duration_seconds', 0)
+
+        study_stats.append({
+            'day': day.strftime("%a"),
+            'hours': round(day_total_seconds / 3600, 2)
+        })
+
+    # --- CALENDAR EVENTS ---
+    calendar_events = []
+    # Add exams
+    for r in results:
+        if r.get('exam_date'):
+            calendar_events.append({
+                'title': f"Exam: {r.get('subject')}",
+                'start': r.get('exam_date'),
+                'type': 'exam'
+            })
+    # Add tasks
+    for t in tasks:
+        if t.get('due_date'):
+            calendar_events.append({
+                'title': t.get('title'),
+                'start': t.get('due_date'),
+                'type': 'task',
+                'completed': t.get('completed')
+            })
+    # Add assignments
+    for a in assignments:
+        if a.get('due_date'):
+            calendar_events.append({
+                'title': a.get('title'),
+                'start': a.get('due_date'),
+                'type': 'assignment',
+                'completed': a.get('completed')
+            })
+
     # Get user's saved career interests for the interests island
     interests = user_data.get('interests', {})
     if isinstance(interests, list):
         interests = {'careers': [], 'courses': [], 'internships': []}
     saved_career_ids = interests.get('careers', [])
     saved_careers = [get_career_by_id(cid) for cid in saved_career_ids if get_career_by_id(cid)]
+
     context = {
         'user': user_data,
         'name': user_data.get('name', 'Student'),
@@ -1305,7 +1401,20 @@ def profile_dashboard():
         'profile_picture': user_data.get('profile_picture'),
         'settings': user_data.get('settings', {}),
         'in_institution': bool(user_data.get('institution_id')),
-        'has_class': bool(user_data.get('class_ids'))
+        'has_class': bool(user_data.get('class_ids')),
+        # New Dashboard Data
+        'avg_performance': avg_performance,
+        'last_exam': last_exam,
+        'highest_exam': highest_exam,
+        'total_goals': total_goals,
+        'completed_goals': completed_goals,
+        'total_tasks': total_tasks,
+        'completed_tasks': completed_tasks,
+        'total_assignments': total_assignments,
+        'completed_assignments': completed_assignments,
+        'study_stats': study_stats,
+        'calendar_events': calendar_events,
+        'quick_todos': user_data.get('quick_todos', [])
     }
     return render_template('main_dashboard.html', **context)
 
@@ -3293,6 +3402,130 @@ def delete_study_todo(tid):
     uid = session['uid']
     db.collection('users').document(uid).collection('study_todos').document(tid).delete()
     return jsonify(ok=True)
+
+# ============================================================================
+# CALENDAR & ASSIGNMENTS
+# ============================================================================
+
+@app.route('/calendar')
+@require_login
+def calendar_dashboard():
+    uid = session['uid']
+    user_data = get_user_data(uid)
+
+    # Similar data gathering as main dashboard but for a full view
+    goals = user_data.get('goals', [])
+    tasks = user_data.get('tasks', [])
+    assignments = user_data.get('assignments', [])
+    results = user_data.get('exam_results', [])
+
+    events = []
+    for r in results:
+        if r.get('exam_date'):
+            events.append({'title': f"Exam: {r.get('subject')}", 'start': r.get('exam_date'), 'type': 'exam'})
+    for t in tasks:
+        if t.get('due_date'):
+            events.append({'title': t.get('title'), 'start': t.get('due_date'), 'type': 'task', 'completed': t.get('completed')})
+    for a in assignments:
+        if a.get('due_date'):
+            events.append({'title': a.get('title'), 'start': a.get('due_date'), 'type': 'assignment', 'completed': a.get('completed')})
+
+    context = {
+        'user': user_data,
+        'name': user_data.get('name'),
+        'events': events,
+        'settings': user_data.get('settings', {}),
+        'in_institution': bool(user_data.get('institution_id')),
+        'has_class': bool(user_data.get('class_ids'))
+    }
+    return render_template('calendar.html', **context)
+
+@app.route('/assignments', methods=['GET', 'POST'])
+@require_login
+def assignments_dashboard():
+    uid = session['uid']
+    if request.method == 'POST':
+        action = request.form.get('action')
+        user_data = get_user_data(uid)
+        assignments = user_data.get('assignments', [])
+
+        if action == 'add':
+            title = request.form.get('title')
+            if title:
+                assignments.append({
+                    'id': int(time.time()),
+                    'title': title,
+                    'subject': request.form.get('subject', ''),
+                    'due_date': request.form.get('due_date', ''),
+                    'completed': False,
+                    'created_at': datetime.utcnow().isoformat()
+                })
+        elif action == 'toggle':
+            aid = int(request.form.get('assignment_id'))
+            for a in assignments:
+                if a.get('id') == aid:
+                    a['completed'] = not a.get('completed', False)
+                    break
+        elif action == 'delete':
+            aid = int(request.form.get('assignment_id'))
+            assignments = [a for a in assignments if a.get('id') != aid]
+
+        db.collection('users').document(uid).update({'assignments': assignments})
+        return redirect(url_for('assignments_dashboard'))
+
+    user_data = get_user_data(uid)
+    context = {
+        'user': user_data,
+        'name': user_data.get('name'),
+        'assignments': user_data.get('assignments', []),
+        'settings': user_data.get('settings', {}),
+        'in_institution': bool(user_data.get('institution_id')),
+        'has_class': bool(user_data.get('class_ids'))
+    }
+    return render_template('assignments.html', **context)
+
+# ============================================================================
+# QUICK TODO CRUD
+# ============================================================================
+
+@app.route('/api/todos', methods=['GET', 'POST'])
+@require_login
+def handle_quick_todos():
+    uid = session['uid']
+    user_ref = db.collection('users').document(uid)
+
+    if request.method == 'GET':
+        user_data = user_ref.get().to_dict()
+        return jsonify(user_data.get('quick_todos', []))
+
+    if request.method == 'POST':
+        data = request.json
+        action = data.get('action')
+
+        user_data = user_ref.get().to_dict()
+        todos = user_data.get('quick_todos', [])
+
+        if action == 'add':
+            new_todo = {
+                'id': str(uuid.uuid4()),
+                'text': data.get('text'),
+                'completed': False,
+                'created_at': datetime.utcnow().isoformat()
+            }
+            todos.append(new_todo)
+        elif action == 'toggle':
+            tid = data.get('id')
+            for t in todos:
+                if t.get('id') == tid:
+                    t['completed'] = not t.get('completed', False)
+                    break
+        elif action == 'delete':
+            tid = data.get('id')
+            todos = [t for t in todos if t.get('id') != tid]
+
+        user_ref.update({'quick_todos': todos})
+        return jsonify({'success': True, 'todos': todos})
+
 #=============================================================================
 # DOC - V1 - ChatGPT - Temporary Not Perfect
 #=============================================================================

@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="{{ settings.get('theme', 'dark') }}">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Calendar — Sclera</title>
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <!-- FullCalendar CDN -->
+    <script src='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/index.global.min.js'></script>
+    <style>
+        .calendar-container {
+            padding: 24px;
+            background: var(--bg-primary);
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            height: calc(100vh - 120px);
+        }
+        #calendar {
+            height: 100%;
+        }
+        .fc-toolbar-title {
+            font-size: 1.5rem !important;
+            font-weight: 600 !important;
+            color: var(--text-primary) !important;
+        }
+        .fc-button {
+            background-color: var(--surface) !important;
+            border-color: var(--border) !important;
+            color: var(--text-primary) !important;
+            text-transform: capitalize !important;
+        }
+        .fc-button-active {
+            background-color: var(--accent-primary) !important;
+            border-color: var(--accent-primary) !important;
+        }
+        .fc-daygrid-day-number, .fc-col-header-cell-cushion {
+            color: var(--text-primary) !important;
+            text-decoration: none !important;
+        }
+        .fc-list-event-title, .fc-list-day-text, .fc-list-day-side-text {
+            color: var(--text-primary) !important;
+        }
+        .event-exam { background-color: #ff4757 !important; border-color: #ff4757 !important; }
+        .event-task { background-color: #5352ed !important; border-color: #5352ed !important; }
+        .event-assignment { background-color: #2ed573 !important; border-color: #2ed573 !important; }
+    </style>
+</head>
+<body>
+    <div class="dashboard-layout">
+        {% include '_topnav.html' %}
+
+        <main class="main-content">
+            <div class="header-action-row" style="margin-bottom: 24px;">
+                <h2>Academic Calendar</h2>
+                <div class="header-actions">
+                    <a href="{{ url_for('assignments_dashboard') }}" class="btn btn-secondary">
+                        <span class="material-symbols-outlined">assignment</span>
+                        Manage Assignments
+                    </a>
+                </div>
+            </div>
+
+            <div class="calendar-container">
+                <div id="calendar"></div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            var calendarEl = document.getElementById('calendar');
+            var events = JSON.parse('{{ events | tojson | safe }}');
+
+            // Map types to classes
+            events.forEach(e => {
+                e.className = 'event-' + e.type;
+            });
+
+            var calendar = new FullCalendar.Calendar(calendarEl, {
+                initialView: 'dayGridMonth',
+                headerToolbar: {
+                    left: 'prev,next today',
+                    center: 'title',
+                    right: 'dayGridMonth,timeGridWeek,timeGridDay,listMonth'
+                },
+                themeSystem: 'standard',
+                events: events,
+                height: 'parent',
+                eventClick: function(info) {
+                    // Could show details modal here
+                }
+            });
+            calendar.render();
+        });
+    </script>
+</body>
+</html>

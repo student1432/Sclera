@@ -12,13 +12,11 @@
 
 <body>
     <div class="dashboard-layout">
-
         <!-- TOPNAV -->
         {% include '_topnav.html' %}
 
         <!-- MAIN -->
         <main class="main-content">
-
             {% with messages = get_flashed_messages(with_categories=true) %}
             {% if messages %}
             {% for category, message in messages %}
@@ -27,156 +25,188 @@
             {% endif %}
             {% endwith %}
 
-            <!-- TOP ROW: Academic (left, large) | Profile + Careers (right, stacked) -->
-            <div class="dashboard-top">
+            <div class="dashboard-grid">
 
-                <!-- TOP-LEFT: Academic Island -->
-                <a href="{{ url_for('academic_dashboard') }}" class="island island-academic"
-                    style="text-decoration:none;">
+                <!-- 1. COMPACT ACADEMIC ISLAND -->
+                <a href="{{ url_for('academic_dashboard') }}" class="island island-academic" style="text-decoration:none;">
                     <h3>Academic</h3>
-                    <p>Your syllabus, chapters &amp; study progress</p>
+                    <p>Syllabus &amp; Progress</p>
                     <div class="academic-content">
-                        <div class="island-chart" style="flex-shrink: 0;">
-                            <canvas id="academicDonut" width="320" height="320" style="display: block;"></canvas>
-                            <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 28px; font-weight: bold; color: var(--text-primary); text-align: center; line-height: 1; white-space: nowrap; margin-top: 2px;">{{ overall_progress }}%</div>
+                        <div class="island-chart">
+                            <canvas id="academicDonut"></canvas>
+                            <div class="chart-center-text" style="font-size: 18px;">{{ overall_progress }}%</div>
                         </div>
-                        <div class="academic-legend">
+                        <div class="academic-legend" style="gap: 8px;">
                             <div class="legend-item">
-                                <span class="legend-label">Total Chapters:</span>
-                                <span class="legend-value">{{ total_chapters|default('0') }}</span>
+                                <span class="legend-label" style="font-size: 12px;">Done:</span>
+                                <span class="legend-value" style="font-size: 20px;">{{ completed_chapters }}</span>
                             </div>
                             <div class="legend-item">
-                                <span class="legend-label">Completed Chapters:</span>
-                                <span class="legend-value">{{ completed_chapters|default('0') }}</span>
+                                <span class="legend-label" style="font-size: 12px;">Total:</span>
+                                <span class="legend-value" style="font-size: 20px;">{{ total_chapters }}</span>
                             </div>
                         </div>
                     </div>
                 </a>
 
-                <!-- TOP-RIGHT: two stacked islands -->
-                <div class="dashboard-top-right">
+                <!-- 2. STREAK ISLAND -->
+                <div class="island streak-island">
+                    <div class="streak-icon">
+                        <span class="material-symbols-outlined" style="font-size: 48px;">local_fire_department</span>
+                    </div>
+                    <div class="streak-info">
+                        <h4>Daily Streak</h4>
+                        <div class="streak-val">{{ streak }} Days</div>
+                    </div>
+                </div>
 
-                    <!-- Profile Island -->
-                    <a href="{{ url_for('profile_resume') }}" class="island island-profile-split" style="text-decoration:none;">
-                        <h3>Profile</h3>
-                        <div class="profile-content-split">
-                            <div class="profile-picture-section">
-                                {% if profile_picture %}
-                                <img src="{{ url_for('serve_profile_picture', filename=profile_picture.split('/')[1]) }}" alt="Profile picture" class="profile-pic-large">
-                                {% else %}
-                                <div class="profile-pic-placeholder">
-                                    <span class="material-symbols-outlined">person</span>
-                                </div>
-                                {% endif %}
-                            </div>
-                            <div class="profile-info-section">
-                                <div class="island-profile-snapshot">
-                                    <p><strong>{{ name }}</strong></p>
-                                    <p>{{ purpose_display }}{% if academic_summary %} · {{ academic_summary }}{% endif %}</p>
-                                    <span class="snapshot-cta">View full profile →</span>
-                                </div>
-                            </div>
-                        </div>
-                    </a>
-
-                    <!-- Career / Interests Island -->
-                    <a href="{{ url_for('interests_dashboard') }}" class="island" style="text-decoration:none;">
-                        <h3>Careers</h3>
-                        <p>Explore paths, courses &amp; internships</p>
-                        {% if saved_careers %}
-                        <div class="island-careers-list">
-                            {% for career in saved_careers %}
-                            <span class="career-chip">{{ career.name }}</span>
-                            {% endfor %}
-                        </div>
+                <!-- 3. PROFILE ISLAND (Compact) -->
+                <a href="{{ url_for('profile_resume') }}" class="island" style="text-decoration:none;">
+                    <h3>Profile</h3>
+                    <div style="display: flex; align-items: center; gap: 12px; margin-top: 10px;">
+                        {% if profile_picture %}
+                        <img src="{{ url_for('serve_profile_picture', filename=profile_picture.split('/')[1]) }}" alt="PFP" style="width: 50px; height: 50px; border-radius: 50%; object-fit: cover;">
                         {% else %}
-                        <div class="island-careers-list" style="margin-top:auto;">
-                            <span class="career-chip" style="color:var(--text-muted);">No careers saved yet</span>
+                        <div style="width: 50px; height: 50px; border-radius: 50%; background: var(--bg-tertiary); display: flex; align-items: center; justify-content: center;">
+                            <span class="material-symbols-outlined">person</span>
                         </div>
                         {% endif %}
-                    </a>
-
-                </div>
-            </div>
-
-            <!-- BOTTOM: Progress Strip -->
-            <div class="progress-strip">
-                <div class="progress-strip-header">
-                    <h4>Overall Academic Progress</h4>
-                    <div style="display:inline;">
-                        <h3 style="height: 10px;">Daily Streak: {{ streak }} Days</h3>
-                    </div>
-                    <span>{{ overall_progress }}%</span>
-                </div>
-                <div class="progress-bar-track">
-                    <div class="progress-bar-fill" style="width: {{ overall_progress }}%;"></div>
-                </div>
-
-                {% if subject_progress %}
-                <div class="subject-mini-donuts">
-                    {% for subject, pct in subject_progress.items() %}
-                    <div class="subject-donut-container">
-                        <div class="subject-donut-label">{{ subject }}</div>
-                        <div class="subject-chart-and-legend">
-                            <div class="subject-donut-wrapper">
-                                <svg class="subject-donut" viewBox="0 0 36 36" xmlns="http://www.w3.org/2000/svg">
-                                    <circle class="subject-donut-bg" cx="18" cy="18" r="16" fill="none" stroke-width="3"/>
-                                    <circle class="subject-donut-progress" cx="18" cy="18" r="16" fill="none" stroke-width="3" style="stroke-dasharray: 100.53; stroke-dashoffset: 0;"/>
-                                </svg>
-                                <div class="subject-donut-center">{{ pct }}%</div>
-                            </div>
-                            <div class="subject-legend">
-                                <div class="subject-legend-item">
-                                    <span class="subject-legend-label">Total:</span>
-                                    <span class="subject-legend-value">{{ chapters_by_subject.get(subject, {}).get('total', 0) }}</span>
-                                </div>
-                                <div class="subject-legend-item">
-                                    <span class="subject-legend-label">Done:</span>
-                                    <span class="subject-legend-value">{{ chapters_by_subject.get(subject, {}).get('completed', 0) }}</span>
-                                </div>
-                            </div>
+                        <div>
+                            <p style="margin:0; font-weight: 600; color: var(--text-primary);">{{ name }}</p>
+                            <p style="margin:0; font-size: 12px;">{{ purpose_display }}</p>
                         </div>
                     </div>
-                    {% endfor %}
+                </a>
+
+                <!-- 4. CALENDAR WIDGET ISLAND -->
+                <a href="{{ url_for('calendar_dashboard') }}" class="island island-calendar-widget" style="text-decoration:none;">
+                    <h3>Calendar</h3>
+                    <p>Upcoming Deadlines</p>
+                    <div class="mini-calendar-events">
+                        {% set recent_events = calendar_events | sort(attribute='start') %}
+                        {% for event in recent_events[:5] %}
+                        <div class="mini-event-item">
+                            <div class="mini-event-dot dot-{{ event.type }}"></div>
+                            <div style="flex:1;">
+                                <div style="font-weight: 500; color: var(--text-primary);">{{ event.title }}</div>
+                                <div style="font-size: 11px; color: var(--text-muted);">{{ event.start }}</div>
+                            </div>
+                            {% if event.completed %}
+                            <span class="material-symbols-outlined" style="font-size: 16px; color: var(--success);">check_circle</span>
+                            {% endif %}
+                        </div>
+                        {% else %}
+                        <p style="text-align: center; padding: 20px 0;">No upcoming events</p>
+                        {% endfor %}
+                    </div>
+                    <span style="font-size: 12px; color: var(--accent); margin-top: auto; padding-top: 12px;">View full calendar →</span>
+                </a>
+
+                <!-- 5. PERFORMANCE ISLAND -->
+                <div class="island">
+                    <h3>Performance</h3>
+                    <div class="performance-metrics">
+                        <div class="perf-item">
+                            <div style="display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 4px;">
+                                <span>Average Score</span>
+                                <span>{{ avg_performance }}%</span>
+                            </div>
+                            <div class="perf-bar-container">
+                                <div class="perf-bar-fill" style="width: {{ avg_performance }}%; background: #3b82f6;"></div>
+                            </div>
+                        </div>
+
+                        <div class="perf-item">
+                            <div style="display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 4px;">
+                                <span>Last Exam</span>
+                                <span>{{ last_exam.pct if last_exam else 0 }}%</span>
+                            </div>
+                            <div class="perf-bar-container">
+                                <div class="perf-bar-fill" style="width: {{ last_exam.pct if last_exam else 0 }}%; background: #22c55e;"></div>
+                            </div>
+                            {% if last_exam %}
+                            <div style="font-size: 10px; color: var(--text-muted); margin-top: 2px;">{{ last_exam.subject }}</div>
+                            {% endif %}
+                        </div>
+
+                        <div class="perf-item">
+                            <div style="display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 4px;">
+                                <span>Highest Score</span>
+                                <span>{{ highest_exam.pct if highest_exam else 0 }}%</span>
+                            </div>
+                            <div class="perf-bar-container">
+                                <div class="perf-bar-fill" style="width: {{ highest_exam.pct if highest_exam else 0 }}%; background: #a855f7;"></div>
+                            </div>
+                            {% if highest_exam %}
+                            <div style="font-size: 10px; color: var(--text-muted); margin-top: 2px;">{{ highest_exam.subject }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
                 </div>
-                {% endif %}
+
+                <!-- 6. STATS ISLAND -->
+                <div class="island">
+                    <h3>Completion Stats</h3>
+                    <div class="stats-island-grid">
+                        <div class="stat-box-small">
+                            <span class="val">{{ completed_goals }}/{{ total_goals }}</span>
+                            <span class="lab">Goals</span>
+                        </div>
+                        <div class="stat-box-small">
+                            <span class="val">{{ completed_tasks }}/{{ total_tasks }}</span>
+                            <span class="lab">Tasks</span>
+                        </div>
+                        <div class="stat-box-small">
+                            <span class="val">{{ completed_assignments }}/{{ total_assignments }}</span>
+                            <span class="lab">Assignments</span>
+                        </div>
+                        <div class="stat-box-small">
+                            <span class="val">{{ completed_chapters }}</span>
+                            <span class="lab">Chapters</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 7. STUDY TIME GRAPH -->
+                <div class="island" style="grid-column: span 2;">
+                    <h3>Study Time (Last 7 Days)</h3>
+                    <div style="height: 200px; margin-top: 10px;">
+                        <canvas id="studyTimeChart"></canvas>
+                    </div>
+                </div>
+
+                <!-- 8. QUICK TODO ISLAND -->
+                <div class="island">
+                    <h3>Quick Access TODO</h3>
+                    <div class="quick-todo-container">
+                        <div class="todo-input-row">
+                            <input type="text" id="newTodoInput" placeholder="New task...">
+                            <button class="btn btn-secondary" onclick="addTodo()" style="padding: 0 12px;">+</button>
+                        </div>
+                        <div class="mini-todo-list" id="todoList">
+                            <!-- JS populated -->
+                        </div>
+                    </div>
+                </div>
+
             </div>
 
         </main>
     </div>
 
     <script>
+        // ACADEMIC DONUT
         let academicChart = null;
-        
         function updateAcademicChart() {
             const canvas = document.getElementById('academicDonut');
             if (!canvas) return;
-            
-            // Get responsive dimensions from CSS
-            const container = canvas.parentElement;
-            const computedStyle = getComputedStyle(container);
-            const width = parseInt(computedStyle.width);
-            const height = parseInt(computedStyle.height);
-            
-            // Set canvas dimensions to match container
-            canvas.width = width;
-            canvas.height = height;
-            
-            // Get the context
             const ctx = canvas.getContext('2d');
-            const progress = JSON.parse('{{ overall_progress | tojson | safe }}');
-            
-            // Get theme-aware colors
+            const progress = {{ overall_progress }};
             const rootStyles = getComputedStyle(document.documentElement);
-            const progressFill = rootStyles.getPropertyValue('--progress-fill').trim();
-            const progressTrack = rootStyles.getPropertyValue('--progress-track').trim();
+            const progressFill = rootStyles.getPropertyValue('--progress-fill').trim() || '#ffffff';
+            const progressTrack = rootStyles.getPropertyValue('--progress-track').trim() || '#27272a';
             
-            // Destroy existing chart if it exists
-            if (academicChart) {
-                academicChart.destroy();
-            }
-            
-            // Create the chart
+            if (academicChart) academicChart.destroy();
             academicChart = new Chart(ctx, {
                 type: 'doughnut',
                 data: {
@@ -187,59 +217,106 @@
                     }]
                 },
                 options: {
-                    responsive: false,
+                    responsive: true,
                     maintainAspectRatio: false,
-                    cutout: '75%',
-                    plugins: {
-                        legend: { display: false },
-                        tooltip: { enabled: false }
-                    }
+                    cutout: '80%',
+                    plugins: { legend: { display: false }, tooltip: { enabled: false } }
                 }
             });
         }
-        
+
+        // STUDY TIME CHART
+        function initStudyChart() {
+            const ctx = document.getElementById('studyTimeChart').getContext('2d');
+            const data = {{ study_stats | tojson | safe }};
+
+            new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: data.map(d => d.day),
+                    datasets: [{
+                        label: 'Hours Studied',
+                        data: data.map(d => d.hours),
+                        backgroundColor: '#3b82f6',
+                        borderRadius: 4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: { beginAtZero: true, grid: { color: 'rgba(255,255,255,0.05)' } },
+                        x: { grid: { display: false } }
+                    },
+                    plugins: { legend: { display: false } }
+                }
+            });
+        }
+
+        // QUICK TODO LOGIC
+        async function fetchTodos() {
+            const res = await fetch('/api/todos');
+            const todos = await res.json();
+            renderTodos(todos);
+        }
+
+        function renderTodos(todos) {
+            const list = document.getElementById('todoList');
+            list.innerHTML = '';
+            todos.forEach(todo => {
+                const div = document.createElement('div');
+                div.className = `mini-todo-item ${todo.completed ? 'done' : ''}`;
+                div.innerHTML = `
+                    <input type="checkbox" ${todo.completed ? 'checked' : ''} onchange="toggleTodo('${todo.id}')">
+                    <span>${todo.text}</span>
+                    <span class="material-symbols-outlined" style="font-size: 16px; cursor: pointer; color: var(--text-muted);" onclick="deleteTodo('${todo.id}')">delete</span>
+                `;
+                list.appendChild(div);
+            });
+        }
+
+        async function addTodo() {
+            const input = document.getElementById('newTodoInput');
+            const text = input.value.trim();
+            if (!text) return;
+            const res = await fetch('/api/todos', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: 'add', text })
+            });
+            const data = await res.json();
+            input.value = '';
+            renderTodos(data.todos);
+        }
+
+        async function toggleTodo(id) {
+            const res = await fetch('/api/todos', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: 'toggle', id })
+            });
+            const data = await res.json();
+            renderTodos(data.todos);
+        }
+
+        async function deleteTodo(id) {
+            const res = await fetch('/api/todos', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: 'delete', id })
+            });
+            const data = await res.json();
+            renderTodos(data.todos);
+        }
+
         document.addEventListener('DOMContentLoaded', function() {
             updateAcademicChart();
-
-            // Animate subject donut charts
-            const donutProgressCircles = document.querySelectorAll('.subject-donut-progress');
-            donutProgressCircles.forEach(circle => {
-                const container = circle.closest('.subject-donut-container');
-                const percentageText = container.querySelector('.subject-donut-center');
-                const percentage = parseInt(percentageText.textContent);
-                
-                // Circumference of circle (2 * π * r)
-                const radius = 16;
-                const circumference = 2 * Math.PI * radius;
-                
-                // Set stroke-dasharray and stroke-dashoffset
-                circle.style.strokeDasharray = `${circumference}`;
-                circle.style.strokeDashoffset = `${circumference - (percentage / 100) * circumference}`;
-            });
+            initStudyChart();
+            fetchTodos();
         });
     </script>
 
     <!-- Notification System -->
     {% include 'notifications_snippet.html' %}
-
-    <!-- AI Planning Prompt Strip (only show if user has consented to AI) -->
-    {% if user.get('ai_consent') %}
-    <div class="ai-dashboard-prompt">
-        <div class="ai-prompt-content">
-            <div class="ai-prompt-text">
-                <h4>Plan Your Studies with AI</h4>
-                <p>Get personalized study plans and resolve doubts with our AI assistant.</p>
-            </div>
-            <div class="ai-prompt-action">
-                <a href="{{ url_for('ai_assistant') }}" class="btn btn-small">
-                    <span class="material-symbols-outlined" style="font-size: 16px;">smart_toy</span>
-                    Try AI Assistant
-                </a>
-            </div>
-        </div>
-    </div>
-    {% endif %}
-
 </body>
-
 </html>

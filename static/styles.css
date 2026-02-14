@@ -603,35 +603,202 @@ textarea {
     color: var(--text-primary);
 }
 
-/* Top row: 2 columns - Academic Dashboard Layout (using flexbox) */
-.dashboard-top {
-    display: flex;
-    gap: 20px;
+/* Multi-Island Dashboard Grid */
+.dashboard-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 24px;
     margin-bottom: 24px;
     width: 100%;
-    box-sizing: border-box;
 }
 
-/* Left column: Academic island (2/3 width) - first child */
-.dashboard-top > :first-child {
-    flex: 2 1 0;
-    min-width: 0; /* Allow shrinking */
-    display: block !important; /* Ensure it's a block element */
+@media (max-width: 1200px) {
+    .dashboard-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
 }
 
-/* Right column: Profile/Careers stack (1/3 width) - last child */
-.dashboard-top > :last-child {
-    flex: 1 1 0;
-    min-width: 0; /* Allow shrinking */
+@media (max-width: 768px) {
+    .dashboard-grid {
+        grid-template-columns: 1fr;
+    }
 }
 
-/* Top-right splits vertically into 2 equal halves */
-.dashboard-top-right {
+.dashboard-top {
+    display: contents;
+}
+
+/* Academic island — compact */
+.island-academic {
+    height: auto;
+    min-height: 280px;
+}
+
+.island-chart {
+    flex-shrink: 0;
+    width: 140px;
+    height: 140px;
+    position: relative;
+}
+
+.island-chart canvas {
+    width: 100%;
+    height: 100%;
+}
+
+.academic-content {
+    display: flex;
+    align-items: center;
+    justify-content: space-around;
+    gap: 16px;
+    width: 100%;
+    margin-top: 10px;
+}
+
+/* Feature Islands */
+.island-calendar-widget {
+    grid-row: span 2;
+}
+
+.mini-calendar-events {
+    margin-top: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.mini-event-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px;
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: 8px;
+    font-size: 13px;
+}
+
+.mini-event-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+}
+
+.dot-exam { background: #ff4757; }
+.dot-task { background: #5352ed; }
+.dot-assignment { background: #2ed573; }
+
+/* Streak Box */
+.streak-island {
+    background: linear-gradient(135deg, rgba(255, 107, 107, 0.1), rgba(255, 107, 107, 0.05)) !important;
+    border: 1px solid rgba(255, 107, 107, 0.2) !important;
+    flex-direction: row !important;
+    align-items: center;
+    gap: 16px;
+    min-height: 100px !important;
+}
+
+.streak-icon {
+    font-size: 32px;
+    color: #ff6b6b;
+}
+
+.streak-val {
+    font-size: 28px;
+    font-weight: 700;
+}
+
+/* Quick TODO */
+.quick-todo-container {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.todo-input-row {
+    display: flex;
+    gap: 8px;
+}
+
+.todo-input-row input {
+    flex: 1;
+    background: var(--bg-primary);
+    border: 1px solid var(--border);
+    padding: 8px 12px;
+    border-radius: 6px;
+    color: var(--text-primary);
+}
+
+.mini-todo-list {
+    max-height: 150px;
+    overflow-y: auto;
+}
+
+.mini-todo-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 6px 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.mini-todo-item.done span {
+    text-decoration: line-through;
+    color: var(--text-muted);
+}
+
+/* Performance bars */
+.perf-metrics {
     display: flex;
     flex-direction: column;
     gap: 16px;
-    width: 100%;
-    box-sizing: border-box;
+    margin-top: 12px;
+}
+
+.perf-item h5 {
+    margin-bottom: 6px;
+    font-size: 11px;
+    text-transform: uppercase;
+    color: var(--text-secondary);
+}
+
+.perf-bar-container {
+    height: 6px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 3px;
+    overflow: hidden;
+}
+
+.perf-bar-fill {
+    height: 100%;
+    background: var(--accent);
+    border-radius: 3px;
+}
+
+/* Stats Island */
+.stats-island-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-top: 10px;
+}
+
+.stat-box-small {
+    background: rgba(255, 255, 255, 0.03);
+    padding: 12px;
+    border-radius: 8px;
+    text-align: center;
+}
+
+.stat-box-small .val {
+    font-size: 20px;
+    font-weight: 700;
+    display: block;
+}
+
+.stat-box-small .lab {
+    font-size: 9px;
+    color: var(--text-secondary);
+    text-transform: uppercase;
 }
 
 /* Academic Dashboard Layout - Equal 50/50 split */

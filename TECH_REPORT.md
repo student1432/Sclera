@@ -22,7 +22,9 @@ This report provides a technical breakdown of the Sclera (formerly StudyOS) code
 
 ## 4. Frontend & Presentation
 *   **`templates/`**: A collection of over 50 Jinja2 templates.
-    *   `main_dashboard.html`: The central student hub.
+    *   `main_dashboard.html`: The central student hub, featuring a multi-island layout with real-time performance and productivity widgets.
+    *   `calendar.html`: The academic calendar interface with day, week, and month tracking for exams, tasks, and assignments.
+    *   `assignments.html`: Dashboard for creating and managing academic assignments.
     *   `institution_*.html`: Dedicated views for the Institutional Layer (Admin/Teacher portals).
     *   `ai_assistant.html`: The premium "Dark Academic" chat interface.
     *   `_sidebar.html`, `_topnav.html`: Modular UI components for consistent navigation.

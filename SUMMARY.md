@@ -11,7 +11,8 @@ Unlike gamified productivity apps, Sclera is built as a **"Focused Research Oper
 3.  **Execution Layer:** A suite of productivity tools including Goals, Tasks, and an AI-powered Analytics Engine that tracks student performance.
 
 ## 🚀 Key Feature Modules
-*   **Academic Dashboard:** Precision tracking of syllabus progress.
+*   **Academic Dashboard:** Precision tracking of syllabus progress with an overhauled multi-island layout, performance analytics (Average, Last, Highest scores), and study-time visualizations.
+*   **Academic Calendar:** Comprehensive tracking of exams, assignments, and tasks with Day, Week, and Month views.
 *   **Study Mode (Pomodoro):** A focused study environment with an integrated timer, study-specific to-do lists, and automatic session recording.
 *   **AI Progress Engine:** Calculates advanced metrics:
     *   **Momentum:** Score gradient over recent exams.
