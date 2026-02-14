@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="{{ settings.get('theme', 'dark') }}">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Calendar — Sclera</title>
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap"
+        rel="stylesheet" />
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet" />
+    <!-- FullCalendar CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/index.global.min.css" rel="stylesheet">
+    <style>
+        .text-inverse {
+            color: var(--bg-primary);
+        }
+
+        [data-theme="light"] .text-inverse {
+            color: #ffffff !important;
+        }
+
+        [data-theme="dark"] .fc {
+            color: var(--text-primary);
+        }
+
+        [data-theme="dark"] .fc td,
+        [data-theme="dark"] .fc th {
+            border-color: rgba(255, 255, 255, 0.1) !important;
+        }
+
+        [data-theme="dark"] .fc-col-header-cell-cushion,
+        [data-theme="dark"] .fc-daygrid-day-number {
+            color: var(--text-primary) !important;
+        }
+
+        [data-theme="dark"] .fc-list-event-title,
+        [data-theme="dark"] .fc-list-day-text,
+        [data-theme="dark"] .fc-list-day-side-text {
+            color: var(--text-primary) !important;
+        }
+
+        [data-theme="dark"] .fc-button-primary {
+            background: var(--bg-tertiary) !important;
+            border-color: var(--border) !important;
+            color: var(--text-primary) !important;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="dashboard-layout">
+
+        <!-- TOPNAV -->
+        {% include '_topnav.html' %}
+
+        <!-- MAIN -->
+        <main class="main-content">
+
+            {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}\n {% for category, message in messages %}
+            <div class="alert alert-{{ category }}">{{ message }}</div>
+            {% endfor %}
+            {% endif %}
+            {% endwith %}
+
+            <div class="calendar-header">
+                <h1>Calendar</h1>
+                <div class="calendar-actions">
+                    <button id="newEventBtn" class="btn">+ New Event</button>
+                    <a href="{{ url_for('profile_dashboard') }}" class="btn btn-secondary">Back to Dashboard</a>
+                </div>
+            </div>
+
+            <!-- Calendar Container -->
+            <div id="calendar" class="calendar-container"></div>
+
+        </main>
+    </div>
+
+    <!-- Event Modal -->
+    <div id="eventModal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="modalTitle">New Event</h2>
+                <button class="modal-close" onclick="closeEventModal()">&times;</button>
+            </div>
+            <form id="eventForm">
+                <input type="hidden" id="eventId" name="event_id">
+
+                <div class="form-group">
+                    <label for="eventTitle">Title *</label>
+                    <input type="text" id="eventTitle" name="title" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="eventType">Type</label>
+                    <select id="eventType" name="event_type">
+                        <option value="assignment">Assignment</option>
+                        <option value="exam">Exam</option>
+                        <option value="meeting">Meeting</option>
+                        <option value="class">Class</option>
+                        <option value="task">Task</option>
+                        <option value="other">Other</option>
+                    </select>
+                </div>
+
+                <div class="form-row-split">
+                    <div class="form-group">
+                        <label for="eventStart">Start Date/Time *</label>
+                        <input type="datetime-local" id="eventStart" name="start_date" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="eventEnd">End Date/Time *</label>
+                        <input type="datetime-local" id="eventEnd" name="end_date" required>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>
+                        <input type="checkbox" id="eventAllDay" name="all_day">
+                        All Day Event
+                    </label>
+                </div>
+
+                <div class="form-group">
+                    <label for="eventDescription">Description</label>
+                    <textarea id="eventDescription" name="description" rows="3"></textarea>
+                </div>
+
+                <div class="modal-actions">
+                    <button type="button" id="deleteEventBtn" class="btn btn-danger" style="display: none;"
+                        onclick="deleteEvent()">Delete</button>
+                    <div style="flex: 1;"></div>
+                    <button type="button" class="btn btn-secondary" onclick="closeEventModal()">Cancel</button>
+                    <button type="submit" class="btn">Save</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- FullCalendar JS -->
+    <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/index.global.min.js"></script>
+
+    <!-- Calendar Logic -->
+    <script>
+        let calendar;
+        let currentEventId = null;
+
+        document.addEventListener('DOMContentLoaded', function () {
+            const calendarEl = document.getElementById('calendar');
+
+            calendar = new FullCalendar.Calendar(calendarEl, {
+                initialView: 'dayGridMonth',
+                headerToolbar: {
+                    left: 'prev,next today',
+                    center: 'title',
+                    right: 'dayGridMonth,timeGridWeek,timeGridDay'
+                },
+                editable: true,
+                selectable: true,
+                selectMirror: true,
+                dayMaxEvents: true,
+                events: function (info, successCallback, failureCallback) {
+                    // Fetch events from API
+                    fetch('/api/calendar/events')
+                        .then(response => response.json())
+                        .then(data => {
+                            const events = data.events.map(event => ({
+                                id: event.id,
+                                title: event.title,
+                                start: event.start || event.start_date,
+                                end: event.end || event.end_date,
+                                allDay: event.all_day || false,
+                                backgroundColor: event.color || '#3b82f6',
+                                borderColor: event.color || '#3b82f6',
+                                extendedProps: {
+                                    description: event.description,
+                                    event_type: event.event_type
+                                }
+                            }));
+                            successCallback(events);
+                        })
+                        .catch(error => {
+                            console.error('Error fetching events:', error);
+                            failureCallback(error);
+                        });
+                },
+                select: function (info) {
+                    // Open modal for new event
+                    openEventModal(null, info.startStr, info.endStr);
+                },
+                eventClick: function (info) {
+                    // Open modal to edit event
+                    openEventModal(info.event);
+                },
+                eventDrop: function (info) {
+                    // Handle drag-and-drop
+                    moveEvent(info.event.id, info.event.startStr, info.event.endStr);
+                },
+                eventResize: function (info) {
+                    // Handle resize
+                    moveEvent(info.event.id, info.event.startStr, info.event.endStr);
+                }
+            });
+
+            calendar.render();
+
+            // New Event button
+            document.getElementById('newEventBtn').addEventListener('click', function () {
+                openEventModal();
+            });
+
+            // Event form submission
+            document.getElementById('eventForm').addEventListener('submit', function (e) {
+                e.preventDefault();
+                saveEvent();
+            });
+        });
+
+        function openEventModal(event = null, startStr = null, endStr = null) {
+            const modal = document.getElementById('eventModal');
+            const form = document.getElementById('eventForm');
+            const deleteBtn = document.getElementById('deleteEventBtn');
+
+            form.reset();
+
+            if (event) {
+                // Edit existing event
+                document.getElementById('modalTitle').textContent = 'Edit Event';
+                document.getElementById('eventId').value = event.id;
+                document.getElementById('eventTitle').value = event.title;
+                document.getElementById('eventType').value = event.extendedProps.event_type || 'other';
+                document.getElementById('eventStart').value = formatDateTimeLocal(event.start);
+                document.getElementById('eventEnd').value = formatDateTimeLocal(event.end || event.start);
+                document.getElementById('eventAllDay').checked = event.allDay;
+                document.getElementById('eventDescription').value = event.extendedProps.description || '';
+                deleteBtn.style.display = 'block';
+                currentEventId = event.id;
+            } else {
+                // New event
+                document.getElementById('modalTitle').textContent = 'New Event';
+                if (startStr) {
+                    document.getElementById('eventStart').value = formatDateTimeLocal(startStr);
+                    document.getElementById('eventEnd').value = formatDateTimeLocal(endStr);
+                }
+                deleteBtn.style.display = 'none';
+                currentEventId = null;
+            }
+
+            modal.style.display = 'flex';
+        }
+
+        function closeEventModal() {
+            document.getElementById('eventModal').style.display = 'none';
+            currentEventId = null;
+        }
+
+        function saveEvent() {
+            const form = document.getElementById('eventForm');
+            const formData = new FormData(form);
+
+            const eventData = {
+                title: formData.get('title'),
+                event_type: formData.get('event_type'),
+                start_date: formData.get('start_date'),
+                end_date: formData.get('end_date'),
+                all_day: document.getElementById('eventAllDay').checked,
+                description: formData.get('description')
+            };
+
+            const url = currentEventId
+                ? `/api/calendar/events/${currentEventId}`
+                : '/api/calendar/events';
+
+            const method = currentEventId ? 'PUT' : 'POST';
+
+            fetch(url, {
+                method: method,
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(eventData)
+            })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success || data.event) {
+                        closeEventModal();
+                        calendar.refetchEvents();
+                    } else {
+                        alert('Error saving event: ' + (data.error || 'Unknown error'));
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('Error saving event');
+                });
+        }
+
+        function deleteEvent() {
+            if (!currentEventId) return;
+
+            if (!confirm('Are you sure you want to delete this event?')) return;
+
+            fetch(`/api/calendar/events/${currentEventId}`, {
+                method: 'DELETE'
+            })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        closeEventModal();
+                        calendar.refetchEvents();
+                    } else {
+                        alert('Error deleting event: ' + (data.error || 'Unknown error'));
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('Error deleting event');
+                });
+        }
+
+        function moveEvent(eventId, startStr, endStr) {
+            fetch(`/api/calendar/events/${eventId}/move`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    start_date: startStr,
+                    end_date: endStr
+                })
+            })
+                .then(response => response.json())
+                .then(data => {
+                    if (!data.success) {
+                        alert('Error moving event: ' + (data.error || 'Unknown error'));
+                        calendar.refetchEvents();
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    calendar.refetchEvents();
+                });
+        }
+
+        function formatDateTimeLocal(dateStr) {
+            if (!dateStr) return '';
+            const date = new Date(dateStr);
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            const hours = String(date.getHours()).padStart(2, '0');
+            const minutes = String(date.getMinutes()).padStart(2, '0');
+            return `${year}-${month}-${day}T${hours}:${minutes}`;
+        }
+
+        // Close modal when clicking outside
+        window.onclick = function (event) {
+            const modal = document.getElementById('eventModal');
+            if (event.target === modal) {
+                closeEventModal();
+            }
+        }
+    </script>
+
+    <!-- Notification System -->
+    {% include 'notifications_snippet.html' %}
+
+</body>
+
+</html>

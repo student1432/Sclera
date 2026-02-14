@@ -136,6 +136,9 @@
                         <p style="font-size: 0.9rem; color: var(--text-secondary); margin: 0; line-height: 1.5;">
                             {{ bubble.description or 'A collaborative study space for group learning and progress tracking.' }}
                         </p>
+                        <div style="font-size: 0.8rem; color: var(--text-muted); margin-top: 0.5rem;">
+                            Created by {{ bubble.creator_name }}
+                        </div>
                     </div>
 
                     <div class="bubble-stats-row" style="display: flex; gap: 1rem; margin-bottom: 1rem;">

@@ -20,6 +20,7 @@ import time
 import uuid
 from functools import wraps
 from firebase_admin import firestore
+Increment = firestore.Increment
 from collections import defaultdict
 import random
 import string
@@ -1288,11 +1289,102 @@ def profile_dashboard():
         interests = {'careers': [], 'courses': [], 'internships': []}
     saved_career_ids = interests.get('careers', [])
     saved_careers = [get_career_by_id(cid) for cid in saved_career_ids if get_career_by_id(cid)]
+    
+    # NEW: Fetch upcoming calendar events for widget
+    upcoming_events = []
+    try:
+        today = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+        week_later = today + timedelta(days=7)
+        # Fix: Fetch events specifically for this user
+        events_ref = db.collection('calendar_events').where('uid', '==', uid).stream()
+        for doc in events_ref:
+            event_data = doc.to_dict()
+            event_data['id'] = doc.id
+            # Normalize date for sorting and display
+            s_date = event_data.get('start_date') or event_data.get('start')
+            if s_date:
+                try:
+                    if isinstance(s_date, str):
+                        dt = datetime.fromisoformat(s_date.replace('Z', '+00:00'))
+                    else:
+                        dt = s_date
+                    
+                    if today <= dt.replace(tzinfo=None) <= week_later:
+                        event_data['display_date'] = dt.strftime('%Y-%m-%d')
+                        upcoming_events.append(event_data)
+                except: pass
+        upcoming_events.sort(key=lambda x: str(x.get('start_date') or x.get('start') or ''))
+        upcoming_events = upcoming_events[:5]
+    except Exception as e:
+        logger.error(f"Fetch upcoming events error: {str(e)}")
+    
+    # NEW: Get performance metrics
+    performance_data = {'average': 0, 'last': 0, 'highest': 0}
+    try:
+        results = user_data.get('exam_results', [])
+        if results:
+            # Fix: use percentage if available, else calculate from score
+            scores = []
+            for r in results:
+                if 'percentage' in r:
+                    scores.append(float(r['percentage']))
+                elif r.get('max_score'):
+                    scores.append(float(r['score'] / r['max_score'] * 100))
+            if scores:
+                performance_data['average'] = round(sum(scores) / len(scores), 1)
+                performance_data['last'] = round(scores[-1], 1)
+                performance_data['highest'] = round(max(scores), 1)
+    except Exception as e:
+        logger.error(f"Calculate performance error: {str(e)}")
+
+    # NEW: Get study time data (last 7 days)
+    study_time_data = []
+    try:
+        daily_totals = defaultdict(int)
+        sessions_ref = db.collection('users').document(uid).collection('study_sessions').stream()
+        for doc in sessions_ref:
+            session_data = doc.to_dict()
+            session_start = session_data.get('start_time', '')
+            if session_start:
+                date_part = session_start.split('T')[0]
+                daily_totals[date_part] += session_data.get('duration_seconds', 0) // 60
+        
+        today = datetime.now()
+        for i in range(6, -1, -1):
+            date = (today - timedelta(days=i)).strftime('%Y-%m-%d')
+            study_time_data.append({
+                'date': date,
+                'minutes': daily_totals.get(date, 0)
+            })
+    except Exception as e:
+        logger.error(f"Fetch study time error: {str(e)}")
+
+    # NEW: Get totals
+    totals_data = {'total_goals': 0, 'completed_goals': 0, 'total_tasks': 0, 'completed_tasks': 0}
+    try:
+        goals = user_data.get('goals', [])
+        totals_data['total_goals'] = len(goals) if isinstance(goals, list) else 0
+        totals_data['completed_goals'] = sum(1 for g in goals if isinstance(g, dict) and g.get('completed', False)) if isinstance(goals, list) else 0
+        tasks = user_data.get('tasks', [])
+        totals_data['total_tasks'] = len(tasks) if isinstance(tasks, list) else 0
+        totals_data['completed_tasks'] = sum(1 for t in tasks if isinstance(t, dict) and t.get('completed', False)) if isinstance(tasks, list) else 0
+    except Exception as e:
+        logger.error(f"Calculate totals error: {str(e)}")
+
+    # NEW: Get incomplete tasks
+    recent_tasks = []
+    try:
+        tasks = user_data.get('tasks', [])
+        if isinstance(tasks, list):
+            recent_tasks = [t for t in tasks if isinstance(t, dict) and not t.get('completed', False)][:5]
+    except: pass
+
     context = {
         'user': user_data,
+        'email': user_data.get('email', 'N/A'),
         'name': user_data.get('name', 'Student'),
         'purpose': purpose,
-        'purpose_display': purpose.replace('_', ' ').title() if purpose else '',
+        'purpose_display': (purpose or '').replace('_', ' ').title(),
         'academic_summary': academic_summary,
         'progress_data': progress_data,
         'overall_progress': progress_data.get('overall', 0),
@@ -1305,7 +1397,13 @@ def profile_dashboard():
         'profile_picture': user_data.get('profile_picture'),
         'settings': user_data.get('settings', {}),
         'in_institution': bool(user_data.get('institution_id')),
-        'has_class': bool(user_data.get('class_ids'))
+        'has_class': bool(user_data.get('class_ids')),
+        # NEW: Dashboard data for new islands
+        'upcoming_events': upcoming_events,
+        'performance_data': performance_data,
+        'study_time_data': study_time_data,
+        'totals_data': totals_data,
+        'recent_tasks': recent_tasks
     }
     return render_template('main_dashboard.html', **context)
 
@@ -1425,6 +1523,442 @@ def download_class_file(file_id):
     return redirect(file_data['file_url'])
 
 # ============================================================================
+# CALENDAR SYSTEM
+# ============================================================================
+
+@app.route('/calendar')
+@require_login
+def calendar_dashboard():
+    """Main calendar dashboard view"""
+    uid = session['uid']
+    user_data = get_user_data(uid)
+    if not user_data:
+        flash('User data not found', 'error')
+        return redirect(url_for('logout'))
+    
+    context = {
+        'user': user_data,
+        'name': user_data.get('name', 'Student'),
+        'settings': user_data.get('settings', {})
+    }
+    return render_template('calendar_dashboard.html', **context)
+
+@app.route('/api/calendar/events', methods=['GET'])
+@require_login
+def get_calendar_events():
+    """Get all calendar events for the logged-in user"""
+    uid = session['uid']
+    
+    try:
+        # Get date range from query params (optional)
+        start_date = request.args.get('start')
+        end_date = request.args.get('end')
+        
+        events_ref = db.collection('calendar_events').where('uid', '==', uid)
+        
+        events = []
+        for doc in events_ref.stream():
+            event_data = doc.to_dict()
+            event_data['id'] = doc.id
+            
+            # Convert Firestore timestamps to ISO strings for FullCalendar
+            if 'start_date' in event_data and event_data['start_date']:
+                event_data['start'] = event_data['start_date'].isoformat() if hasattr(event_data['start_date'], 'isoformat') else event_data['start_date']
+            if 'end_date' in event_data and event_data['end_date']:
+                event_data['end'] = event_data['end_date'].isoformat() if hasattr(event_data['end_date'], 'isoformat') else event_data['end_date']
+            
+            events.append(event_data)
+        
+        return jsonify({'events': events})
+    except Exception as e:
+        logger.error(f"Get calendar events error: {str(e)}")
+        return jsonify({'error': 'Failed to fetch events'}), 500
+
+@app.route('/api/calendar/events', methods=['POST'])
+@require_login
+def create_calendar_event():
+    """Create a new calendar event"""
+    _institution_login_guard()
+    uid = session['uid']
+    
+    try:
+        data = request.get_json()
+        
+        # Validate required fields
+        if not data.get('title'):
+            return jsonify({'error': 'Title is required'}), 400
+        
+        # Event type color mapping
+        color_map = {
+            'assignment': '#3b82f6',  # blue
+            'exam': '#ef4444',        # red
+            'meeting': '#22c55e',     # green
+            'class': '#f59e0b',       # amber
+            'task': '#8b5cf6',        # purple
+            'other': '#6b7280'        # gray
+        }
+        
+        event_type = data.get('event_type', 'other')
+        event_id = str(uuid.uuid4())
+        
+        event_data = {
+            'id': event_id,
+            'uid': uid,
+            'title': data.get('title'),
+            'description': data.get('description', ''),
+            'event_type': event_type,
+            'start_date': data.get('start_date'),
+            'end_date': data.get('end_date'),
+            'all_day': data.get('all_day', False),
+            'color': color_map.get(event_type, '#6b7280'),
+            'linked_task_id': data.get('linked_task_id'),
+            'linked_chapter_id': data.get('linked_chapter_id'),
+            'created_at': firestore.SERVER_TIMESTAMP,
+            'updated_at': firestore.SERVER_TIMESTAMP
+        }
+        
+        db.collection('calendar_events').document(event_id).set(event_data)
+        
+        return jsonify({'success': True, 'event': event_data, 'id': event_id})
+    except Exception as e:
+        logger.error(f"Create calendar event error: {str(e)}")
+        return jsonify({'error': 'Failed to create event'}), 500
+
+@app.route('/api/calendar/events/<event_id>', methods=['PUT'])
+@require_login
+def update_calendar_event(event_id):
+    """Update an existing calendar event"""
+    _institution_login_guard()
+    uid = session['uid']
+    
+    try:
+        # Verify event belongs to user
+        event_doc = db.collection('calendar_events').document(event_id).get()
+        if not event_doc.exists:
+            return jsonify({'error': 'Event not found'}), 404
+        
+        event_data = event_doc.to_dict()
+        if event_data.get('uid') != uid:
+            return jsonify({'error': 'Unauthorized'}), 403
+        
+        data = request.get_json()
+        
+        # Update fields
+        update_data = {
+            'updated_at': firestore.SERVER_TIMESTAMP
+        }
+        
+        if 'title' in data:
+            update_data['title'] = data['title']
+        if 'description' in data:
+            update_data['description'] = data['description']
+        if 'event_type' in data:
+            update_data['event_type'] = data['event_type']
+        if 'start_date' in data:
+            update_data['start_date'] = data['start_date']
+        if 'end_date' in data:
+            update_data['end_date'] = data['end_date']
+        if 'all_day' in data:
+            update_data['all_day'] = data['all_day']
+        
+        db.collection('calendar_events').document(event_id).update(update_data)
+        
+        return jsonify({'success': True, 'message': 'Event updated'})
+    except Exception as e:
+        logger.error(f"Update calendar event error: {str(e)}")
+        return jsonify({'error': 'Failed to update event'}), 500
+
+@app.route('/api/calendar/events/<event_id>', methods=['DELETE'])
+@require_login
+def delete_calendar_event(event_id):
+    """Delete a calendar event"""
+    _institution_login_guard()
+    uid = session['uid']
+    
+    try:
+        # Verify event belongs to user
+        event_doc = db.collection('calendar_events').document(event_id).get()
+        if not event_doc.exists:
+            return jsonify({'error': 'Event not found'}), 404
+        
+        event_data = event_doc.to_dict()
+        if event_data.get('uid') != uid:
+            return jsonify({'error': 'Unauthorized'}), 403
+        
+        db.collection('calendar_events').document(event_id).delete()
+        
+        return jsonify({'success': True, 'message': 'Event deleted'})
+    except Exception as e:
+        logger.error(f"Delete calendar event error: {str(e)}")
+        return jsonify({'error': 'Failed to delete event'}), 500
+
+@app.route('/api/calendar/events/<event_id>/move', methods=['POST'])
+@require_login
+def move_calendar_event(event_id):
+    """Move event to new date/time (drag-and-drop support)"""
+    _institution_login_guard()
+    uid = session['uid']
+    
+    try:
+        # Verify event belongs to user
+        event_doc = db.collection('calendar_events').document(event_id).get()
+        if not event_doc.exists:
+            return jsonify({'error': 'Event not found'}), 404
+        
+        event_data = event_doc.to_dict()
+        if event_data.get('uid') != uid:
+            return jsonify({'error': 'Unauthorized'}), 403
+        
+        data = request.get_json()
+        
+        update_data = {
+            'start_date': data.get('start_date'),
+            'end_date': data.get('end_date'),
+            'updated_at': firestore.SERVER_TIMESTAMP
+        }
+        
+        db.collection('calendar_events').document(event_id).update(update_data)
+        
+        return jsonify({'success': True, 'message': 'Event moved'})
+    except Exception as e:
+        logger.error(f"Move calendar event error: {str(e)}")
+        return jsonify({'error': 'Failed to move event'}), 500
+
+# ============================================================================
+# STUDY SESSIONS
+# ============================================================================
+
+@app.route('/api/study_sessions', methods=['GET'])
+@require_login
+def get_study_sessions():
+    """Get study sessions for graphs"""
+    _institution_login_guard()
+    uid = session['uid']
+    
+    try:
+        # Get last 30 days by default
+        days = int(request.args.get('days', 30))
+        
+        sessions_ref = db.collection('study_sessions').where('uid', '==', uid).order_by('session_date', direction=firestore.Query.DESCENDING).limit(days)
+        
+        sessions = []
+        for doc in sessions_ref.stream():
+            session_data = doc.to_dict()
+            session_data['id'] = doc.id
+            sessions.append(session_data)
+        
+        return jsonify({'sessions': sessions})
+    except Exception as e:
+        logger.error(f"Get study sessions error: {str(e)}")
+        return jsonify({'error': 'Failed to fetch study sessions'}), 500
+
+@app.route('/api/study_sessions', methods=['POST'])
+@require_login
+def log_study_session():
+    """Log a new study session"""
+    _institution_login_guard()
+    uid = session['uid']
+    
+    try:
+        data = request.get_json()
+        
+        session_id = str(uuid.uuid4())
+        session_data = {
+            'id': session_id,
+            'uid': uid,
+            'subject': data.get('subject', 'General'),
+            'duration_minutes': int(data.get('duration_minutes', 0)),
+            'session_date': data.get('session_date', datetime.utcnow().isoformat()),
+            'created_at': firestore.SERVER_TIMESTAMP
+        }
+        
+        db.collection('study_sessions').document(session_id).set(session_data)
+        
+        return jsonify({'success': True, 'session': session_data})
+    except Exception as e:
+        logger.error(f"Log study session error: {str(e)}")
+        return jsonify({'error': 'Failed to log study session'}), 500
+
+# ============================================================================
+# DASHBOARD DATA APIs
+# ============================================================================
+
+@app.route('/api/dashboard/performance')
+@require_login
+def get_dashboard_performance():
+    """Get exam performance metrics for dashboard"""
+    _institution_login_guard()
+    uid = session['uid']
+    
+    try:
+        user_data = get_user_data(uid)
+        if not user_data:
+            return jsonify({'error': 'User not found'}), 404
+        
+        # Get exam results
+        results = user_data.get('results', {})
+        
+        if not results:
+            return jsonify({
+                'average': 0,
+                'last': 0,
+                'highest': 0,
+                'total_exams': 0
+            })
+        
+        # Calculate metrics
+        scores = []
+        for exam_type, subjects in results.items():
+            if isinstance(subjects, dict):
+                for subject, data in subjects.items():
+                    if isinstance(data, dict) and 'percentage' in data:
+                        scores.append(float(data['percentage']))
+        
+        if not scores:
+            return jsonify({
+                'average': 0,
+                'last': 0,
+                'highest': 0,
+                'total_exams': 0
+            })
+        
+        average = sum(scores) / len(scores)
+        last = scores[-1] if scores else 0
+        highest = max(scores)
+        
+        return jsonify({
+            'average': round(average, 1),
+            'last': round(last, 1),
+            'highest': round(highest, 1),
+            'total_exams': len(scores)
+        })
+    except Exception as e:
+        logger.error(f"Get dashboard performance error: {str(e)}")
+        return jsonify({'error': 'Failed to fetch performance data'}), 500
+
+@app.route('/api/dashboard/study_time')
+@require_login
+def get_dashboard_study_time():
+    """Get study time data for graphs"""
+    _institution_login_guard()
+    uid = session['uid']
+    
+    try:
+        # Get last 7 days of study sessions
+        sessions_ref = db.collection('study_sessions').where('uid', '==', uid).order_by('session_date', direction=firestore.Query.DESCENDING).limit(30)
+        
+        # Aggregate by date
+        from collections import defaultdict
+        daily_totals = defaultdict(int)
+        
+        for doc in sessions_ref.stream():
+            session_data = doc.to_dict()
+            session_date = session_data.get('session_date', '')
+            
+            # Extract date part (YYYY-MM-DD)
+            if isinstance(session_date, str):
+                date_part = session_date.split('T')[0]
+            else:
+                date_part = datetime.now().strftime('%Y-%m-%d')
+            
+            daily_totals[date_part] += session_data.get('duration_minutes', 0)
+        
+        # Get last 7 days
+        today = datetime.now()
+        last_7_days = []
+        
+        for i in range(6, -1, -1):
+            date = (today - timedelta(days=i)).strftime('%Y-%m-%d')
+            last_7_days.append({
+                'date': date,
+                'minutes': daily_totals.get(date, 0)
+            })
+        
+        total_week = sum(day['minutes'] for day in last_7_days)
+        
+        return jsonify({
+            'daily': last_7_days,
+            'total_week_hours': round(total_week / 60, 1)
+        })
+    except Exception as e:
+        logger.error(f"Get dashboard study time error: {str(e)}")
+        return jsonify({'error': 'Failed to fetch study time data'}), 500
+
+@app.route('/api/dashboard/totals')
+@require_login
+def get_dashboard_totals():
+    """Get totals for goals and tasks"""
+    _institution_login_guard()
+    uid = session['uid']
+    
+    try:
+        user_data = get_user_data(uid)
+        if not user_data:
+            return jsonify({'error': 'User not found'}), 404
+        
+        # Count goals
+        goals = user_data.get('goals', [])
+        total_goals = len(goals) if isinstance(goals, list) else 0
+        completed_goals = sum(1 for g in goals if isinstance(g, dict) and g.get('completed', False)) if isinstance(goals, list) else 0
+        
+        # Count tasks
+        tasks = user_data.get('tasks', [])
+        total_tasks = len(tasks) if isinstance(tasks, list) else 0
+        completed_tasks = sum(1 for t in tasks if isinstance(t, dict) and t.get('completed', False)) if isinstance(tasks, list) else 0
+        
+        return jsonify({
+            'total_goals': total_goals,
+            'completed_goals': completed_goals,
+            'total_tasks': total_tasks,
+            'completed_tasks': completed_tasks
+        })
+    except Exception as e:
+        logger.error(f"Get dashboard totals error: {str(e)}")
+        return jsonify({'error': 'Failed to fetch totals'}), 500
+
+@app.route('/api/dashboard/upcoming_events')
+@require_login
+def get_upcoming_events():
+    """Get upcoming calendar events for widget (next 7 days)"""
+    _institution_login_guard()
+    uid = session['uid']
+    
+    try:
+        # Get events from today onwards
+        today = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+        week_later = today + timedelta(days=7)
+        
+        events_ref = db.collection('calendar_events').where('uid', '==', uid)
+        
+        upcoming = []
+        for doc in events_ref.stream():
+            event_data = doc.to_dict()
+            event_data['id'] = doc.id
+            
+            # Parse start_date
+            start_date_str = event_data.get('start_date', '')
+            if start_date_str:
+                try:
+                    if isinstance(start_date_str, str):
+                        event_date = datetime.fromisoformat(start_date_str.replace('Z', '+00:00'))
+                    else:
+                        event_date = start_date_str
+                    
+                    # Check if within next 7 days
+                    if today <= event_date <= week_later:
+                        upcoming.append(event_data)
+                except:
+                    pass
+        
+        # Sort by date
+        upcoming.sort(key=lambda x: x.get('start_date', ''))
+        
+        return jsonify({'events': upcoming[:10]})  # Limit to 10
+    except Exception as e:
+        logger.error(f"Get upcoming events error: {str(e)}")
+        return jsonify({'error': 'Failed to fetch upcoming events'}), 500
+
+# ============================================================================
 # COMMUNITY SYSTEM
 # ============================================================================
 
@@ -1467,10 +2001,12 @@ def community_dashboard():
                 invite_doc = db.collection('bubble_invitations').document(invitation_id).get()
                 if invite_doc.exists:
                     invitation = invite_doc.to_dict()
+                    sender_data = get_user_data(invitation.get('sender_uid'))
+                    sender_name = sender_data.get('name', 'Unknown User') if sender_data else 'Unknown User'
                     bubble_invitations.append({
                         'id': invitation_id,
                         'bubble_name': invitation.get('bubble_name'),
-                        'sender_name': None,  # Could fetch sender name if needed
+                        'sender_name': sender_name,
                         'message': invitation.get('message'),
                         'created_at': invitation.get('created_at')
                     })
@@ -2109,6 +2645,10 @@ def send_bubble_invitation(bubble_id):
         # Check if invitation already sent (you could store pending invitations)
         # For now, just create a notification/invitation record
 
+        # Fetch creator's name for the invitation message
+        creator_data = get_user_data(uid)
+        creator_name = creator_data.get('name', 'Unknown User') if creator_data else 'Unknown User'
+
         invitation_id = f"invite_{bubble_id}_{target_uid}_{int(time.time())}"
         invitation_data = {
             'invitation_id': invitation_id,
@@ -2118,7 +2658,7 @@ def send_bubble_invitation(bubble_id):
             'receiver_uid': target_uid,
             'status': 'pending',
             'created_at': datetime.utcnow().isoformat(),
-            'message': f'You have been invited to join the study bubble "{bubble_data.get("name")}"'
+            'message': f'You have been invited by {creator_name} to join the study bubble "{bubble_data.get("name")}"'
         }
 
         # Store invitation
@@ -2432,6 +2972,10 @@ def bubble_detail(bubble_id):
         flash('You are not a member of this bubble', 'error')
         return redirect(url_for('community_dashboard'))
 
+    # Get creator name
+    creator_data = get_user_data(bubble_data.get('creator_uid'))
+    creator_name = creator_data.get('name', 'Unknown User') if creator_data else 'Unknown User'
+
     # Get bubble members for leaderboard
     member_uids = bubble_data.get('member_uids', [])
     leaderboard_data = []
@@ -2495,7 +3039,8 @@ def bubble_detail(bubble_id):
             'description': bubble_data.get('description'),
             'member_count': len(member_uids),
             'created_at': bubble_data.get('created_at'),
-            'is_creator': is_creator
+            'is_creator': is_creator,
+            'creator_name': creator_name
         },
         'leaderboard': leaderboard_data[:50],  # Top 50 in bubble
         'current_user_rank': current_user_rank,
@@ -3257,7 +3802,7 @@ def study_time():
     session_ref = db.collection('users').document(uid).collection('study_sessions').document(hour_id)
     session_data = {
         'start_time': now.isoformat(),
-        'duration_seconds': Increment(seconds),
+        'duration_seconds': firestore.Increment(seconds),
         'last_updated': now.isoformat()
     }
     if local_hour is not None:
@@ -3342,49 +3887,72 @@ def goals_dashboard():
     # GET fallback — redirect to academic dashboard
     return redirect(url_for('academic_dashboard'))
 
-# ============================================================================
-# TASKS
-
-# ============================================================================
-
 @app.route('/tasks', methods=['GET', 'POST'])
 @require_login
 def tasks_dashboard():
     uid = session['uid']
+    user_data = get_user_data(uid)
+    if not user_data:
+        flash('User data not found', 'error')
+        return redirect(url_for('logout'))
+
     if request.method == 'POST':
-        action = request.form.get('action')
-        if action == 'add':
-            title = request.form.get('title')
-            if title:
-                user_data = get_user_data(uid)
-                tasks = user_data.get('tasks', [])
-                tasks.append({
-                    'id': len(tasks), 'title': title,
-                    'description': request.form.get('description', ''),
-                    'goal_id': request.form.get('goal_id', ''),
-                    'due_date': request.form.get('due_date', ''),
-                    'completed': False,
-                    'created_at': datetime.utcnow().isoformat()
-                })
-                db.collection('users').document(uid).update({'tasks': tasks})
-                flash('Task added!', 'success')
-        elif action == 'toggle':
-            task_id = int(request.form.get('task_id'))
-            user_data = get_user_data(uid)
+        try:
+            action = request.form.get('action')
             tasks = user_data.get('tasks', [])
-            for t in tasks:
-                if t.get('id') == task_id:
-                    t['completed'] = not t.get('completed', False)
-                    break
-            db.collection('users').document(uid).update({'tasks': tasks})
-        elif action == 'delete':
-            task_id = int(request.form.get('task_id'))
-            user_data = get_user_data(uid)
-            tasks = [t for t in user_data.get('tasks', []) if t.get('id') != task_id]
-            db.collection('users').document(uid).update({'tasks': tasks})
-            flash('Task deleted!', 'success')
-        return redirect(url_for('academic_dashboard'))
-    return redirect(url_for('academic_dashboard'))
+            
+            if action == 'add':
+                title = request.form.get('title')
+                if title:
+                    new_task = {
+                        'id': str(int(datetime.utcnow().timestamp() * 1000)),
+                        'title': title,
+                        'description': request.form.get('description', ''),
+                        'goal_id': request.form.get('goal_id', ''),
+                        'due_date': request.form.get('due_date', ''),
+                        'completed': False,
+                        'created_at': datetime.utcnow().isoformat(),
+                        'updated_at': datetime.utcnow().isoformat()
+                    }
+                    tasks.append(new_task)
+                    db.collection('users').document(uid).update({'tasks': tasks})
+                    flash('Task added successfully!', 'success')
+                else:
+                    flash('Task title is required', 'error')
+                    
+            elif action == 'toggle':
+                task_id = request.form.get('task_id')
+                for t in tasks:
+                    if str(t.get('id')) == str(task_id):
+                        t['completed'] = not t.get('completed', False)
+                        t['updated_at'] = datetime.utcnow().isoformat()
+                        break
+                db.collection('users').document(uid).update({'tasks': tasks})
+                
+            elif action == 'delete':
+                task_id = request.form.get('task_id')
+                tasks = [t for t in tasks if str(t.get('id')) != str(task_id)]
+                db.collection('users').document(uid).update({'tasks': tasks})
+                flash('Task deleted!', 'success')
+        except Exception as e:
+            logger.error(f"Task action error: {str(e)}")
+            flash(f"An error occurred: {str(e)}", 'error')
+            
+        # Redirect back to the referrer or a default page
+        referrer = request.referrer or ''
+        if 'tasks' in referrer or 'dashboard' in referrer:
+            return redirect(referrer)
+        return redirect(url_for('profile_dashboard'))
+
+    # GET: Render tasks dashboard
+    context = {
+        'tasks': user_data.get('tasks', []),
+        'goals': user_data.get('goals', []),
+        'user': user_data,
+        'name': user_data.get('name', 'Student'),
+        'settings': user_data.get('settings', {})
+    }
+    return render_template('tasks_dashboard.html', **context)
 
 # ============================================================================
 # RESULTS
