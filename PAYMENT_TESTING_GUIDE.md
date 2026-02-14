@@ -1,12 +1,12 @@
-# Comprehensive Testing Guide: Institutional Payment
+# Comprehensive Testing Guide: Institutional Payment (Razorpay)
 
-Follow these exact steps to verify the robustness of your new payment implementation.
+Follow these exact steps to verify the robustness of your Razorpay integration.
 
 ---
 
 ## 🛠 Setup for Testing
-1.  **Stripe Keys:** Ensure you are using `sk_test_...` and `pk_test_...`.
-2.  **Price ID:** Create a "Product" in your Stripe Dashboard (Test Mode) and copy the Price ID into your `.env`.
+1.  **Razorpay Keys:** Ensure you are using Test Mode keys (`rzp_test_...`).
+2.  **Amount:** Set a small amount for testing (e.g., 100 paise for 1.00 INR).
 
 ---
 
@@ -19,34 +19,34 @@ Follow these exact steps to verify the robustness of your new payment implementa
     *   [ ] Try to manually type `/institution/admin/dashboard` in the URL bar. Do you get redirected back to checkout?
     *   [ ] In Firestore, does the institution have `status: "pending_payment"`?
 
-### 2. The "Stripe Handshake" Test
+### 2. The "Order Creation" Test
 *   **Action:** Click the "Pay Now" button on the checkout page.
 *   **Verification:**
-    *   [ ] Does the browser redirect to `checkout.stripe.com`?
-    *   [ ] Inspect the network tab for the POST to `/api/create-checkout-session`. Does it return a JSON object with a session ID?
+    *   [ ] Does the Razorpay modal open successfully?
+    *   [ ] Inspect the network tab for the POST to `/api/create-razorpay-order`. Does it return an order object with an ID?
 
-### 3. The "Test Card" Success Test
-*   **Action:** Use card `4242 4242 4242 4242`, any expiry in future, and any CVC.
+### 3. The "Test Payment" Success Test
+*   **Action:** In the Razorpay modal, select "Card" or "UPI" and use the test credentials provided by Razorpay (e.g., Success card).
 *   **Verification:**
-    *   [ ] After clicking "Pay", are you redirected to Sclera's `/institution/payment-success` page?
-    *   [ ] Does the success page show a countdown or redirect you to the dashboard within 5-10 seconds?
-    *   [ ] **Database check:** Does the institution now have `status: "active"`, `plan: "Pro"`, and a `subscription_id`?
+    *   [ ] After the modal closes, does the frontend call `/api/verify-payment`?
+    *   [ ] Does the success page show a countdown or redirect you to the dashboard?
+    *   [ ] **Database check:** Does the institution now have `status: "active"`, `plan: "Pro"`, and a `razorpay_payment_id`?
 
-### 4. The "Payment Cancelled" Test
-*   **Action:** Start the checkout process, then click the "Back" arrow on the Stripe page.
+### 4. The "Signature Verification" Security Test
+*   **Action:** Attempt to manually call `/api/verify-payment` with fake data.
 *   **Verification:**
-    *   [ ] Are you returned to Sclera's checkout page?
-    *   [ ] Is the institution status still `pending_payment`?
-    *   [ ] Try to access the dashboard again—ensure it's still locked.
+    *   [ ] Does the server return a `400 Bad Request` or a signature verification failure?
+    *   [ ] Verify that the institution status remains `pending_payment`.
 
-### 5. The "Metadata Security" Test
-*   **Action:** Verify that the `institution_id` in Stripe Metadata matches the ID in your Firestore.
+### 5. The "Payment Cancelled" Test
+*   **Action:** Open the Razorpay modal, then close it without paying.
 *   **Verification:**
-    *   [ ] Check the Stripe Dashboard -> Payments -> [Click Payment] -> Metadata section. It should contain the correct `institution_id`.
+    *   [ ] Does the page remain on `/institution/checkout`?
+    *   [ ] Verify that the institution status is still `pending_payment`.
 
 ---
 
 ## 🚩 Common Failure Points to Watch For:
-1.  **Missing `require_admin_v2`:** If you forget this, a student might accidentally access the checkout session API.
-2.  **Wrong `success_url`:** Ensure the `success_url` in your Python code includes the `{CHECKOUT_SESSION_ID}` template tag.
-3.  **Firestore Permissions:** Ensure your Firestore rules allow the Admin to update their own Institution record after payment (or perform the update server-side).
+1.  **Paise vs. Rupees:** Razorpay amounts are in the smallest currency unit (paise). `100` = `1.00 INR`. Ensure your config reflects this.
+2.  **Signature Mismatch:** Ensure you are using the correct `razorpay_order_id`, `razorpay_payment_id`, and `razorpay_signature` in the verification dictionary.
+3.  **Frontend Success Callback:** Make sure the frontend only redirects to the success page AFTER the server-side verification returns a success status.
