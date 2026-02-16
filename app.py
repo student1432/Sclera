@@ -1539,7 +1539,9 @@ def calendar_dashboard():
     context = {
         'user': user_data,
         'name': user_data.get('name', 'Student'),
-        'settings': user_data.get('settings', {})
+        'settings': user_data.get('settings', {}),
+        'in_institution': bool(user_data.get('institution_id')) if user_data else False,
+        'has_class': bool(user_data.get('class_ids')) if user_data else False
     }
     return render_template('calendar_dashboard.html', **context)
 
@@ -5378,6 +5380,585 @@ def mark_notification_read(notif_id):
             notif_ref.update({'read': True})
             return jsonify({'success': True})
     return jsonify({'error': 'Not found'}), 404
+
+# ============================================================================
+# DOCS SYSTEM API ROUTES
+
+# ============================================================================
+
+DOCS_COL = 'documents'
+FOLDERS_COL = 'folders'
+DOC_VERSIONS_COL = 'document_versions'
+
+def docs_login_guard():
+    """Check if user is logged in for docs routes"""
+    if 'uid' not in session:
+        if request.is_json:
+            return jsonify({'error': 'Authentication required', 'message': 'Please log in to access documents'}), 401
+        return redirect(url_for('login'))
+    return None
+
+@app.route('/docs')
+def docs_dashboard():
+    """Main docs dashboard"""
+    guard_resp = docs_login_guard()
+    if guard_resp:
+        return guard_resp
+    
+    user_id = session['uid']
+    
+    # Get user's academic data for subjects
+    user_doc = db.collection('users').document(user_id).get()
+    user_data = user_doc.to_dict() if user_doc.exists else {}
+    
+    # Get available subjects based on user's academic path
+    subjects = []
+    purpose = user_data.get('purpose', '')
+    
+    if purpose == 'high_school' and user_data.get('highschool'):
+        hs = user_data['highschool']
+        subjects = get_available_subjects('highschool', hs.get('board'), hs.get('grade'))
+    elif purpose == 'exam_prep' and user_data.get('exam'):
+        subjects = get_available_subjects('exam', user_data['exam'].get('type'))
+    elif purpose == 'after_tenth' and user_data.get('after_tenth'):
+        at = user_data['after_tenth']
+        subjects = get_available_subjects('after_tenth', 'CBSE', at.get('grade'))
+    
+    # Get user's folders and documents - use simpler queries first
+    try:
+        folders_ref = db.collection(FOLDERS_COL).where('owner_id', '==', user_id).where('deleted', '==', False).stream()
+        folders = []
+        for folder in folders_ref:
+            folder_data = folder.to_dict()
+            folder_data['id'] = folder.id
+            
+            # Convert timestamps to strings for JSON serialization
+            if 'created_at' in folder_data and folder_data['created_at']:
+                folder_data['created_at'] = folder_data['created_at'].isoformat() if hasattr(folder_data['created_at'], 'isoformat') else str(folder_data['created_at'])
+            if 'updated_at' in folder_data and folder_data['updated_at']:
+                folder_data['updated_at'] = folder_data['updated_at'].isoformat() if hasattr(folder_data['updated_at'], 'isoformat') else str(folder_data['updated_at'])
+            
+            folders.append(folder_data)
+        
+        # Sort folders by order_index in Python instead of Firestore
+        folders.sort(key=lambda x: x.get('order_index', 0))
+    except Exception as e:
+        # Fallback if index not ready - get all folders and filter
+        folders = []
+        all_folders = db.collection(FOLDERS_COL).where('owner_id', '==', user_id).stream()
+        for folder in all_folders:
+            folder_data = folder.to_dict()
+            folder_data['id'] = folder.id
+            if not folder_data.get('deleted', False):
+                # Convert timestamps to strings
+                if 'created_at' in folder_data and folder_data['created_at']:
+                    folder_data['created_at'] = folder_data['created_at'].isoformat() if hasattr(folder_data['created_at'], 'isoformat') else str(folder_data['created_at'])
+                if 'updated_at' in folder_data and folder_data['updated_at']:
+                    folder_data['updated_at'] = folder_data['updated_at'].isoformat() if hasattr(folder_data['updated_at'], 'isoformat') else str(folder_data['updated_at'])
+                
+                folders.append(folder_data)
+        folders.sort(key=lambda x: x.get('order_index', 0))
+    
+    try:
+        documents_ref = db.collection(DOCS_COL).where('owner_id', '==', user_id).where('deleted', '==', False).stream()
+        documents = []
+        for doc in documents_ref:
+            doc_data = doc.to_dict()
+            doc_data['id'] = doc.id
+            
+            # Convert timestamps to strings for JSON serialization
+            if 'created_at' in doc_data and doc_data['created_at']:
+                doc_data['created_at'] = doc_data['created_at'].isoformat() if hasattr(doc_data['created_at'], 'isoformat') else str(doc_data['created_at'])
+            if 'updated_at' in doc_data and doc_data['updated_at']:
+                doc_data['updated_at'] = doc_data['updated_at'].isoformat() if hasattr(doc_data['updated_at'], 'isoformat') else str(doc_data['updated_at'])
+            
+            documents.append(doc_data)
+        
+        # Sort documents by updated_at in Python
+        documents.sort(key=lambda x: x.get('updated_at', datetime.min), reverse=True)
+    except Exception as e:
+        # Fallback if index not ready
+        documents = []
+        all_docs = db.collection(DOCS_COL).where('owner_id', '==', user_id).stream()
+        for doc in all_docs:
+            doc_data = doc.to_dict()
+            doc_data['id'] = doc.id
+            if not doc_data.get('deleted', False):
+                # Convert timestamps to strings
+                if 'created_at' in doc_data and doc_data['created_at']:
+                    doc_data['created_at'] = doc_data['created_at'].isoformat() if hasattr(doc_data['created_at'], 'isoformat') else str(doc_data['created_at'])
+                if 'updated_at' in doc_data and doc_data['updated_at']:
+                    doc_data['updated_at'] = doc_data['updated_at'].isoformat() if hasattr(doc_data['updated_at'], 'isoformat') else str(doc_data['updated_at'])
+                
+                documents.append(doc_data)
+        documents.sort(key=lambda x: x.get('updated_at', datetime.min), reverse=True)
+    
+    # Get user settings for theme
+    settings = {}
+    try:
+        user_doc = db.collection('users').document(user_id).get()
+        if user_doc.exists:
+            user_data_full = user_doc.to_dict()
+            settings = user_data_full.get('settings', {})
+    except Exception as e:
+        print(f"Error getting user settings: {e}")
+        user_data_full = {}
+    
+    # Determine institution and class status for topnav
+    in_institution = bool(user_data_full.get('institution_id')) if user_data_full else False
+    has_class = bool(user_data_full.get('class_ids')) if user_data_full else False
+    
+    return render_template('docs_dashboard.html', folders=folders, documents=documents, settings=settings, subjects=subjects, in_institution=in_institution, has_class=has_class)
+
+@app.route('/api/documents', methods=['GET'])
+def get_documents():
+    """Get all documents for user"""
+    guard_resp = docs_login_guard()
+    if guard_resp:
+        return guard_resp
+    
+    user_id = session['uid']
+    folder_id = request.args.get('folder_id')
+    
+    try:
+        if folder_id:
+            query = db.collection(DOCS_COL).where('folder_id', '==', folder_id).where('owner_id', '==', user_id).where('deleted', '==', False)
+        else:
+            query = db.collection(DOCS_COL).where('owner_id', '==', user_id).where('deleted', '==', False)
+        
+        documents = []
+        for doc in query.stream():
+            doc_data = doc.to_dict()
+            doc_data['id'] = doc.id
+            documents.append(doc_data)
+        
+        # Sort by updated_at in Python
+        documents.sort(key=lambda x: x.get('updated_at', datetime.min), reverse=True)
+        
+    except Exception as e:
+        # Fallback if index not ready
+        documents = []
+        all_docs = db.collection(DOCS_COL).where('owner_id', '==', user_id).stream()
+        for doc in all_docs:
+            doc_data = doc.to_dict()
+            doc_data['id'] = doc.id
+            if not doc_data.get('deleted', False):
+                if not folder_id or doc_data.get('folder_id') == folder_id:
+                    documents.append(doc_data)
+        documents.sort(key=lambda x: x.get('updated_at', datetime.min), reverse=True)
+    
+    return jsonify({'documents': documents})
+
+@app.route('/api/documents', methods=['POST'])
+def create_document():
+    """Create new document"""
+    guard_resp = docs_login_guard()
+    if guard_resp:
+        return guard_resp
+    
+    user_id = session['uid']
+    data = request.get_json()
+    
+    # Validate required fields
+    if not data.get('title'):
+        return jsonify({'error': 'Title is required'}), 400
+    
+    try:
+        # Create document
+        doc_data = {
+            'title': data.get('title'),
+            'content': data.get('content', ''),
+            'subject': data.get('subject', None),
+            'owner_id': user_id,
+            'folder_id': data.get('folder_id', None),
+            'word_count': 0,
+            'created_at': firestore.SERVER_TIMESTAMP,
+            'updated_at': firestore.SERVER_TIMESTAMP,
+            'deleted': False
+        }
+        
+        doc_ref, doc_id = db.collection(DOCS_COL).add(doc_data)
+        created_doc = doc_ref.get().to_dict()
+        created_doc['id'] = doc_id
+        
+        # Convert timestamps to strings for JSON serialization
+        if 'created_at' in created_doc and created_doc['created_at']:
+            if hasattr(created_doc['created_at'], 'isoformat'):
+                created_doc['created_at'] = created_doc['created_at'].isoformat()
+            else:
+                created_doc['created_at'] = str(created_doc['created_at'])
+        if 'updated_at' in created_doc and created_doc['updated_at']:
+            if hasattr(created_doc['updated_at'], 'isoformat'):
+                created_doc['updated_at'] = created_doc['updated_at'].isoformat()
+            else:
+                created_doc['updated_at'] = str(created_doc['updated_at'])
+        
+        return jsonify({'document': created_doc}), 201
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/documents/<doc_id>', methods=['GET'])
+def get_document(doc_id):
+    """Get specific document"""
+    guard_resp = docs_login_guard()
+    if guard_resp:
+        return guard_resp
+    
+    user_id = session['uid']
+    
+    doc_ref = db.collection(DOCS_COL).document(doc_id).get()
+    if not doc_ref.exists:
+        return jsonify({'error': 'Document not found'}), 404
+    
+    doc_data = doc_ref.to_dict()
+    doc_data['id'] = doc_ref.id
+    
+    # Check permission
+    if doc_data.get('owner_id') != user_id:
+        return jsonify({'error': 'Access denied'}), 403
+    
+    return jsonify({'document': doc_data})
+
+@app.route('/api/documents/<doc_id>/export/<format>')
+def export_document(doc_id, format):
+    """Export document in different formats"""
+    guard_resp = docs_login_guard()
+    if guard_resp:
+        return guard_resp
+    
+    user_id = session['uid']
+    
+    doc_ref = db.collection(DOCS_COL).document(doc_id)
+    doc = doc_ref.get()
+    
+    if not doc.exists:
+        return jsonify({'error': 'Document not found'}), 404
+    
+    doc_data = doc.to_dict()
+    
+    # Check permission
+    if doc_data.get('owner_id') != user_id:
+        return jsonify({'error': 'Access denied'}), 403
+    
+    content = doc_data.get('content', '')
+    title = doc_data.get('title', 'Untitled Document')
+    
+    if format == 'markdown':
+        # Simple markdown conversion
+        from flask import Response
+        markdown_content = f"# {title}\n\n{content}"
+        return Response(markdown_content, mimetype='text/plain', headers={
+            'Content-Disposition': f'attachment; filename="{title}.md"'
+        })
+    elif format == 'html':
+        from flask import Response
+        html_content = f"""<!DOCTYPE html>
+<html>
+<head>
+    <title>{title}</title>
+    <style>
+        body {{ font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; }}
+    </style>
+</head>
+<body>
+    <h1>{title}</h1>
+    <div>{content}</div>
+</body>
+</html>"""
+        return Response(html_content, mimetype='text/html', headers={
+            'Content-Disposition': f'attachment; filename="{title}.html"'
+        })
+    elif format == 'txt':
+        from flask import Response
+        return Response(f"{title}\n\n{content}", mimetype='text/plain', headers={
+            'Content-Disposition': f'attachment; filename="{title}.txt"'
+        })
+    elif format == 'pdf':
+        # For PDF, we'll return a simple text-based approach
+        # In production, you'd use a proper PDF library
+        from flask import Response
+        return Response(f"{title}\n\n{content}", mimetype='text/plain', headers={
+            'Content-Disposition': f'attachment; filename="{title}.txt"'
+        })
+    else:
+        return jsonify({'error': 'Unsupported format'}), 400
+
+@app.route('/api/documents/<doc_id>', methods=['PUT'])
+def update_document(doc_id):
+    """Update document"""
+    guard_resp = docs_login_guard()
+    if guard_resp:
+        return guard_resp
+    
+    user_id = session['uid']
+    data = request.get_json()
+    
+    doc_ref = db.collection(DOCS_COL).document(doc_id)
+    doc = doc_ref.get()
+    
+    if not doc.exists:
+        return jsonify({'error': 'Document not found'}), 404
+    
+    doc_data = doc.to_dict()
+    
+    # Check permission
+    if doc_data.get('owner_id') != user_id:
+        return jsonify({'error': 'Access denied'}), 403
+    
+    # Update document
+    update_data = {
+        'title': data.get('title', doc_data.get('title')),
+        'content': data.get('content', doc_data.get('content')),
+        'folder_id': data.get('folder_id', doc_data.get('folder_id')),
+        'updated_at': firestore.SERVER_TIMESTAMP,
+        'word_count': data.get('word_count', doc_data.get('word_count', 0)),
+        'subject': data.get('subject', doc_data.get('subject', '')),
+        'tags': data.get('tags', doc_data.get('tags', [])),
+        'starred': data.get('starred', doc_data.get('starred', False))
+    }
+    
+    doc_ref.update(update_data)
+    
+    # Create version if significant change
+    if data.get('create_version', False):
+        version_data = {
+            'document_id': doc_id,
+            'content': update_data['content'],
+            'word_count': update_data['word_count'],
+            'created_at': firestore.SERVER_TIMESTAMP,
+            'author_id': user_id,
+            'change_type': data.get('change_type', 'edited')
+        }
+        db.collection(DOC_VERSIONS_COL).add(version_data)
+    
+    # Return updated document
+    updated_doc = doc_ref.get().to_dict()
+    updated_doc['id'] = doc_id
+    
+    return jsonify({'document': updated_doc})
+
+@app.route('/api/documents/<doc_id>', methods=['DELETE'])
+def delete_document(doc_id):
+    """Soft delete document"""
+    guard_resp = docs_login_guard()
+    if guard_resp:
+        return guard_resp
+    
+    user_id = session['uid']
+    
+    doc_ref = db.collection(DOCS_COL).document(doc_id)
+    doc = doc_ref.get()
+    
+    if not doc.exists:
+        return jsonify({'error': 'Document not found'}), 404
+    
+    doc_data = doc.to_dict()
+    
+    # Check permission
+    if doc_data.get('owner_id') != user_id:
+        return jsonify({'error': 'Access denied'}), 403
+    
+    doc_ref.update({'deleted': True, 'deleted_at': firestore.SERVER_TIMESTAMP})
+    
+    return jsonify({'message': 'Document deleted'})
+
+@app.route('/api/folders', methods=['GET'])
+def get_folders():
+    """Get all folders for user"""
+    guard_resp = docs_login_guard()
+    if guard_resp:
+        return guard_resp
+    
+    user_id = session['uid']
+    
+    try:
+        folders = []
+        for folder in db.collection(FOLDERS_COL).where('owner_id', '==', user_id).where('deleted', '==', False).stream():
+            folder_data = folder.to_dict()
+            folder_data['id'] = folder.id
+            folders.append(folder_data)
+        
+        # Sort by order_index in Python
+        folders.sort(key=lambda x: x.get('order_index', 0))
+        
+    except Exception as e:
+        # Fallback if index not ready
+        folders = []
+        all_folders = db.collection(FOLDERS_COL).where('owner_id', '==', user_id).stream()
+        for folder in all_folders:
+            folder_data = folder.to_dict()
+            folder_data['id'] = folder.id
+            if not folder_data.get('deleted', False):
+                folders.append(folder_data)
+        folders.sort(key=lambda x: x.get('order_index', 0))
+    
+    return jsonify({'folders': folders})
+
+@app.route('/api/folders', methods=['POST'])
+def create_folder():
+    """Create new folder"""
+    guard_resp = docs_login_guard()
+    if guard_resp:
+        return guard_resp
+    
+    user_id = session['uid']
+    data = request.get_json()
+    
+    # Get next order index - use simpler query
+    try:
+        existing_folders = list(db.collection(FOLDERS_COL).where('owner_id', '==', user_id).where('parent_id', '==', data.get('parent_id', None)).where('deleted', '==', False).stream())
+        order_index = len(existing_folders)
+    except Exception as e:
+        # Fallback - get all and filter
+        all_folders = list(db.collection(FOLDERS_COL).where('owner_id', '==', user_id).stream())
+        filtered_folders = [f for f in all_folders if not f.to_dict().get('deleted', False) and f.to_dict().get('parent_id') == data.get('parent_id', None)]
+        order_index = len(filtered_folders)
+    
+    folder_data = {
+        'name': data.get('name', 'New Folder'),
+        'parent_id': data.get('parent_id'),
+        'owner_id': user_id,
+        'created_at': firestore.SERVER_TIMESTAMP,
+        'updated_at': firestore.SERVER_TIMESTAMP,
+        'order_index': order_index,
+        'deleted': False,
+        'expanded': True
+    }
+    
+    folder_ref, folder_id = db.collection(FOLDERS_COL).add(folder_data)
+    
+    # Get the created folder to return proper data
+    created_folder = folder_ref.get()
+    folder_response = created_folder.to_dict()
+    folder_response['id'] = folder_id
+    
+    # Convert timestamps to strings for JSON serialization
+    if 'created_at' in folder_response and folder_response['created_at']:
+        folder_response['created_at'] = folder_response['created_at'].isoformat() if hasattr(folder_response['created_at'], 'isoformat') else str(folder_response['created_at'])
+    if 'updated_at' in folder_response and folder_response['updated_at']:
+        folder_response['updated_at'] = folder_response['updated_at'].isoformat() if hasattr(folder_response['updated_at'], 'isoformat') else str(folder_response['updated_at'])
+    
+    return jsonify({'folder': folder_response}), 201
+
+@app.route('/api/folders/<folder_id>', methods=['PUT'])
+def update_folder(folder_id):
+    """Update folder"""
+    guard_resp = docs_login_guard()
+    if guard_resp:
+        return guard_resp
+    
+    user_id = session['uid']
+    data = request.get_json()
+    
+    folder_ref = db.collection(FOLDERS_COL).document(folder_id)
+    folder = folder_ref.get()
+    
+    if not folder.exists:
+        return jsonify({'error': 'Folder not found'}), 404
+    
+    folder_data = folder.to_dict()
+    
+    # Check permission
+    if folder_data.get('owner_id') != user_id:
+        return jsonify({'error': 'Access denied'}), 403
+    
+    update_data = {
+        'name': data.get('name', folder_data.get('name')),
+        'parent_id': data.get('parent_id', folder_data.get('parent_id')),
+        'order_index': data.get('order_index', folder_data.get('order_index')),
+        'expanded': data.get('expanded', folder_data.get('expanded', True)),
+        'updated_at': firestore.SERVER_TIMESTAMP
+    }
+    
+    folder_ref.update(update_data)
+    
+    updated_folder = folder_ref.get().to_dict()
+    updated_folder['id'] = folder_id
+    
+    return jsonify({'folder': updated_folder})
+
+@app.route('/api/folders/<folder_id>', methods=['DELETE'])
+def delete_folder(folder_id):
+    """Soft delete folder and its contents"""
+    guard_resp = docs_login_guard()
+    if guard_resp:
+        return guard_resp
+    
+    user_id = session['uid']
+    
+    folder_ref = db.collection(FOLDERS_COL).document(folder_id)
+    folder = folder_ref.get()
+    
+    if not folder.exists:
+        return jsonify({'error': 'Folder not found'}), 404
+    
+    folder_data = folder.to_dict()
+    
+    # Check permission
+    if folder_data.get('owner_id') != user_id:
+        return jsonify({'error': 'Access denied'}), 403
+    
+    try:
+        # Delete all documents in this folder
+        docs_in_folder = db.collection(DOCS_COL).where('folder_id', '==', folder_id).where('deleted', '==', False).stream()
+        for doc in docs_in_folder:
+            doc.reference.update({
+                'deleted': True,
+                'deleted_at': firestore.SERVER_TIMESTAMP
+            })
+        
+        # Delete all subfolders
+        subfolders = db.collection(FOLDERS_COL).where('parent_id', '==', folder_id).where('deleted', '==', False).stream()
+        for subfolder in subfolders:
+            subfolder.reference.update({
+                'deleted': True,
+                'deleted_at': firestore.SERVER_TIMESTAMP
+            })
+        
+        # Delete the folder itself
+        folder_ref.update({'deleted': True, 'deleted_at': firestore.SERVER_TIMESTAMP})
+        
+        return jsonify({'message': 'Folder and contents deleted successfully'}), 200
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/documents/<doc_id>/versions', methods=['GET'])
+def get_document_versions(doc_id):
+    """Get document version history"""
+    guard_resp = docs_login_guard()
+    if guard_resp:
+        return guard_resp
+    
+    user_id = session['uid']
+    
+    # Check document permission
+    doc_ref = db.collection(DOCS_COL).document(doc_id).get()
+    if not doc_ref.exists:
+        return jsonify({'error': 'Document not found'}), 404
+    
+    doc_data = doc_ref.to_dict()
+    if doc_data.get('owner_id') != user_id:
+        return jsonify({'error': 'Access denied'}), 403
+    
+    try:
+        versions = []
+        for version in db.collection(DOC_VERSIONS_COL).where('document_id', '==', doc_id).order_by('created_at', direction=firestore.Query.DESCENDING).stream():
+            version_data = version.to_dict()
+            version_data['id'] = version.id
+            versions.append(version_data)
+    except Exception as e:
+        # Fallback - get all and sort in Python
+        versions = []
+        all_versions = list(db.collection(DOC_VERSIONS_COL).where('document_id', '==', doc_id).stream())
+        for version in all_versions:
+            version_data = version.to_dict()
+            version_data['id'] = version.id
+            versions.append(version_data)
+        versions.sort(key=lambda x: x.get('created_at', datetime.min), reverse=True)
+    
+    return jsonify({'versions': versions})
 
 # ============================================================================
 # ERROR HANDLERS

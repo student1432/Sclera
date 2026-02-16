@@ -44,6 +44,11 @@
             <span class="material-symbols-outlined">chat</span>
             <span class="notch-label">AI Assistant</span>
         </a>
+        <a href="{{ url_for('docs_dashboard') }}"
+            class="notch-item {% if p.startswith('/docs') %}active{% endif %}">
+            <span class="material-symbols-outlined">description</span>
+            <span class="notch-label">Docs</span>
+        </a>
         <a href="{{ url_for('statistics_dashboard') }}"
             class="notch-item {% if p.startswith('/statistics') %}active{% endif %}">
             <span class="material-symbols-outlined">query_stats</span>
