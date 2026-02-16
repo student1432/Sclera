@@ -1,52 +1,34 @@
-# Master Implementation Prompt: Paid Institution Tiers (Razorpay)
+# Sclera Feature Implementation Prompt
 
-Use this prompt in Windsurf for an automated, high-fidelity implementation of the Razorpay payment gateway, optimized for India.
+Use this prompt in Windsurf for high-fidelity implementation of new features within the Sclera ecosystem.
 
 ---
 
-**Task: Implement Razorpay Gateway for Institutional Onboarding**
+**Task: Implement [Feature Name]**
 
 **Objective:**
-Convert the current free institution setup into a paid subscription flow. Gating the `institution_admin_dashboard` behind a Razorpay payment.
+[Describe the goal of the feature]
 
-**Exact Implementation Steps:**
+**Architectural Context:**
+Sclera is a high-fidelity **Student Academic Operating System** built with a three-layer architecture:
+1.  **Identity Layer:** Flask session management and Firebase Auth.
+2.  **Academic Backbone:** Structured syllabi in `templates/academic_data.py`.
+3.  **Execution Layer:** Real-time analytics and productivity tools (Calendar, Goals, Notes).
 
-1.  **Dependency Addition:**
-    *   Add `razorpay` to `requirements.txt`.
+**Key Technical Details:**
+*   **Backend:** Python 3 (Flask v3.0.0).
+*   **Database:** Firebase Firestore (NoSQL).
+*   **Frontend:** HTML5 with Jinja2 templates, Tailwind CSS, and a "Dark Academic" aesthetic.
+*   **AI:** Google Gemini integration via `ai_assistant.py`.
 
-2.  **Configuration Overhaul:**
-    *   In `config.py`, add `RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET`, and `RAZORPAY_AMOUNT` to the `Config` class.
-    *   Add placeholders for these in `.env`.
+**Instructions for Implementation:**
+*   **Consistency:** Adhere to the "Dark Academic" design philosophy (minimalist, sharp borders, structured typography).
+*   **Security:** Utilize the existing `require_login` and `require_admin_v2` decorators.
+*   **Data Integrity:** Use atomic updates (`firestore.Increment`, `firestore.ArrayUnion`) where appropriate.
+*   **Documentation:** Update `SUMMARY.md` and `TECH_REPORT.md` if new modules or significant architectural changes are introduced.
 
-3.  **Routing & Logic (`app.py`):**
-    *   **Signup Logic:** Update `@app.route('/signup/admin')`. Set institution `status` to `'pending_payment'`.
-    *   **Checkout Route:** Create `@app.route('/institution/checkout')`. Renders `institution_checkout.html`. Pass `RAZORPAY_KEY_ID` and `RAZORPAY_AMOUNT` to the template.
-    *   **Order API:** Create `@app.route('/api/create-razorpay-order', methods=['POST'])`.
-        *   Use `client.order.create` with amount and currency ('INR').
-    *   **Verification API:** Create `@app.route('/api/verify-payment', methods=['POST'])`.
-        *   Use `client.utility.verify_payment_signature` to validate the payload.
-        *   On success, update the Firestore `institutions` document: set `status` to `'active'` and `plan` to `'Pro'`.
-    *   **Middleware Enforcement:** In `@app.route('/institution/admin/dashboard')`, redirect to `institution_checkout` if the institution status is `'pending_payment'`.
-
-4.  **Template Creation:**
-    *   **`templates/institution_checkout.html`**:
-        *   Include `<script src="https://checkout.razorpay.com/v1/checkout.js"></script>`.
-        *   Add a "Pay with Razorpay" button.
-        *   Implement the JavaScript flow:
-            1. Call `/api/create-razorpay-order`.
-            2. Initialize Razorpay options with the `order_id`.
-            3. On successful payment modal close, POST the results to `/api/verify-payment`.
-            4. Redirect to dashboard on success.
-    *   **`templates/payment_success.html`**:
-        *   Show a professional success message with a 5-second redirect.
-
-**Constraints:**
-*   Maintain the "Dark Academic" aesthetic.
-*   Use `INR` as the currency.
-*   Strictly verify the signature on the server side.
-
-**Database References:**
-*   Collection: `institutions`
-*   Status Field: `status` (values: `'pending_payment'`, `'active'`)
+**Development Tools:**
+*   Utilize existing `/api/debug/*` routes for database inspection during development.
+*   The AI Assistant consent check is currently set to bypass for testing efficiency.
 
 ---

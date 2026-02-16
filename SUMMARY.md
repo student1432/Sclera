@@ -24,7 +24,8 @@ Unlike gamified productivity apps, Sclera is built as a **"Focused Research Oper
     *   **Predictive Risk Analytics:** Identifies at-risk students using study session patterns.
     *   **Institutional Heatmap:** Visualizes peak activity hours across the institution.
 *   **Sclera AI (The Core Intelligence):** An AI-powered workspace (via Google Gemini) for academic planning, doubt resolution, and institutional analysis.
-*   **Community & Bubbles:** Social features for forming study groups ("Bubbles"), peer connections, and academic leaderboards.
+*   **Notes & Documentation:** A centralized module for creating and managing academic notes, integrated with the Sclera workspace to replace external document dependencies.
+*   **Community & Bubbles:** Social features for forming study groups ("Bubbles") via invite-based joining, peer connections, and academic leaderboards.
 *   **Interests & Careers:** Maps academic progress to career paths, relevant courses, and internships.
 
 ## 🛠 Technical Stack
