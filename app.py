@@ -36,7 +36,6 @@ env = os.environ.get('FLASK_ENV', 'production')
 app = Flask(__name__)
 config[env].init_app(app)
 # Dedicated CSS endpoint with explicit MIME type
-
 @app.route('/styles.css')
 def serve_css():
     from flask import send_from_directory
@@ -75,10 +74,8 @@ Talisman(app,
 user_ref = None
 # Initialize Flask-Mail
 mail = Mail(app)
-
 # ============================================================================
 # INSTITUTION V2 CONSTANTS / HELPERS
-
 # ============================================================================
 INSTITUTION_ADMINS_COL = 'institution_admins'
 INSTITUTION_TEACHERS_COL = 'institution_teachers'
@@ -86,10 +83,8 @@ INSTITUTIONS_COL = 'institutions'
 TEACHER_INVITES_COL = 'teacher_invites'
 CLASSES_COL = 'classes'
 CLASS_INVITES_COL = 'class_invites'
-
 def _generate_code(length: int = 6) -> str:
     return ''.join(random.choices(string.ascii_uppercase + string.digits, k=length))
-
 def _set_session_identity(uid: str, account_type: str, institution_id: str | None = None):
     session['uid'] = uid
     session['account_type'] = account_type  # 'student' | 'teacher' | 'admin'
@@ -97,10 +92,8 @@ def _set_session_identity(uid: str, account_type: str, institution_id: str | Non
         session['institution_id'] = institution_id
     else:
         session.pop('institution_id', None)
-
 def _get_account_type() -> str:
     return session.get('account_type', 'student')
-
 def require_institution_role(allowed_roles: list[str]):
     def decorator(f):
         @wraps(f)
@@ -115,15 +108,12 @@ def require_institution_role(allowed_roles: list[str]):
     return decorator
 require_admin_v2 = require_institution_role(['admin'])
 require_teacher_v2 = require_institution_role(['teacher'])
-
 def _get_admin_profile(uid: str) -> dict | None:
     profile = _get_any_profile(uid)
     return profile if profile and profile.get('account_type') == 'admin' else None
-
 def _get_teacher_profile(uid: str) -> dict | None:
     profile = _get_any_profile(uid)
     return profile if profile and profile.get('account_type') == 'teacher' else None
-
 def _get_any_profile(uid: str) -> dict | None:
     """Check all identity collections and return profile + account_type."""
     # Check collections in order of specificity
@@ -134,7 +124,6 @@ def _get_any_profile(uid: str) -> dict | None:
     doc = db.collection('users').document(uid).get()
     if doc.exists: return {**doc.to_dict(), 'account_type': 'student'}
     return None
-
 def _get_institution_analytics(institution_id, class_ids=None):
     """
     Common logic for real-time heatmap and at-risk predictive analytics.
@@ -142,40 +131,32 @@ def _get_institution_analytics(institution_id, class_ids=None):
     """
     heatmap_data = defaultdict(int)
     at_risk_students = []
-    
     if not institution_id:
         return {'heatmap': {}, 'at_risk': []}
-
     # 1. Fetch relevant classes
     classes_ref = db.collection(CLASSES_COL).where('institution_id', '==', institution_id)
     classes_docs = list(classes_ref.stream())
-    
     if class_ids:
         classes_docs = [d for d in classes_docs if d.id in class_ids]
-    
     classes_map = {d.id: d.to_dict() for d in classes_docs}
     all_student_ids = set()
     for _, c_data in classes_map.items():
         all_student_ids.update(c_data.get('student_uids', []))
-
     # 2. Aggregations (Heatmap)
     thirty_days_ago = datetime.utcnow() - timedelta(days=30)
     for sid in all_student_ids:
-        sessions = db.collection('users').document(sid).collection('study_sessions')\
-                     .where('start_time', '>=', thirty_days_ago.isoformat()).stream()
+        sessions = db.collection('users').document(sid).collection('study_sessions').where('start_time', '>=', thirty_days_ago.isoformat()).stream()
         for s in sessions:
             s_data = s.to_dict()
             h = s_data.get('local_hour')
             w = s_data.get('local_weekday')
             if h is not None and w is not None:
                 heatmap_data[f"{w}-{h}"] += 1
-
     # 3. Risk Analytics
     for sid in all_student_ids:
         s_doc = db.collection('users').document(sid).get()
         if not s_doc.exists: continue
         s_data = s_doc.to_dict()
-        
         # Simple Risk model
         last_str = s_data.get('last_login_date')
         status = 'healthy'
@@ -183,7 +164,6 @@ def _get_institution_analytics(institution_id, class_ids=None):
         else:
             days = (datetime.utcnow() - datetime.fromisoformat(last_str)).days
             if days > 7: status = 'stagnating'
-        
         # Velocity Momentum
         results = s_data.get('exam_results', [])
         momentum = 0
@@ -194,7 +174,6 @@ def _get_institution_analytics(institution_id, class_ids=None):
                 momentum = series[-1] - series[0]
                 if momentum < -5: status = 'critical' if status == 'stagnating' else 'declining'
             except: pass
-
         if status != 'healthy':
             student_class = "Unknown"
             for cid, cdata in classes_map.items():
@@ -208,12 +187,10 @@ def _get_institution_analytics(institution_id, class_ids=None):
                 'status': status,
                 'momentum': round(momentum, 2)
             })
-
     return {
         'heatmap': dict(heatmap_data),
         'at_risk': at_risk_students
     }
-
 def _institution_login_guard():
     """Prevent admin/teacher accounts from entering student app routes."""
     if 'uid' not in session:
@@ -234,11 +211,9 @@ def _institution_login_guard():
     if account_type == 'teacher':
         return redirect(url_for('institution_teacher_dashboard'))
     return None
-
 # ============================================================================
 # UTILITY FUNCTIONS - 
 # ============================================================================
-
 # ============================================================================
 # STATISTICS
 # ============================================================================
@@ -251,7 +226,6 @@ TEST_TYPES = [
     "Pre Finals", "Finals",
     "Pre Annual", "Annual"
 ]
-
 def require_login(f):
     def wrapper(*args, **kwargs):
         if 'uid' not in session:
@@ -259,13 +233,11 @@ def require_login(f):
         return f(*args, **kwargs)
     wrapper.__name__ = f.__name__
     return wrapper
-
 def get_user_data(uid):
     user_doc = db.collection('users').document(uid).get()
     if user_doc.exists:
         return user_doc.to_dict()
     return None
-
 def calculate_academic_progress(user_data, uid=None):
     """
     Calculate academic progress with 3-tier exclusion system:
@@ -348,13 +320,11 @@ def calculate_academic_progress(user_data, uid=None):
             by_subject[subject_name] = round((subject_completed_count / subject_valid_count) * 100, 1)
         else:
             by_subject[subject_name] = 0
-        
         # Store chapter counts per subject
         chapters_by_subject[subject_name] = {
             'total': subject_valid_count,
             'completed': subject_completed_count
         }
-        
         total_chapters += subject_valid_count
         total_completed += subject_completed_count
     # --- AI Analytics Engine ---
@@ -390,7 +360,6 @@ def calculate_academic_progress(user_data, uid=None):
         'consistency': consistency,
         'readiness': readiness
     }
-
 def calculate_average_percentage(results):
     valid_percentages = []
     for r in results:
@@ -405,7 +374,6 @@ def calculate_average_percentage(results):
     if not valid_percentages:
         return 0
     return round(sum(valid_percentages) / len(valid_percentages), 1)
-
 def initialize_profile_fields(uid):
     user_doc = db.collection('users').document(uid).get()
     user_data = user_doc.to_dict() if user_doc.exists else {}
@@ -443,22 +411,17 @@ def initialize_profile_fields(uid):
     uid = session['uid']
     user_data = get_user_data(uid)
     name_top_statistics = user_data.get('name')
-
 # ============================================================================
 # AUTH ROUTES
-
 # ============================================================================
-
 @app.route('/')
 def index():
     if 'uid' in session:
         return redirect(url_for('profile_dashboard'))
     return redirect(url_for('landing'))
-
 @app.route('/landing')
 def landing():
     return render_template('landing.html')
-
 @app.route('/signup', methods=['GET', 'POST'])
 @limiter.limit(config[env].RATE_LIMIT_SIGNUP)
 def signup():
@@ -538,7 +501,6 @@ def signup():
             flash(f'Error creating account: An error occurred during registration', 'error')
             return redirect(url_for('signup'))
     return render_template('signup.html')
-
 @app.route('/setup/highschool', methods=['GET', 'POST'])
 @require_login
 def setup_highschool():
@@ -550,7 +512,6 @@ def setup_highschool():
         flash('Setup complete!', 'success')
         return redirect(url_for('profile_dashboard'))
     return render_template('setup_highschool.html')
-
 @app.route('/setup/exam', methods=['GET', 'POST'])
 @require_login
 def setup_exam():
@@ -560,7 +521,6 @@ def setup_exam():
         flash('Setup complete!', 'success')
         return redirect(url_for('profile_dashboard'))
     return render_template('setup_exam.html')
-
 @app.route('/setup/after_tenth', methods=['GET', 'POST'])
 @require_login
 def setup_after_tenth():
@@ -576,7 +536,6 @@ def setup_after_tenth():
         flash('Setup complete!', 'success')
         return redirect(url_for('profile_dashboard'))
     return render_template('setup_after_tenth.html')
-
 @app.route('/login', methods=['GET', 'POST'])
 @limiter.limit(config[env].RATE_LIMIT_LOGIN)
 def login():
@@ -659,18 +618,15 @@ def login():
             flash('Login error: An error occurred during login', 'error')
             return redirect(url_for('login'))
     return render_template('login.html')
-
 @app.route('/login/student', methods=['GET', 'POST'])
 def login_student():
     """Explicit student login (mirrors /login for clarity)"""
     return login()
-
 @app.route('/logout')
 def logout():
     session.clear()
     flash('Logged out successfully', 'success')
     return redirect(url_for('landing'))
-
 @app.route('/student/join/class', methods=['GET', 'POST'])
 @require_login
 def student_join_class():
@@ -715,7 +671,6 @@ def student_join_class():
             logger.error("student_join_class_error", error=str(e), invite_code=invite_code)
             flash('An error occurred while joining the class', 'error')
     return render_template('student_join_class.html')
-
 @app.route('/institution/teacher/classes/create', methods=['GET', 'POST'])
 @require_teacher_v2
 def institution_teacher_create_class():
@@ -761,7 +716,6 @@ def institution_teacher_create_class():
             logger.error("teacher_create_class_error", error=str(e))
             flash('Failed to create class', 'error')
     return render_template('institution_teacher_create_class.html', profile=teacher_profile)
-
 @app.route('/institution/teacher/classes')
 @require_teacher_v2
 def institution_teacher_classes():
@@ -786,12 +740,9 @@ def institution_teacher_classes():
         logger.error("teacher_list_classes_error", error=str(e))
         flash('Failed to load classes', 'error')
         return redirect(url_for('institution_teacher_dashboard'))
-
 # ============================================================================
 # INSTITUTION V2 AUTH (ADMIN / TEACHER)
-
 # ============================================================================
-
 @app.route('/signup/admin', methods=['GET', 'POST'])
 def signup_admin():
     if request.method == 'POST':
@@ -845,7 +796,6 @@ def signup_admin():
             flash('Error creating admin account.', 'error')
             return redirect(url_for('signup_admin'))
     return render_template('signup_admin.html')
-
 @app.route('/login/admin', methods=['GET', 'POST'])
 def login_admin():
     if request.method == 'POST':
@@ -883,7 +833,6 @@ def login_admin():
             flash('Login error.', 'error')
             return redirect(url_for('login_admin'))
     return render_template('login_admin.html')
-
 @app.route('/signup/teacher', methods=['GET', 'POST'])
 def signup_teacher():
     if request.method == 'POST':
@@ -929,7 +878,6 @@ def signup_teacher():
             flash('Error creating teacher account.', 'error')
             return redirect(url_for('signup_teacher'))
     return render_template('signup_teacher.html')
-
 @app.route('/login/teacher', methods=['GET', 'POST'])
 def login_teacher():
     if request.method == 'POST':
@@ -970,7 +918,6 @@ def login_teacher():
             flash('Login error.', 'error')
             return redirect(url_for('login_teacher'))
     return render_template('login_teacher.html')
-
 @app.route('/institution/teacher/join', methods=['GET', 'POST'])
 @require_teacher_v2
 def institution_teacher_join():
@@ -1004,7 +951,6 @@ def institution_teacher_join():
         flash('Successfully joined institution!', 'success')
         return redirect(url_for('institution_teacher_dashboard'))
     return render_template('institution_teacher_join.html', profile=profile)
-
 @app.route('/institution/admin/dashboard')
 @require_admin_v2
 def institution_admin_dashboard():
@@ -1027,7 +973,6 @@ def institution_admin_dashboard():
         students.append(d)
     # Analytics (Heatmap + Predictive Risk)
     analytics = _get_institution_analytics(institution_id)
-    
     context = {
         'profile': admin_profile,
         'institution': institution,
@@ -1038,7 +983,6 @@ def institution_admin_dashboard():
         'at_risk_students': analytics['at_risk']
     }
     return render_template('institution_admin_dashboard.html', **context)
-
 @app.route('/institution/admin/teacher_invite', methods=['POST'])
 @require_admin_v2
 def institution_admin_create_teacher_invite():
@@ -1058,7 +1002,6 @@ def institution_admin_create_teacher_invite():
     })
     flash(f'Teacher invite code generated: {code}', 'success')
     return redirect(url_for('institution_admin_dashboard'))
-
 @app.route('/institution/admin/teachers/<teacher_uid>/disable', methods=['POST'])
 @require_admin_v2
 def institution_admin_disable_teacher(teacher_uid):
@@ -1078,7 +1021,6 @@ def institution_admin_disable_teacher(teacher_uid):
         pass
     flash('Teacher disabled.', 'success')
     return redirect(url_for('institution_admin_dashboard'))
-
 @app.route('/institution/admin/teachers/<teacher_uid>/delete', methods=['POST'])
 @require_admin_v2
 def institution_admin_delete_teacher(teacher_uid):
@@ -1099,7 +1041,6 @@ def institution_admin_delete_teacher(teacher_uid):
     db.collection(INSTITUTION_TEACHERS_COL).document(teacher_uid).delete()
     flash('Teacher deleted.', 'success')
     return redirect(url_for('institution_admin_dashboard'))
-
 @app.route('/institution/admin/students/<student_uid>/remove', methods=['POST'])
 @require_admin_v2
 def institution_admin_remove_student(student_uid):
@@ -1127,7 +1068,6 @@ def institution_admin_remove_student(student_uid):
     batch.commit()
     flash('Student removed from institution (personal dashboard preserved).', 'success')
     return redirect(url_for('institution_admin_dashboard'))
-
 @app.route('/institution/admin/students/<student_uid>/delete', methods=['POST'])
 @require_admin_v2
 def institution_admin_delete_student(student_uid):
@@ -1148,7 +1088,6 @@ def institution_admin_delete_student(student_uid):
     db.collection('users').document(student_uid).delete()
     flash('Student deleted (account disabled).', 'success')
     return redirect(url_for('institution_admin_dashboard'))
-
 @app.route('/institution/teacher/dashboard')
 @require_teacher_v2
 def institution_teacher_dashboard():
@@ -1172,14 +1111,12 @@ def institution_teacher_dashboard():
     # Analytics (Heatmap + Predictive Risk) for the teacher's classes
     class_ids = [c['id'] for c in classes]
     analytics = _get_institution_analytics(institution_id, class_ids=class_ids)
-    
     return render_template('institution_teacher_dashboard.html', 
                            profile=profile, 
                            classes=classes, 
                            institution_id=institution_id,
                            heatmap_data=analytics['heatmap'],
                            at_risk_students=analytics['at_risk'])
-
 @app.route('/institution/teacher/class/<class_id>/upload', methods=['GET', 'POST'])
 @require_teacher_v2
 def institution_teacher_upload_file(class_id):
@@ -1196,22 +1133,17 @@ def institution_teacher_upload_file(class_id):
             if not file or file.filename == '':
                 flash('No file selected', 'error')
                 return redirect(request.url)
-            
             filename = secure_filename(file.filename)
             file_id = str(uuid.uuid4())
-            
             # Save to local storage
             upload_folder = os.path.join(app.root_path, 'uploads')
             if not os.path.exists(upload_folder):
                 os.makedirs(upload_folder)
-            
             file_path = os.path.join(upload_folder, f'{file_id}_{filename}')
             file.save(file_path)
-            
             # Get actual file size
             file_size = os.path.getsize(file_path)
             file_url = url_for('serve_upload', filename=f'{file_id}_{filename}')
-            
             # Save to Firestore
             db.collection('class_files').document(file_id).set({
                 'id': file_id,
@@ -1223,10 +1155,8 @@ def institution_teacher_upload_file(class_id):
                 'file_type': 'notes',
                 'file_size': file_size
             })
-            
             flash('File uploaded successfully', 'success')
             return redirect(url_for('institution_teacher_dashboard'))
-            
         except Exception as e:
             logger.error(f"File upload error: {str(e)}")
             flash('An error occurred while uploading the file', 'error')
@@ -1234,7 +1164,6 @@ def institution_teacher_upload_file(class_id):
     # GET: render upload form
     class_data = class_doc.to_dict()
     return render_template('institution_teacher_upload.html', class_id=class_id, class_name=class_data.get('name'), profile=profile)
-
 @app.route('/uploads/<filename>')
 def serve_upload(filename):
     """Serve uploaded files from local storage"""
@@ -1245,7 +1174,6 @@ def serve_upload(filename):
         )
     except FileNotFoundError:
         abort(404)
-
 @app.route('/profile_banners/<filename>')
 def serve_profile_banner(filename):
     """Serve profile banners from local storage"""
@@ -1257,12 +1185,9 @@ def serve_profile_banner(filename):
     except FileNotFoundError:
         # Return default banner or 404
         return '', 404
-
 # ============================================================================
 # MAIN DASHBOARD
-
 # ============================================================================
-
 @app.route('/dashboard')
 @app.route('/profile')
 @require_login
@@ -1289,7 +1214,6 @@ def profile_dashboard():
         interests = {'careers': [], 'courses': [], 'internships': []}
     saved_career_ids = interests.get('careers', [])
     saved_careers = [get_career_by_id(cid) for cid in saved_career_ids if get_career_by_id(cid)]
-    
     # NEW: Fetch upcoming calendar events for widget
     upcoming_events = []
     try:
@@ -1308,7 +1232,6 @@ def profile_dashboard():
                         dt = datetime.fromisoformat(s_date.replace('Z', '+00:00'))
                     else:
                         dt = s_date
-                    
                     if today <= dt.replace(tzinfo=None) <= week_later:
                         event_data['display_date'] = dt.strftime('%Y-%m-%d')
                         upcoming_events.append(event_data)
@@ -1317,7 +1240,6 @@ def profile_dashboard():
         upcoming_events = upcoming_events[:5]
     except Exception as e:
         logger.error(f"Fetch upcoming events error: {str(e)}")
-    
     # NEW: Get performance metrics
     performance_data = {'average': 0, 'last': 0, 'highest': 0}
     try:
@@ -1336,7 +1258,6 @@ def profile_dashboard():
                 performance_data['highest'] = round(max(scores), 1)
     except Exception as e:
         logger.error(f"Calculate performance error: {str(e)}")
-
     # NEW: Get study time data (last 7 days)
     study_time_data = []
     try:
@@ -1348,7 +1269,6 @@ def profile_dashboard():
             if session_start:
                 date_part = session_start.split('T')[0]
                 daily_totals[date_part] += session_data.get('duration_seconds', 0) // 60
-        
         today = datetime.now()
         for i in range(6, -1, -1):
             date = (today - timedelta(days=i)).strftime('%Y-%m-%d')
@@ -1358,7 +1278,6 @@ def profile_dashboard():
             })
     except Exception as e:
         logger.error(f"Fetch study time error: {str(e)}")
-
     # NEW: Get totals
     totals_data = {'total_goals': 0, 'completed_goals': 0, 'total_tasks': 0, 'completed_tasks': 0}
     try:
@@ -1370,7 +1289,6 @@ def profile_dashboard():
         totals_data['completed_tasks'] = sum(1 for t in tasks if isinstance(t, dict) and t.get('completed', False)) if isinstance(tasks, list) else 0
     except Exception as e:
         logger.error(f"Calculate totals error: {str(e)}")
-
     # NEW: Get incomplete tasks
     recent_tasks = []
     try:
@@ -1378,7 +1296,6 @@ def profile_dashboard():
         if isinstance(tasks, list):
             recent_tasks = [t for t in tasks if isinstance(t, dict) and not t.get('completed', False)][:5]
     except: pass
-
     context = {
         'user': user_data,
         'email': user_data.get('email', 'N/A'),
@@ -1406,7 +1323,6 @@ def profile_dashboard():
         'recent_tasks': recent_tasks
     }
     return render_template('main_dashboard.html', **context)
-
 @app.route('/student/class/files', methods=['GET'])
 @require_login
 def student_files():
@@ -1432,7 +1348,6 @@ def student_files():
     for f in files:
         grouped_files[f['class_name']].append(f)
     return render_template('student_class_files.html', grouped_files=grouped_files, settings=user_data.get('settings', {}))
-
 @app.route('/student/class/management')
 @require_login
 def class_management():
@@ -1441,16 +1356,13 @@ def class_management():
     if not user_data:
         flash('User data not found', 'error')
         return redirect(url_for('profile_dashboard'))
-
     institution_id = user_data.get('institution_id')
     class_ids = user_data.get('class_ids', [])
     if not institution_id or not class_ids:
         flash('You need to be in an institution and class to access class management.', 'info')
         return redirect(url_for('profile_dashboard'))
-
     institution_doc = db.collection('institutions').document(institution_id).get()
     institution_name = institution_doc.to_dict().get('name', 'Unknown') if institution_doc.exists else 'Unknown'
-
     classes_info = []
     for class_id in class_ids:
         class_doc = db.collection('classes').document(class_id).get()
@@ -1459,14 +1371,12 @@ def class_management():
         class_data = class_doc.to_dict()
         teacher_uid = class_data.get('teacher_id')
         teacher_profile = _get_teacher_profile(teacher_uid) if teacher_uid else None
-
         # Fetch files for this class
         files = []
         class_files = db.collection('class_files').where('class_id', '==', class_id).stream()
         for f in class_files:
             f_data = f.to_dict()
             files.append(f_data)
-
         classes_info.append({
             'id': class_id,
             'name': class_data.get('name', 'Unknown'),
@@ -1474,7 +1384,6 @@ def class_management():
             'institution_name': institution_name,
             'files': files
         })
-
     context = {
         'user': user_data,
         'name': user_data.get('name'),
@@ -1484,7 +1393,6 @@ def class_management():
         'has_class': True
     }
     return render_template('class_management.html', **context)
-
 @app.route('/student/class/leave/<class_id>', methods=['POST'])
 @require_login
 def leave_class(class_id):
@@ -1493,20 +1401,16 @@ def leave_class(class_id):
     if not user_data:
         flash('User data not found', 'error')
         return redirect(url_for('profile_dashboard'))
-
     class_ids = user_data.get('class_ids', [])
     if class_id not in class_ids:
         flash('You are not enrolled in this class.', 'error')
         return redirect(url_for('class_management'))
-
     # Remove the class_id from user's class_ids
     db.collection('users').document(uid).update({
         'class_ids': firestore.ArrayRemove([class_id])
     })
-
     flash('You have successfully left the class.', 'success')
     return redirect(url_for('class_management'))
-
 @app.route('/download/class_file/<file_id>', methods=['GET'])
 @require_login
 def download_class_file(file_id):
@@ -1521,11 +1425,9 @@ def download_class_file(file_id):
         abort(403)
     # Redirect to file_url
     return redirect(file_data['file_url'])
-
 # ============================================================================
 # CALENDAR SYSTEM
 # ============================================================================
-
 @app.route('/calendar')
 @require_login
 def calendar_dashboard():
@@ -1535,7 +1437,6 @@ def calendar_dashboard():
     if not user_data:
         flash('User data not found', 'error')
         return redirect(url_for('logout'))
-    
     context = {
         'user': user_data,
         'name': user_data.get('name', 'Student'),
@@ -1544,52 +1445,41 @@ def calendar_dashboard():
         'has_class': bool(user_data.get('class_ids')) if user_data else False
     }
     return render_template('calendar_dashboard.html', **context)
-
 @app.route('/api/calendar/events', methods=['GET'])
 @require_login
 def get_calendar_events():
     """Get all calendar events for the logged-in user"""
     uid = session['uid']
-    
     try:
         # Get date range from query params (optional)
         start_date = request.args.get('start')
         end_date = request.args.get('end')
-        
         events_ref = db.collection('calendar_events').where('uid', '==', uid)
-        
         events = []
         for doc in events_ref.stream():
             event_data = doc.to_dict()
             event_data['id'] = doc.id
-            
             # Convert Firestore timestamps to ISO strings for FullCalendar
             if 'start_date' in event_data and event_data['start_date']:
                 event_data['start'] = event_data['start_date'].isoformat() if hasattr(event_data['start_date'], 'isoformat') else event_data['start_date']
             if 'end_date' in event_data and event_data['end_date']:
                 event_data['end'] = event_data['end_date'].isoformat() if hasattr(event_data['end_date'], 'isoformat') else event_data['end_date']
-            
             events.append(event_data)
-        
         return jsonify({'events': events})
     except Exception as e:
         logger.error(f"Get calendar events error: {str(e)}")
         return jsonify({'error': 'Failed to fetch events'}), 500
-
 @app.route('/api/calendar/events', methods=['POST'])
 @require_login
 def create_calendar_event():
     """Create a new calendar event"""
     _institution_login_guard()
     uid = session['uid']
-    
     try:
         data = request.get_json()
-        
         # Validate required fields
         if not data.get('title'):
             return jsonify({'error': 'Title is required'}), 400
-        
         # Event type color mapping
         color_map = {
             'assignment': '#3b82f6',  # blue
@@ -1599,10 +1489,8 @@ def create_calendar_event():
             'task': '#8b5cf6',        # purple
             'other': '#6b7280'        # gray
         }
-        
         event_type = data.get('event_type', 'other')
         event_id = str(uuid.uuid4())
-        
         event_data = {
             'id': event_id,
             'uid': uid,
@@ -1618,38 +1506,30 @@ def create_calendar_event():
             'created_at': firestore.SERVER_TIMESTAMP,
             'updated_at': firestore.SERVER_TIMESTAMP
         }
-        
         db.collection('calendar_events').document(event_id).set(event_data)
-        
         return jsonify({'success': True, 'event': event_data, 'id': event_id})
     except Exception as e:
         logger.error(f"Create calendar event error: {str(e)}")
         return jsonify({'error': 'Failed to create event'}), 500
-
 @app.route('/api/calendar/events/<event_id>', methods=['PUT'])
 @require_login
 def update_calendar_event(event_id):
     """Update an existing calendar event"""
     _institution_login_guard()
     uid = session['uid']
-    
     try:
         # Verify event belongs to user
         event_doc = db.collection('calendar_events').document(event_id).get()
         if not event_doc.exists:
             return jsonify({'error': 'Event not found'}), 404
-        
         event_data = event_doc.to_dict()
         if event_data.get('uid') != uid:
             return jsonify({'error': 'Unauthorized'}), 403
-        
         data = request.get_json()
-        
         # Update fields
         update_data = {
             'updated_at': firestore.SERVER_TIMESTAMP
         }
-        
         if 'title' in data:
             update_data['title'] = data['title']
         if 'description' in data:
@@ -1662,108 +1542,85 @@ def update_calendar_event(event_id):
             update_data['end_date'] = data['end_date']
         if 'all_day' in data:
             update_data['all_day'] = data['all_day']
-        
         db.collection('calendar_events').document(event_id).update(update_data)
-        
         return jsonify({'success': True, 'message': 'Event updated'})
     except Exception as e:
         logger.error(f"Update calendar event error: {str(e)}")
         return jsonify({'error': 'Failed to update event'}), 500
-
 @app.route('/api/calendar/events/<event_id>', methods=['DELETE'])
 @require_login
 def delete_calendar_event(event_id):
     """Delete a calendar event"""
     _institution_login_guard()
     uid = session['uid']
-    
     try:
         # Verify event belongs to user
         event_doc = db.collection('calendar_events').document(event_id).get()
         if not event_doc.exists:
             return jsonify({'error': 'Event not found'}), 404
-        
         event_data = event_doc.to_dict()
         if event_data.get('uid') != uid:
             return jsonify({'error': 'Unauthorized'}), 403
-        
         db.collection('calendar_events').document(event_id).delete()
-        
         return jsonify({'success': True, 'message': 'Event deleted'})
     except Exception as e:
         logger.error(f"Delete calendar event error: {str(e)}")
         return jsonify({'error': 'Failed to delete event'}), 500
-
 @app.route('/api/calendar/events/<event_id>/move', methods=['POST'])
 @require_login
 def move_calendar_event(event_id):
     """Move event to new date/time (drag-and-drop support)"""
     _institution_login_guard()
     uid = session['uid']
-    
     try:
         # Verify event belongs to user
         event_doc = db.collection('calendar_events').document(event_id).get()
         if not event_doc.exists:
             return jsonify({'error': 'Event not found'}), 404
-        
         event_data = event_doc.to_dict()
         if event_data.get('uid') != uid:
             return jsonify({'error': 'Unauthorized'}), 403
-        
         data = request.get_json()
-        
         update_data = {
             'start_date': data.get('start_date'),
             'end_date': data.get('end_date'),
             'updated_at': firestore.SERVER_TIMESTAMP
         }
-        
         db.collection('calendar_events').document(event_id).update(update_data)
-        
         return jsonify({'success': True, 'message': 'Event moved'})
     except Exception as e:
         logger.error(f"Move calendar event error: {str(e)}")
         return jsonify({'error': 'Failed to move event'}), 500
-
 # ============================================================================
 # STUDY SESSIONS
 # ============================================================================
-
 @app.route('/api/study_sessions', methods=['GET'])
 @require_login
 def get_study_sessions():
     """Get study sessions for graphs"""
     _institution_login_guard()
     uid = session['uid']
-    
     try:
         # Get last 30 days by default
         days = int(request.args.get('days', 30))
-        
         sessions_ref = db.collection('study_sessions').where('uid', '==', uid).order_by('session_date', direction=firestore.Query.DESCENDING).limit(days)
-        
         sessions = []
         for doc in sessions_ref.stream():
             session_data = doc.to_dict()
             session_data['id'] = doc.id
             sessions.append(session_data)
-        
         return jsonify({'sessions': sessions})
     except Exception as e:
         logger.error(f"Get study sessions error: {str(e)}")
         return jsonify({'error': 'Failed to fetch study sessions'}), 500
-
 @app.route('/api/study_sessions', methods=['POST'])
 @require_login
 def log_study_session():
     """Log a new study session"""
     _institution_login_guard()
     uid = session['uid']
-    
     try:
         data = request.get_json()
-        
         session_id = str(uuid.uuid4())
         session_data = {
             'id': session_id,
@@ -1773,33 +1630,26 @@ def log_study_session():
             'session_date': data.get('session_date', datetime.utcnow().isoformat()),
             'created_at': firestore.SERVER_TIMESTAMP
         }
-        
         db.collection('study_sessions').document(session_id).set(session_data)
-        
         return jsonify({'success': True, 'session': session_data})
     except Exception as e:
         logger.error(f"Log study session error: {str(e)}")
         return jsonify({'error': 'Failed to log study session'}), 500
-
 # ============================================================================
 # DASHBOARD DATA APIs
 # ============================================================================
-
 @app.route('/api/dashboard/performance')
 @require_login
 def get_dashboard_performance():
     """Get exam performance metrics for dashboard"""
     _institution_login_guard()
     uid = session['uid']
-    
     try:
         user_data = get_user_data(uid)
         if not user_data:
             return jsonify({'error': 'User not found'}), 404
-        
         # Get exam results
         results = user_data.get('results', {})
-        
         if not results:
             return jsonify({
                 'average': 0,
@@ -1807,7 +1657,6 @@ def get_dashboard_performance():
                 'highest': 0,
                 'total_exams': 0
             })
-        
         # Calculate metrics
         scores = []
         for exam_type, subjects in results.items():
@@ -1815,7 +1664,6 @@ def get_dashboard_performance():
                 for subject, data in subjects.items():
                     if isinstance(data, dict) and 'percentage' in data:
                         scores.append(float(data['percentage']))
-        
         if not scores:
             return jsonify({
                 'average': 0,
@@ -1823,11 +1671,9 @@ def get_dashboard_performance():
                 'highest': 0,
                 'total_exams': 0
             })
-        
         average = sum(scores) / len(scores)
         last = scores[-1] if scores else 0
         highest = max(scores)
-        
         return jsonify({
             'average': round(average, 1),
             'last': round(last, 1),
@@ -1837,47 +1683,37 @@ def get_dashboard_performance():
     except Exception as e:
         logger.error(f"Get dashboard performance error: {str(e)}")
         return jsonify({'error': 'Failed to fetch performance data'}), 500
-
 @app.route('/api/dashboard/study_time')
 @require_login
 def get_dashboard_study_time():
     """Get study time data for graphs"""
     _institution_login_guard()
     uid = session['uid']
-    
     try:
         # Get last 7 days of study sessions
         sessions_ref = db.collection('study_sessions').where('uid', '==', uid).order_by('session_date', direction=firestore.Query.DESCENDING).limit(30)
-        
         # Aggregate by date
         from collections import defaultdict
         daily_totals = defaultdict(int)
-        
         for doc in sessions_ref.stream():
             session_data = doc.to_dict()
             session_date = session_data.get('session_date', '')
-            
             # Extract date part (YYYY-MM-DD)
             if isinstance(session_date, str):
                 date_part = session_date.split('T')[0]
             else:
                 date_part = datetime.now().strftime('%Y-%m-%d')
-            
             daily_totals[date_part] += session_data.get('duration_minutes', 0)
-        
         # Get last 7 days
         today = datetime.now()
         last_7_days = []
-        
         for i in range(6, -1, -1):
             date = (today - timedelta(days=i)).strftime('%Y-%m-%d')
             last_7_days.append({
                 'date': date,
                 'minutes': daily_totals.get(date, 0)
             })
-        
         total_week = sum(day['minutes'] for day in last_7_days)
-        
         return jsonify({
             'daily': last_7_days,
             'total_week_hours': round(total_week / 60, 1)
@@ -1885,29 +1721,24 @@ def get_dashboard_study_time():
     except Exception as e:
         logger.error(f"Get dashboard study time error: {str(e)}")
         return jsonify({'error': 'Failed to fetch study time data'}), 500
-
 @app.route('/api/dashboard/totals')
 @require_login
 def get_dashboard_totals():
     """Get totals for goals and tasks"""
     _institution_login_guard()
     uid = session['uid']
-    
     try:
         user_data = get_user_data(uid)
         if not user_data:
             return jsonify({'error': 'User not found'}), 404
-        
         # Count goals
         goals = user_data.get('goals', [])
         total_goals = len(goals) if isinstance(goals, list) else 0
         completed_goals = sum(1 for g in goals if isinstance(g, dict) and g.get('completed', False)) if isinstance(goals, list) else 0
-        
         # Count tasks
         tasks = user_data.get('tasks', [])
         total_tasks = len(tasks) if isinstance(tasks, list) else 0
         completed_tasks = sum(1 for t in tasks if isinstance(t, dict) and t.get('completed', False)) if isinstance(tasks, list) else 0
-        
         return jsonify({
             'total_goals': total_goals,
             'completed_goals': completed_goals,
@@ -1917,26 +1748,21 @@ def get_dashboard_totals():
     except Exception as e:
         logger.error(f"Get dashboard totals error: {str(e)}")
         return jsonify({'error': 'Failed to fetch totals'}), 500
-
 @app.route('/api/dashboard/upcoming_events')
 @require_login
 def get_upcoming_events():
     """Get upcoming calendar events for widget (next 7 days)"""
     _institution_login_guard()
     uid = session['uid']
-    
     try:
         # Get events from today onwards
         today = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
         week_later = today + timedelta(days=7)
-        
         events_ref = db.collection('calendar_events').where('uid', '==', uid)
-        
         upcoming = []
         for doc in events_ref.stream():
             event_data = doc.to_dict()
             event_data['id'] = doc.id
-            
             # Parse start_date
             start_date_str = event_data.get('start_date', '')
             if start_date_str:
@@ -1945,25 +1771,20 @@ def get_upcoming_events():
                         event_date = datetime.fromisoformat(start_date_str.replace('Z', '+00:00'))
                     else:
                         event_date = start_date_str
-                    
                     # Check if within next 7 days
                     if today <= event_date <= week_later:
                         upcoming.append(event_data)
                 except:
                     pass
-        
         # Sort by date
         upcoming.sort(key=lambda x: x.get('start_date', ''))
-        
         return jsonify({'events': upcoming[:10]})  # Limit to 10
     except Exception as e:
         logger.error(f"Get upcoming events error: {str(e)}")
         return jsonify({'error': 'Failed to fetch upcoming events'}), 500
-
 # ============================================================================
 # COMMUNITY SYSTEM
 # ============================================================================
-
 @app.route('/community')
 @require_login
 def community_dashboard():
@@ -1973,17 +1794,14 @@ def community_dashboard():
     if not user_data:
         flash('User data not found', 'error')
         return redirect(url_for('logout'))
-
     # Get connections data
     connections_data = get_connections_data(uid)
-
     # Get user's bubbles (both created and joined)
     user_bubbles = []
     bubbles_ref = db.collection('bubbles')
     for bubble_doc in bubbles_ref.stream():
         bubble_data = bubble_doc.to_dict()
         member_uids = bubble_data.get('member_uids', [])
-
         # Show bubbles where user is a member (creator or joined via invitation)
         if uid in member_uids:
             user_bubbles.append({
@@ -1994,7 +1812,6 @@ def community_dashboard():
                 'created_at': bubble_data.get('created_at'),
                 'is_creator': bubble_data.get('creator_uid') == uid
             })
-
     # Get user's bubble invitations
     bubble_invitations = []
     if hasattr(user_data, 'get') and user_data.get('pending_bubble_invitations'):
@@ -2014,7 +1831,6 @@ def community_dashboard():
                     })
             except Exception as e:
                 continue
-
     context = {
         'user': user_data,
         'name': user_data.get('name'),
@@ -2026,25 +1842,20 @@ def community_dashboard():
         'in_institution': bool(user_data.get('institution_id')),
         'has_class': bool(user_data.get('class_ids'))
     }
-
     return render_template('community_dashboard.html', **context)
-
 def get_connections_data(uid):
     """Helper function to get formatted connections data"""
     try:
         user_data = get_user_data(uid)
         if not user_data:
             return {'accepted': [], 'pending_sent': [], 'pending_received': []}
-
         connections = user_data.get('connections', {})
-
         # Get detailed info for each connection
         result = {
             'accepted': [],
             'pending_sent': [],
             'pending_received': []
         }
-
         # Get accepted connections
         for conn_uid in connections.get('accepted', []):
             conn_data = get_user_data(conn_uid)
@@ -2056,7 +1867,6 @@ def get_connections_data(uid):
                     'last_active': conn_data.get('last_login_date')
                 }
                 result['accepted'].append(profile)
-
         # Get pending sent requests
         for conn_uid in connections.get('pending_sent', []):
             conn_data = get_user_data(conn_uid)
@@ -2067,7 +1877,6 @@ def get_connections_data(uid):
                     'purpose_display': conn_data.get('purpose', '').replace('_', ' ').title()
                 }
                 result['pending_sent'].append(profile)
-
         # Get pending received requests with connection IDs
         for conn_uid in connections.get('pending_received', []):
             # Find connection request
@@ -2076,7 +1885,6 @@ def get_connections_data(uid):
             for req in conn_requests:
                 conn_request = req
                 break
-
             if conn_request:
                 conn_data = get_user_data(conn_uid)
                 if conn_data:
@@ -2088,17 +1896,13 @@ def get_connections_data(uid):
                         'message': conn_request.to_dict().get('message', '')
                     }
                     result['pending_received'].append(profile)
-
         return result
-
     except Exception as e:
         logger.error(f"Get connections data error: {str(e)}")
         return {'accepted': [], 'pending_sent': [], 'pending_received': []}
-
 # ============================================================================
 # AI ASSISTANT
 # ============================================================================
-
 @app.route('/ai-assistant')
 @require_login
 def ai_assistant():
@@ -2108,14 +1912,12 @@ def ai_assistant():
     if not user_data:
         flash('User data not found', 'error')
         return redirect(url_for('logout'))
-
     # TEMPORARILY BYPASS CONSENT CHECK FOR DEBUGGING
     # Check if user has consented to AI features
     # ai_consent = user_data.get('ai_consent', False)
     # if not ai_consent:
     #     # Show consent screen
     #     return render_template('ai_consent.html', user=user_data)
-
     # Show AI assistant interface (force consent for debugging)
     ai_consent = True  # Force consent for debugging
     context = {
@@ -2127,23 +1929,19 @@ def ai_assistant():
         'has_class': bool(user_data.get('class_ids'))
     }
     return render_template('ai_assistant.html', **context)
-
 @app.route('/ai-assistant/consent', methods=['POST'])
 @require_login
 def ai_assistant_consent():
     """Handle AI consent decision"""
     uid = session['uid']
     consent = request.form.get('consent') == 'yes'
-
     if consent:
         # Update user with consent
         db.collection('users').document(uid).update({'ai_consent': True})
         flash('AI Assistant enabled! You can now use AI-powered academic planning and doubt resolution.', 'success')
     else:
         flash('AI Assistant access denied. You can enable it later from your profile.', 'info')
-
     return redirect(url_for('profile_dashboard'))
-
 @app.route('/api/ai/chat/planning', methods=['POST'])
 @require_login
 def ai_chat_planning():
@@ -2152,33 +1950,25 @@ def ai_chat_planning():
     user_data = get_user_data(uid)
     if not user_data:
         return jsonify({'error': 'User not found'}), 404
-
     # Check consent
     # TEMPORARILY BYPASS CONSENT CHECK FOR DEBUGGING
     # if not user_data.get('ai_consent', False):
     #     return jsonify({'error': 'AI consent required'}), 403
-
     message = request.json.get('message', '').strip()
     if not message:
         return jsonify({'error': 'Message required'}), 400
-
     try:
         ai = get_ai_assistant()
         academic_context = ai.get_academic_context(user_data)
-        
         # Save user message
         ai.save_message(uid, 'planning', 'user', message)
-        
         response = ai.generate_planning_response(message, academic_context)
-        
         # Save AI response
         ai.save_message(uid, 'planning', 'assistant', response)
-        
         return jsonify({'response': response})
     except Exception as e:
         logger.error(f"AI planning chat error: {str(e)}")
         return jsonify({'error': 'AI service temporarily unavailable'}), 500
-
 @app.route('/api/ai/chat/doubt', methods=['POST'])
 @require_login
 def ai_chat_doubt():
@@ -2187,42 +1977,32 @@ def ai_chat_doubt():
     user_data = get_user_data(uid)
     if not user_data:
         return jsonify({'error': 'User not found'}), 404
-
     # Check consent
     # TEMPORARILY BYPASS CONSENT CHECK FOR DEBUGGING
     # if not user_data.get('ai_consent', False):
     #     return jsonify({'error': 'AI consent required'}), 403
-
     message = request.json.get('message', '').strip()
     if not message:
         return jsonify({'error': 'Message required'}), 400
-
     try:
         ai = get_ai_assistant()
         academic_context = ai.get_academic_context(user_data)
-        
         # Save user message
         ai.save_message(uid, 'doubt', 'user', message)
-        
         response = ai.generate_doubt_response(message, academic_context)
-        
         # Save AI response
         ai.save_message(uid, 'doubt', 'assistant', response)
-        
         return jsonify({'response': response})
     except Exception as e:
         logger.error(f"AI doubt chat error: {str(e)}")
         return jsonify({'error': 'AI service temporarily unavailable'}), 500
-
 @app.route('/api/ai/chat/history/<chatbot_type>', methods=['GET'])
 @require_login
 def get_chat_history(chatbot_type):
     """Get conversation history for a specific chatbot type (active thread)"""
     uid = session['uid']
-    
     if chatbot_type not in ['planning', 'doubt']:
         return jsonify({'error': 'Invalid chatbot type'}), 400
-    
     try:
         ai = get_ai_assistant()
         history = ai.get_conversation_history(uid, chatbot_type)
@@ -2230,16 +2010,13 @@ def get_chat_history(chatbot_type):
     except Exception as e:
         logger.error(f"Error loading chat history: {str(e)}")
         return jsonify({'error': 'Failed to load conversation history'}), 500
-
 @app.route('/api/ai/threads/<chatbot_type>', methods=['GET'])
 @require_login
 def get_threads(chatbot_type):
     """Get all conversation threads for a chatbot type"""
     uid = session['uid']
-
     if chatbot_type not in ['planning', 'doubt']:
         return jsonify({'error': 'Invalid chatbot type'}), 400
-
     try:
         ai = get_ai_assistant()
         threads = ai.get_user_threads(uid, chatbot_type)
@@ -2251,18 +2028,14 @@ def get_threads(chatbot_type):
     except Exception as e:
         logger.error(f"Error loading threads: {str(e)}")
         return jsonify({'error': 'Failed to load threads'}), 500
-
 @app.route('/api/ai/threads/<chatbot_type>/create', methods=['POST'])
 @require_login
 def create_thread(chatbot_type):
     """Create a new conversation thread"""
     uid = session['uid']
-
     if chatbot_type not in ['planning', 'doubt']:
         return jsonify({'error': 'Invalid chatbot type'}), 400
-
     title = request.json.get('title', f'New {chatbot_type.title()} Conversation')
-
     try:
         ai = get_ai_assistant()
         thread_id = ai.create_new_thread(uid, chatbot_type, title)
@@ -2277,16 +2050,13 @@ def create_thread(chatbot_type):
     except Exception as e:
         logger.error(f"Error creating thread: {str(e)}")
         return jsonify({'error': 'Failed to create thread'}), 500
-
 @app.route('/api/ai/threads/<chatbot_type>/<thread_id>/switch', methods=['POST'])
 @require_login
 def switch_thread(chatbot_type, thread_id):
     """Switch active thread for a chatbot type"""
     uid = session['uid']
-
     if chatbot_type not in ['planning', 'doubt']:
         return jsonify({'error': 'Invalid chatbot type'}), 400
-
     try:
         ai = get_ai_assistant()
         success = ai.switch_thread(uid, chatbot_type, thread_id)
@@ -2297,16 +2067,13 @@ def switch_thread(chatbot_type, thread_id):
     except Exception as e:
         logger.error(f"Error switching thread: {str(e)}")
         return jsonify({'error': 'Failed to switch thread'}), 500
-
 @app.route('/api/ai/threads/<chatbot_type>/<thread_id>/delete', methods=['DELETE'])
 @require_login
 def delete_thread(chatbot_type, thread_id):
     """Delete a conversation thread"""
     uid = session['uid']
-
     if chatbot_type not in ['planning', 'doubt']:
         return jsonify({'error': 'Invalid chatbot type'}), 400
-
     try:
         ai = get_ai_assistant()
         success = ai.delete_thread(uid, chatbot_type, thread_id)
@@ -2317,23 +2084,18 @@ def delete_thread(chatbot_type, thread_id):
     except Exception as e:
         logger.error(f"Error deleting thread: {str(e)}")
         return jsonify({'error': 'Failed to delete thread'}), 500
-
 @app.route('/api/ai/threads/<chatbot_type>/<thread_id>/export/<format_type>', methods=['GET'])
 @require_login
 def export_thread(chatbot_type, thread_id, format_type):
     """Export a conversation thread"""
     uid = session['uid']
-
     if chatbot_type not in ['planning', 'doubt']:
         return jsonify({'error': 'Invalid chatbot type'}), 400
-
     if format_type not in ['text', 'markdown', 'json']:
         return jsonify({'error': 'Invalid export format. Use: text, markdown, or json'}), 400
-
     try:
         ai = get_ai_assistant()
         export_data = ai.export_thread(uid, chatbot_type, thread_id, format_type)
-
         if export_data:
             if format_type == 'json':
                 return jsonify(export_data)
@@ -2354,16 +2116,13 @@ def export_thread(chatbot_type, thread_id, format_type):
     except Exception as e:
         logger.error(f"Error exporting thread: {str(e)}")
         return jsonify({'error': 'Export failed'}), 500
-
 @app.route('/api/ai/threads/<chatbot_type>/<thread_id>/history', methods=['GET'])
 @require_login
 def get_thread_history(chatbot_type, thread_id):
     """Get messages for a specific conversation thread"""
     uid = session['uid']
-    
     if chatbot_type not in ['planning', 'doubt']:
         return jsonify({'error': 'Invalid chatbot type'}), 400
-    
     try:
         ai = get_ai_assistant()
         history = ai.get_conversation_history(uid, chatbot_type, thread_id)
@@ -2371,11 +2130,9 @@ def get_thread_history(chatbot_type, thread_id):
     except Exception as e:
         logger.error(f"Error loading thread history: {str(e)}")
         return jsonify({'error': 'Failed to load thread history'}), 500
-
 # ============================================================================
 # CONNECTIONS SYSTEM
 # ============================================================================
-
 @app.route('/api/people/search', methods=['GET'])
 @require_login
 def search_people():
@@ -2386,42 +2143,33 @@ def search_people():
     school_filter = request.args.get('school')
     subject_filter = request.args.get('subject')
     academic_range = request.args.get('academic_range')
-
     logger.info(f"MAIN Search request: uid={uid}, query='{query}'")
-
     if not query or len(query) < 2:
         return jsonify({'error': 'Search query must be at least 2 characters'}), 400
-
     try:
         logger.info("MAIN: Starting user search query")
         users_ref = db.collection('users')
         users = []
-
         logger.info("MAIN: Iterating through users collection")
         for doc in users_ref.stream():
             try:
                 user_data = doc.to_dict()
                 logger.debug(f"MAIN: Processing user: {doc.id}")
-
                 # Skip self
                 if doc.id == uid:
                     logger.debug("MAIN: Skipping self")
                     continue
-
                 # Check privacy settings
                 visibility = user_data.get('profile_visibility', {})
                 if not visibility.get('name', True):
                     logger.debug(f"MAIN: Skipping user {doc.id} - name not visible")
                     continue
-
                 # Name matching (case-insensitive)
                 name = user_data.get('name', '').lower()
                 if query.lower() not in name:
                     logger.debug(f"MAIN: Name '{name}' doesn't contain query '{query.lower()}'")
                     continue
-
                 logger.debug(f"MAIN: User {doc.id} matches search")
-
                 # Build profile for search results
                 profile = {
                     'uid': doc.id,
@@ -2430,47 +2178,36 @@ def search_people():
                     'academic_summary': '',
                     'connection_status': 'none'
                 }
-
                 users.append(profile)
                 logger.debug(f"MAIN: Added user {doc.id} to results")
-
             except Exception as user_error:
                 logger.error(f"MAIN: Error processing user {doc.id}: {str(user_error)}")
                 continue
-
         logger.info(f"MAIN: Found {len(users)} matching users")
-
         # Limit results
         users = users[:20]
-
         return jsonify({
             'results': users,
             'total': len(users),
             'query': query
         })
-
     except Exception as e:
         logger.error(f"MAIN: People search error: {str(e)}")
         return jsonify({'error': 'Search failed', 'details': str(e)}), 500
-
 # ============================================================================
 # BUBBLES SYSTEM
 # ============================================================================
-
 @app.route('/api/bubbles/create', methods=['POST'])
 @require_login
 def create_bubble():
     """Create a new study bubble"""
     uid = session['uid']
-
     try:
         data = request.json
         name = data.get('name', '').strip()
         description = data.get('description', '').strip()
-
         if not name:
             return jsonify({'error': 'Bubble name is required'}), 400
-
         bubble_id = f"bubble_{uid}_{int(time.time())}"
         bubble_data = {
             'bubble_id': bubble_id,
@@ -2484,173 +2221,134 @@ def create_bubble():
                 'leaderboard_enabled': True
             }
         }
-
         # Save bubble
         db.collection('bubbles').document(bubble_id).set(bubble_data)
-
         # Add bubble to user's bubbles list
         user_ref = db.collection('users').document(uid)
         user_ref.update({
             'bubbles': firestore.ArrayUnion([bubble_id])
         })
-
         logger.info(f"Created bubble {bubble_id} by user {uid}")
-
         return jsonify({
             'success': True,
             'bubble_id': bubble_id,
             'message': 'Study bubble created successfully'
         })
-
     except Exception as e:
         logger.error(f"Bubble creation error: {str(e)}")
         return jsonify({'error': 'Failed to create bubble', 'details': str(e)}), 500
-
 @app.route('/api/bubbles/<bubble_id>/delete', methods=['DELETE'])
 @require_login
 def delete_bubble(bubble_id):
     """Delete a study bubble"""
     uid = session['uid']
-
     try:
         # Get bubble to verify ownership
         bubble_doc = db.collection('bubbles').document(bubble_id).get()
         if not bubble_doc.exists:
             return jsonify({'error': 'Bubble not found'}), 404
-
         bubble_data = bubble_doc.to_dict()
         if bubble_data.get('creator_uid') != uid:
             return jsonify({'error': 'Not authorized to delete this bubble'}), 403
-
         # Remove bubble from all members' bubbles lists
         member_uids = bubble_data.get('member_uids', [])
         batch = db.batch()
-
         for member_uid in member_uids:
             batch.update(db.collection('users').document(member_uid), {
                 'bubbles': firestore.ArrayRemove([bubble_id])
             })
-
         # Delete the bubble document
         batch.delete(db.collection('bubbles').document(bubble_id))
-
         batch.commit()
-
         return jsonify({
             'success': True,
             'message': 'Bubble deleted successfully'
         })
-
     except Exception as e:
         return jsonify({'error': f'Failed to delete bubble: {str(e)}'}), 500
-
 @app.route('/api/user/privacy/leaderboard', methods=['POST'])
 @require_login
 def update_leaderboard_consent():
     """Update user's privacy consent for leaderboard participation"""
     uid = session['uid']
-
     try:
         data = request.get_json()
         allow_leaderboard = data.get('allow_leaderboard', False)
-
         # Update user privacy settings
         user_ref = db.collection('users').document(uid)
         user_ref.update({
             'privacy_settings.allow_leaderboard': allow_leaderboard
         })
-
         return jsonify({
             'success': True,
             'message': 'Privacy preference updated successfully'
         })
-
     except Exception as e:
         return jsonify({'error': f'Failed to update privacy settings: {str(e)}'}), 500
-
 @app.route('/api/bubbles/join', methods=['POST'])
 @require_login
 def join_bubble_by_code():
     """Join a bubble using invite code"""
     uid = session['uid']
-
     try:
         data = request.get_json()
         invite_code = data.get('invite_code', '').strip()
-
         if not invite_code:
             return jsonify({'error': 'Invite code is required'}), 400
-
         # Find bubble by invite code
         bubbles_ref = db.collection('bubbles')
         bubble_query = bubbles_ref.where('invite_code', '==', invite_code).limit(1)
         bubble_docs = bubble_query.get()
-
         if not bubble_docs:
             return jsonify({'error': 'Invalid invite code'}), 404
-
         bubble_doc = next(iter(bubble_docs))
         bubble_data = bubble_doc.to_dict()
         bubble_id = bubble_doc.id
-
         # Check if user is already a member
         member_uids = bubble_data.get('member_uids', [])
         if uid in member_uids:
             return jsonify({'error': 'You are already a member of this bubble'}), 400
-
         # Add user to bubble members
         db.collection('bubbles').document(bubble_id).update({
             'member_uids': firestore.ArrayUnion([uid])
         })
-
         # Add bubble to user's bubbles list
         db.collection('users').document(uid).update({
             'bubbles': firestore.ArrayUnion([bubble_id])
         })
-
         return jsonify({
             'success': True,
             'message': 'Successfully joined the bubble!',
             'bubble_id': bubble_id,
             'bubble_name': bubble_data.get('name')
         })
-
     except Exception as e:
         return jsonify({'error': f'Failed to join bubble: {str(e)}'}), 500
-
 @app.route('/api/bubbles/<bubble_id>/invite', methods=['POST'])
 @require_login
 def send_bubble_invitation(bubble_id):
     """Send bubble invitation to a connection"""
     uid = session['uid']
-
     try:
         data = request.get_json()
         target_uid = data.get('target_uid')
-
         if not target_uid:
             return jsonify({'error': 'Target user required'}), 400
-
         # Verify bubble ownership
         bubble_doc = db.collection('bubbles').document(bubble_id).get()
         if not bubble_doc.exists:
             return jsonify({'error': 'Bubble not found'}), 404
-
         bubble_data = bubble_doc.to_dict()
         if bubble_data.get('creator_uid') != uid:
             return jsonify({'error': 'Not authorized to send invitations for this bubble'}), 403
-
         # Check if target is already a member
         if target_uid in bubble_data.get('member_uids', []):
             return jsonify({'error': 'User is already a member of this bubble'}), 400
-
         # Check if invitation already sent (you could store pending invitations)
         # For now, just create a notification/invitation record
-
         # Fetch creator's name for the invitation message
         creator_data = get_user_data(uid)
         creator_name = creator_data.get('name', 'Unknown User') if creator_data else 'Unknown User'
-
         invitation_id = f"invite_{bubble_id}_{target_uid}_{int(time.time())}"
         invitation_data = {
             'invitation_id': invitation_id,
@@ -2662,53 +2360,41 @@ def send_bubble_invitation(bubble_id):
             'created_at': datetime.utcnow().isoformat(),
             'message': f'You have been invited by {creator_name} to join the study bubble "{bubble_data.get("name")}"'
         }
-
         # Store invitation
         db.collection('bubble_invitations').document(invitation_id).set(invitation_data)
-
         # Add to receiver's pending invitations
         db.collection('users').document(target_uid).update({
             'pending_bubble_invitations': firestore.ArrayUnion([invitation_id])
         })
-
         return jsonify({
             'success': True,
             'invitation_id': invitation_id,
             'message': 'Invitation sent successfully'
         })
-
     except Exception as e:
         return jsonify({'error': f'Failed to send invitation: {str(e)}'}), 500
-
 @app.route('/api/bubbles/invitations/<invitation_id>/accept', methods=['POST'])
 @require_login
 def accept_bubble_invitation(invitation_id):
     """Accept a bubble invitation"""
     uid = session['uid']
-
     try:
         # Get invitation
         invite_doc = db.collection('bubble_invitations').document(invitation_id).get()
         if not invite_doc.exists:
             return jsonify({'error': 'Invitation not found'}), 404
-
         invitation = invite_doc.to_dict()
-
         # Verify user is the receiver
         if invitation['receiver_uid'] != uid:
             return jsonify({'error': 'Not authorized'}), 403
-
         # Check if already processed
         if invitation['status'] != 'pending':
             return jsonify({'error': 'Invitation already processed'}), 400
-
         bubble_id = invitation['bubble_id']
-
         # Get bubble to verify it exists
         bubble_doc = db.collection('bubbles').document(bubble_id).get()
         if not bubble_doc.exists:
             return jsonify({'error': 'Bubble no longer exists'}), 404
-
         # Ask for consent
         consent_given = request.get_json().get('consent', False)
         if not consent_given:
@@ -2717,108 +2403,85 @@ def accept_bubble_invitation(invitation_id):
                 'bubble_name': invitation['bubble_name'],
                 'message': 'Please confirm you want to join this bubble and share your progress on the leaderboard.'
             }), 200
-
         # Add user to bubble
         db.collection('bubbles').document(bubble_id).update({
             'member_uids': firestore.ArrayUnion([uid])
         })
-
         # Add bubble to user's bubbles
         db.collection('users').document(uid).update({
             'bubbles': firestore.ArrayUnion([bubble_id]),
             'privacy_settings.allow_leaderboard': True  # They consented
         })
-
         # Update invitation status
         db.collection('bubble_invitations').document(invitation_id).update({
             'status': 'accepted',
             'accepted_at': datetime.utcnow().isoformat()
         })
-
         # Remove from pending invitations
         db.collection('users').document(uid).update({
             'pending_bubble_invitations': firestore.ArrayRemove([invitation_id])
         })
-
         return jsonify({
             'success': True,
             'bubble_id': bubble_id,
             'message': f'Successfully joined "{invitation["bubble_name"]}"'
         })
-
     except Exception as e:
         return jsonify({'error': f'Failed to accept invitation: {str(e)}'}), 500
-
 @app.route('/api/bubbles/invitations/<invitation_id>/decline', methods=['POST'])
 @require_login
 def decline_bubble_invitation(invitation_id):
     """Decline a bubble invitation"""
     uid = session['uid']
-
     try:
         # Get invitation
         invite_doc = db.collection('bubble_invitations').document(invitation_id).get()
         if not invite_doc.exists:
             return jsonify({'error': 'Invitation not found'}), 404
-
         invitation = invite_doc.to_dict()
-
         # Verify user is the receiver
         if invitation['receiver_uid'] != uid:
             return jsonify({'error': 'Not authorized'}), 403
-
         # Update invitation status
         db.collection('bubble_invitations').document(invitation_id).update({
             'status': 'declined',
             'declined_at': datetime.utcnow().isoformat()
         })
-
         # Remove from pending invitations
         db.collection('users').document(uid).update({
             'pending_bubble_invitations': firestore.ArrayRemove([invitation_id])
         })
-
         return jsonify({
             'success': True,
             'message': 'Invitation declined'
         })
-
     except Exception as e:
         return jsonify({'error': f'Failed to decline invitation: {str(e)}'}), 500
-
 @app.route('/api/people/search/debug', methods=['GET'])
 def debug_search_people():
     """Debug version of search without authentication"""
     query = request.args.get('q', '').strip()
-
     logger.info(f"DEBUG Search request: query='{query}'")
-
     if not query or len(query) < 2:
         return jsonify({'error': 'Search query must be at least 2 characters'}), 400
-
     try:
         logger.info("DEBUG: Starting user search query")
         users_ref = db.collection('users')
         users = []
-
         logger.info("DEBUG: Iterating through users collection")
         for doc in users_ref.stream():
             try:
                 user_data = doc.to_dict()
                 logger.debug(f"DEBUG: Processing user: {doc.id}")
-
                 # Check privacy settings
                 visibility = user_data.get('profile_visibility', {})
                 if not visibility.get('name', True):
                     continue
-
                 # Name matching (case-insensitive)
                 name = user_data.get('name', '').lower()
                 if query.lower() not in name:
                     continue
-
                 logger.debug(f"DEBUG: User {doc.id} matches search")
-
                 # Build profile for search results
                 profile = {
                     'uid': doc.id,
@@ -2827,37 +2490,30 @@ def debug_search_people():
                     'academic_summary': '',
                     'connection_status': 'none'
                 }
-
                 users.append(profile)
-
             except Exception as user_error:
                 logger.error(f"DEBUG: Error processing user {doc.id}: {str(user_error)}")
                 continue
-
         logger.info(f"DEBUG: Found {len(users)} matching users")
         users = users[:5]  # Limit for debug
-
         return jsonify({
             'results': users,
             'total': len(users),
             'query': query,
             'debug': True
         })
-
     except Exception as e:
         logger.error(f"DEBUG: Search error: {str(e)}")
         logger.error(f"DEBUG: Error type: {type(e).__name__}")
         import traceback
         logger.error(f"DEBUG: Traceback: {traceback.format_exc()}")
         return jsonify({'error': 'Search failed', 'details': str(e), 'debug': True}), 500
-
 @app.route('/api/debug/users', methods=['GET'])
 def debug_list_users():
     """Debug endpoint to list all users in database"""
     try:
         users_ref = db.collection('users')
         users = []
-        
         for doc in users_ref.stream():
             user_data = doc.to_dict()
             users.append({
@@ -2867,7 +2523,6 @@ def debug_list_users():
                 'has_profile_visibility': 'profile_visibility' in user_data,
                 'name_visible': user_data.get('profile_visibility', {}).get('name', True)
             })
-        
         return jsonify({
             'total_users': len(users),
             'users': users[:10],  # Limit to first 10
@@ -2875,7 +2530,6 @@ def debug_list_users():
         })
     except Exception as e:
         return jsonify({'error': str(e), 'debug': True}), 500
-
 @app.route('/bubbles')
 @require_login
 def academic_leaderboard():
@@ -2885,20 +2539,16 @@ def academic_leaderboard():
     if not user_data:
         flash('User data not found', 'error')
         return redirect(url_for('logout'))
-
     # Get all users for leaderboard
     users_ref = db.collection('users')
     leaderboard_data = []
-
     for doc in users_ref.stream():
         user_doc = doc.to_dict()
         user_id = doc.id
-
         # Calculate academic progress for each user
         try:
             progress = calculate_academic_progress(user_doc)
             overall_score = progress.get('overall', 0)
-
             leaderboard_data.append({
                 'uid': user_id,
                 'name': user_doc.get('name', 'Anonymous'),
@@ -2909,25 +2559,20 @@ def academic_leaderboard():
                 'grade': None,
                 'is_current_user': user_id == uid
             })
-
             # Add grade info if available
             purpose = user_doc.get('purpose')
             if purpose == 'high_school' and user_doc.get('highschool'):
                 leaderboard_data[-1]['grade'] = user_doc['highschool'].get('grade')
             elif purpose == 'after_tenth' and user_doc.get('after_tenth'):
                 leaderboard_data[-1]['grade'] = user_doc['after_tenth'].get('grade')
-
         except Exception as e:
             # Skip users with calculation errors
             continue
-
     # Sort by overall score (highest first)
     leaderboard_data.sort(key=lambda x: x['overall_score'], reverse=True)
-
     # Add rankings
     for i, user in enumerate(leaderboard_data, 1):
         user['rank'] = i
-
     # Find current user's rank
     current_user_rank = None
     current_user_data = None
@@ -2936,7 +2581,6 @@ def academic_leaderboard():
             current_user_rank = user['rank']
             current_user_data = user
             break
-
     context = {
         'user': user_data,
         'name': user_data.get('name'),
@@ -2945,9 +2589,7 @@ def academic_leaderboard():
         'current_user_data': current_user_data,
         'total_participants': len(leaderboard_data)
     }
-
     return render_template('academic_leaderboard.html', **context)
-
 @app.route('/bubble/<bubble_id>')
 @require_login
 def bubble_detail(bubble_id):
@@ -2957,31 +2599,24 @@ def bubble_detail(bubble_id):
     if not user_data:
         flash('User data not found', 'error')
         return redirect(url_for('logout'))
-
     # Get bubble data
     bubble_doc = db.collection('bubbles').document(bubble_id).get()
     if not bubble_doc.exists:
         flash('Bubble not found', 'error')
         return redirect(url_for('community_dashboard'))
-
     bubble_data = bubble_doc.to_dict()
-
     # Check if user is a member of this bubble
     is_member = uid in bubble_data.get('member_uids', [])
     is_creator = bubble_data.get('creator_uid') == uid
-
     if not is_member and not is_creator:
         flash('You are not a member of this bubble', 'error')
         return redirect(url_for('community_dashboard'))
-
     # Get creator name
     creator_data = get_user_data(bubble_data.get('creator_uid'))
     creator_name = creator_data.get('name', 'Unknown User') if creator_data else 'Unknown User'
-
     # Get bubble members for leaderboard
     member_uids = bubble_data.get('member_uids', [])
     leaderboard_data = []
-
     for member_uid in member_uids:
         try:
             member_data = get_user_data(member_uid)
@@ -2989,11 +2624,9 @@ def bubble_detail(bubble_id):
                 # Check if user has consented to leaderboard participation
                 privacy_settings = member_data.get('privacy_settings', {})
                 allow_leaderboard = privacy_settings.get('allow_leaderboard', False)
-
                 if allow_leaderboard:
                     progress = calculate_academic_progress(member_data)
                     overall_score = progress.get('overall', 0)
-
                     leaderboard_data.append({
                         'uid': member_uid,
                         'name': member_data.get('name', 'Anonymous'),
@@ -3004,25 +2637,20 @@ def bubble_detail(bubble_id):
                         'grade': None,
                         'is_current_user': member_uid == uid
                     })
-
                     # Add grade info if available
                     purpose = member_data.get('purpose')
                     if purpose == 'high_school' and member_data.get('highschool'):
                         leaderboard_data[-1]['grade'] = member_data['highschool'].get('grade')
                     elif purpose == 'after_tenth' and member_data.get('after_tenth'):
                         leaderboard_data[-1]['grade'] = member_data['after_tenth'].get('grade')
-
         except Exception as e:
             # Skip members with calculation errors
             continue
-
     # Sort by overall score (highest first)
     leaderboard_data.sort(key=lambda x: x['overall_score'], reverse=True)
-
     # Add rankings
     for i, user in enumerate(leaderboard_data, 1):
         user['rank'] = i
-
     # Find current user's rank
     current_user_rank = None
     current_user_data = None
@@ -3031,7 +2659,6 @@ def bubble_detail(bubble_id):
             current_user_rank = user['rank']
             current_user_data = user
             break
-
     context = {
         'user': user_data,
         'name': user_data.get('name'),
@@ -3049,48 +2676,36 @@ def bubble_detail(bubble_id):
         'current_user_data': current_user_data,
         'total_participants': len(leaderboard_data)
     }
-
     return render_template('bubble_detail.html', **context)
-
 @app.route('/api/connections/send', methods=['POST'])
 @require_login
 def send_connection_request():
     """Send a connection request to another user"""
     uid = session['uid']
-
     try:
         data = request.get_json()
         target_uid = data.get('target_uid')
         message = data.get('message', 'Hi! I found you on StudyOS and thought we might study together.')
-
         if not target_uid:
             return jsonify({'error': 'Target user ID is required'}), 400
-
         if target_uid == uid:
             return jsonify({'error': 'Cannot send connection request to yourself'}), 400
-
         # Check if users are already connected
         user_data = get_user_data(uid)
         target_data = get_user_data(target_uid)
-
         if not user_data or not target_data:
             return jsonify({'error': 'User not found'}), 404
-
         # Check if already connected
         user_connections = user_data.get('connections', {})
         target_connections = target_data.get('connections', {})
-
         if target_uid in user_connections.get('accepted', []):
             return jsonify({'error': 'Already connected to this user'}), 400
-
         # Check if request already sent
         if target_uid in user_connections.get('pending_sent', []):
             return jsonify({'error': 'Connection request already sent'}), 400
-
         # Check if request already received
         if uid in target_connections.get('pending_received', []):
             return jsonify({'error': 'Connection request already exists'}), 400
-
         # Create connection request
         connection_id = f"{uid}_{target_uid}_{int(time.time())}"
         connection_data = {
@@ -3101,10 +2716,8 @@ def send_connection_request():
             'message': message,
             'created_at': datetime.utcnow().isoformat()
         }
-
         # Save to connections collection
         db.collection('connections').document(connection_id).set(connection_data)
-
         # Update user connection lists
         db.collection('users').document(uid).update({
             'connections.pending_sent': firestore.ArrayUnion([target_uid])
@@ -3112,46 +2725,36 @@ def send_connection_request():
         db.collection('users').document(target_uid).update({
             'connections.pending_received': firestore.ArrayUnion([uid])
         })
-
         return jsonify({
             'success': True,
             'message': 'Connection request sent successfully'
         })
-
     except Exception as e:
         logger.error(f"Send connection error: {str(e)}")
         return jsonify({'error': 'Failed to send connection request', 'details': str(e)}), 500
-
 @app.route('/api/connections/<connection_id>/accept', methods=['POST'])
 @require_login
 def accept_connection_request(connection_id):
     """Accept a connection request"""
     uid = session['uid']
-
     try:
         # Get connection request
         connection_doc = db.collection('connections').document(connection_id).get()
         if not connection_doc.exists:
             return jsonify({'error': 'Connection request not found'}), 404
-
         connection_data = connection_doc.to_dict()
-
         # Verify user is the receiver
         if connection_data['receiver_uid'] != uid:
             return jsonify({'error': 'Unauthorized'}), 403
-
         # Check if already accepted
         if connection_data['status'] != 'pending':
             return jsonify({'error': 'Connection request already processed'}), 400
-
         batch = db.batch()
-
         # Update connection status
         batch.update(db.collection('connections').document(connection_id), {
             'status': 'accepted',
             'accepted_at': datetime.utcnow().isoformat()
         })
-
         # Update user connection lists
         sender_uid = connection_data['sender_uid']
         batch.update(db.collection('users').document(uid), {
@@ -3162,44 +2765,33 @@ def accept_connection_request(connection_id):
             'connections.accepted': firestore.ArrayUnion([uid]),
             'connections.pending_sent': firestore.ArrayRemove([uid])
         })
-
         batch.commit()
-
         return jsonify({'success': True, 'message': 'Connection accepted'})
-
     except Exception as e:
         logger.error(f"Accept connection error: {str(e)}")
         return jsonify({'error': 'Failed to accept connection', 'details': str(e)}), 500
-
 @app.route('/api/connections/<connection_id>/decline', methods=['POST'])
 @require_login
 def decline_connection_request(connection_id):
     """Decline a connection request"""
     uid = session['uid']
-
     try:
         # Get connection request
         connection_doc = db.collection('connections').document(connection_id).get()
         if not connection_doc.exists:
             return jsonify({'error': 'Connection request not found'}), 404
-
         connection_data = connection_doc.to_dict()
-
         # Verify user is the receiver
         if connection_data['receiver_uid'] != uid:
             return jsonify({'error': 'Unauthorized'}), 403
-
         # Check if already processed
         if connection_data['status'] != 'pending':
             return jsonify({'error': 'Connection request already processed'}), 400
-
         batch = db.batch()
-
         # Update connection status
         batch.update(db.collection('connections').document(connection_id), {
             'status': 'declined'
         })
-
         # Update user connection lists
         sender_uid = connection_data['sender_uid']
         batch.update(db.collection('users').document(uid), {
@@ -3208,32 +2800,24 @@ def decline_connection_request(connection_id):
         batch.update(db.collection('users').document(sender_uid), {
             'connections.pending_sent': firestore.ArrayRemove([uid])
         })
-
         batch.commit()
-
         return jsonify({'success': True, 'message': 'Connection request declined'})
-
     except Exception as e:
         logger.error(f"Decline connection error: {str(e)}")
         return jsonify({'error': 'Failed to decline connection', 'details': str(e)}), 500
-
 @app.route('/api/connections/<connection_id>/block', methods=['POST'])
 @require_login
 def block_connection(connection_id):
     """Block a user (removes any connection and prevents future requests)"""
     uid = session['uid']
-
     try:
         # Get connection request
         connection_doc = db.collection('connections').document(connection_id).get()
         if not connection_doc.exists:
             return jsonify({'error': 'Connection request not found'}), 404
-
         connection_data = connection_doc.to_dict()
         other_uid = connection_data['sender_uid'] if connection_data['receiver_uid'] == uid else connection_data['receiver_uid']
-
         batch = db.batch()
-
         # Remove from all connection lists
         batch.update(db.collection('users').document(uid), {
             'connections.accepted': firestore.ArrayRemove([other_uid]),
@@ -3245,38 +2829,29 @@ def block_connection(connection_id):
             'connections.pending_sent': firestore.ArrayRemove([uid]),
             'connections.pending_received': firestore.ArrayRemove([uid])
         })
-
         # Delete connection record
         batch.delete(db.collection('connections').document(connection_id))
-
         batch.commit()
-
         return jsonify({'success': True, 'message': 'User blocked'})
-
     except Exception as e:
         logger.error(f"Block connection error: {str(e)}")
         return jsonify({'error': 'Failed to block user', 'details': str(e)}), 500
-
 @app.route('/api/connections', methods=['GET'])
 @require_login
 def get_connections():
     """Get user's connections list"""
     uid = session['uid']
-
     try:
         user_data = get_user_data(uid)
         if not user_data:
             return jsonify({'error': 'User data not found'}), 404
-
         connections = user_data.get('connections', {})
-
         # Get detailed info for each connection
         result = {
             'accepted': [],
             'pending_sent': [],
             'pending_received': []
         }
-
         # Get accepted connections
         for conn_uid in connections.get('accepted', []):
             conn_data = get_user_data(conn_uid)
@@ -3288,7 +2863,6 @@ def get_connections():
                     'last_active': conn_data.get('last_login_date')
                 }
                 result['accepted'].append(profile)
-
         # Get pending sent requests
         for conn_uid in connections.get('pending_sent', []):
             conn_data = get_user_data(conn_uid)
@@ -3299,7 +2873,6 @@ def get_connections():
                     'purpose_display': conn_data.get('purpose', '').replace('_', ' ').title()
                 }
                 result['pending_sent'].append(profile)
-
         # Get pending received requests with connection IDs
         for conn_uid in connections.get('pending_received', []):
             # Find connection request
@@ -3308,7 +2881,6 @@ def get_connections():
             for req in conn_requests:
                 conn_request = req
                 break
-
             if conn_request:
                 conn_data = get_user_data(conn_uid)
                 if conn_data:
@@ -3320,9 +2892,7 @@ def get_connections():
                         'message': conn_request.to_dict().get('message', '')
                     }
                     result['pending_received'].append(profile)
-
         return jsonify(result)
-
     except Exception as e:
         logger.error(f"Get connections error: {str(e)}")
         return jsonify({'error': 'Failed to get connections', 'details': str(e)}), 500
@@ -3359,12 +2929,10 @@ def profile_resume():
         'profile_banner': user_data.get('profile_banner')
     }
     return render_template('profile_resume.html', **context)
-
 def allowed_file(filename):
     """Check if file has allowed extension"""
     ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'webp'}
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
-
 @app.route('/profile/edit', methods=['GET', 'POST'])
 @require_login
 def profile_edit():
@@ -3377,14 +2945,12 @@ def profile_edit():
             db.collection('users').document(uid).update({'profile_picture': None})
             flash('Profile picture removed successfully!', 'success')
             return redirect(url_for('profile_edit'))
-        
         # Handle banner removal
         if action == 'remove_banner':
             # Remove profile banner from database
             db.collection('users').document(uid).update({'profile_banner': None})
             flash('Profile banner removed successfully!', 'success')
             return redirect(url_for('profile_edit'))
-        
         # Handle profile picture upload
         if 'profile_picture' in request.files:
             file = request.files['profile_picture']
@@ -3393,31 +2959,23 @@ def profile_edit():
                 if not allowed_file(file.filename):
                     flash('Invalid file type. Please upload JPG, PNG, or WebP images.', 'error')
                     return redirect(url_for('profile_edit'))
-                
                 if file.content_length > 5 * 1024 * 1024:  # 5MB limit
                     flash('File size too large. Please upload images smaller than 5MB.', 'error')
                     return redirect(url_for('profile_edit'))
-                
                 try:
                     # Create profile pictures directory if it doesn't exist
                     upload_dir = os.path.join(app.root_path, 'static', 'profile_pictures')
                     os.makedirs(upload_dir, exist_ok=True)
-                    
                     # Generate unique filename
                     filename = secure_filename(f"{uid}_{int(time.time())}_{file.filename}")
                     file_path = os.path.join(upload_dir, filename)
-                    
                     # Save file to local storage
                     file.save(file_path)
-                    
                     # Store relative path in database (will be served via Flask route)
                     profile_picture_path = f"profile_pictures/{filename}"
-                    
                     # Update user data with profile picture path
                     db.collection('users').document(uid).update({'profile_picture': profile_picture_path})
-                    
                     logger.info(f"Profile picture saved successfully: {profile_picture_path}")
-                    
                 except Exception as e:
                     logger.error(f"Profile picture upload error: {str(e)}")
                     logger.error(f"Error type: {type(e).__name__}")
@@ -3425,7 +2983,6 @@ def profile_edit():
                     logger.error(f"Traceback: {traceback.format_exc()}")
                     flash(f'Failed to upload profile picture: {str(e)}', 'error')
                     return redirect(url_for('profile_edit'))
-        
         # Handle banner upload
         if 'profile_banner' in request.files:
             file = request.files['profile_banner']
@@ -3434,11 +2991,9 @@ def profile_edit():
                 if not allowed_file(file.filename):
                     flash('Invalid file type. Please upload JPG, PNG, or WebP images.', 'error')
                     return redirect(url_for('profile_edit'))
-                
                 if file.content_length > 10 * 1024 * 1024:  # 10MB limit for banners
                     flash('Banner file size too large. Please upload images smaller than 10MB.', 'error')
                     return redirect(url_for('profile_edit'))
-                
                 try:
                     # Process and convert image to banner format
                     try:
@@ -3458,22 +3013,17 @@ def profile_edit():
                         logger.info(f"Profile banner saved without processing: {profile_banner_path}")
                         flash('Profile banner uploaded successfully!', 'success')
                         return redirect(url_for('profile_edit'))
-                    
                     # Read image
                     image = Image.open(file)
-                    
                     # Convert to RGB if necessary (for JPEG compatibility)
                     if image.mode in ("RGBA", "P"):
                         image = image.convert("RGB")
-                    
                     # Resize to banner dimensions (1200x400 - good aspect ratio for banners)
                     banner_width = 1200
                     banner_height = 400
-                    
                     # Calculate aspect ratios
                     target_ratio = banner_width / banner_height
                     image_ratio = image.width / image.height
-                    
                     if image_ratio > target_ratio:
                         # Image is wider, crop width
                         new_width = int(image.height * target_ratio)
@@ -3484,35 +3034,26 @@ def profile_edit():
                         new_height = int(image.width / target_ratio)
                         top = (image.height - new_height) // 2
                         image = image.crop((0, top, image.width, top + new_height))
-                    
                     # Resize to exact dimensions
                     image = image.resize((banner_width, banner_height), Image.Resampling.LANCZOS)
-                    
                     # Save as WebP for better compression
                     output = io.BytesIO()
                     image.save(output, format='WebP', quality=85)
                     output.seek(0)
-                    
                     # Create profile banners directory if it doesn't exist
                     upload_dir = os.path.join(app.root_path, 'static', 'profile_banners')
                     os.makedirs(upload_dir, exist_ok=True)
-                    
                     # Generate unique filename
                     filename = secure_filename(f"{uid}_{int(time.time())}_banner.webp")
                     file_path = os.path.join(upload_dir, filename)
-                    
                     # Save processed image
                     with open(file_path, 'wb') as f:
                         f.write(output.getvalue())
-                    
                     # Store relative path in database
                     profile_banner_path = f"profile_banners/{filename}"
-                    
                     # Update user data with profile banner path
                     db.collection('users').document(uid).update({'profile_banner': profile_banner_path})
-                    
                     logger.info(f"Profile banner processed and saved successfully: {profile_banner_path}")
-                    
                 except Exception as e:
                     logger.error(f"Profile banner processing error: {str(e)}")
                     logger.error(f"Error type: {type(e).__name__}")
@@ -3520,7 +3061,6 @@ def profile_edit():
                     logger.error(f"Traceback: {traceback.format_exc()}")
                     flash(f'Failed to process banner image: {str(e)}', 'error')
                     return redirect(url_for('profile_edit'))
-        
         updates = {
             'name': request.form.get('name'),
             'about': request.form.get('about'),
@@ -3544,11 +3084,9 @@ def profile_edit():
         'profile_picture': user_data.get('profile_picture')
     }
     return render_template('profile_edit.html', **context)
-
 # ============================================================================
 # PROFILE PICTURE SERVING
 # ============================================================================
-
 @app.route('/profile_pictures/<filename>')
 def serve_profile_picture(filename):
     """Serve profile pictures from local storage"""
@@ -3563,12 +3101,9 @@ def serve_profile_picture(filename):
             os.path.join(app.root_path, 'static'),
             'default-profile.png'
         ), 404
-
 # ============================================================================
 # ACADEMIC DASHBOARD
-
 # ============================================================================
-
 @app.route('/academic')
 @require_login
 def academic_dashboard():
@@ -3654,7 +3189,6 @@ def academic_dashboard():
         'has_class': bool(user_data.get('class_ids'))
     }
     return render_template('academic_dashboard.html', **context)
-
 @app.route('/master-library')
 @require_login
 def master_library():
@@ -3672,7 +3206,6 @@ def master_library():
         'has_class': bool(user_data.get('class_ids'))
     }
     return render_template('master_library.html', **context)
-
 @app.route('/academic/subject/<subject_name>/chapter/<chapter_name>')
 @require_login
 def chapter_detail(subject_name, chapter_name):
@@ -3719,7 +3252,6 @@ def chapter_detail(subject_name, chapter_name):
         'has_class': bool(user_data.get('class_ids'))
     }
     return render_template('chapter_detail.html', **context)
-
 @app.route('/academic/toggle_chapter', methods=['POST'])
 @require_login
 def toggle_chapter_completion():
@@ -3738,7 +3270,6 @@ def toggle_chapter_completion():
     db.collection('users').document(uid).update({'chapters_completed': chapters_completed})
     # Redirect back to academic dashboard (the chapter list lives there now)
     return redirect(url_for('academic_dashboard'))
-
 @app.route('/academic/toggle_chapter_exclusion', methods=['POST'])
 @require_login
 def toggle_chapter_exclusion():
@@ -3762,12 +3293,9 @@ def toggle_chapter_exclusion():
         exclusions[key] = True
     user_ref.update({'academic_exclusions': exclusions})
     return redirect(url_for('academic_dashboard'))
-
 # ============================================================
 # STUDY MODE (Pomodoro) ChatGPT
-
 # ============================================================
-
 @app.route('/study-mode')
 @require_login
 def study_mode():
@@ -3776,7 +3304,6 @@ def study_mode():
     name = user_data.get('name', 'Student') if user_data else 'Student'
     todos = db.collection('users').document(uid).collection('study_todos').stream()
     todo_list = [{'id': t.id, **t.to_dict()} for t in todos]
-    
     return render_template(
         'study_mode.html',
         name=name,
@@ -3785,7 +3312,6 @@ def study_mode():
         in_institution=bool(user_data.get('institution_id')),
         has_class=bool(user_data.get('class_ids'))
     )
-
 @app.route('/study-mode/time', methods=['POST'])
 @require_login
 def study_time():
@@ -3795,23 +3321,18 @@ def study_time():
     local_hour = data.get('local_hour')
     local_weekday = data.get('local_weekday')
     session_break = data.get('session_break', False)
-
     # Get user data for timezone conversion
     user_data = get_user_data(uid)
-
     db.collection('users').document(uid).set({
         'study_mode': {'total_seconds': Increment(seconds)}
     }, merge=True)
-
     # Record/Update session for heatmap
     # Using YYYY-MM-DD-HH as a unique key for the hour to avoid document spam
     now = datetime.utcnow()
     hour_id = now.strftime("%Y-%m-%d-%H")
-
     # If session_break is True, create a unique session by adding timestamp
     if session_break:
         hour_id = f"{hour_id}-{int(now.timestamp())}"
-
     session_ref = db.collection('users').document(uid).collection('study_sessions').document(hour_id)
     session_data = {
         'start_time': get_current_time_for_user(user_data),  # Use user's timezone
@@ -3824,7 +3345,6 @@ def study_time():
         session_data['local_weekday'] = local_weekday
     session_ref.set(session_data, merge=True)
     return jsonify(ok=True)
-
 @app.route('/study-mode/todo/add', methods=['POST'])
 @require_login
 def add_study_todo():
@@ -3835,7 +3355,6 @@ def add_study_todo():
             'done': False
         })
     return jsonify(ok=True)
-
 @app.route('/study-mode/todo/<tid>/toggle', methods=['POST'])
 @require_login
 def toggle_study_todo(tid):
@@ -3844,7 +3363,6 @@ def toggle_study_todo(tid):
     doc = ref.get()
     ref.update({'done': not doc.to_dict().get('done', False)})
     return jsonify(ok=True)
-
 @app.route('/study-mode/todo/<tid>/delete', methods=['POST'])
 @require_login
 def delete_study_todo(tid):
@@ -3854,12 +3372,9 @@ def delete_study_todo(tid):
 #=============================================================================
 # DOC - V1 - ChatGPT - Temporary Not Perfect
 #=============================================================================
-
 # ============================================================================
 # GOALS (POST handler only — rendered inside academic_dashboard)
-
 # ============================================================================
-
 @app.route('/goals', methods=['GET', 'POST'])
 @require_login
 def goals_dashboard():
@@ -3899,7 +3414,6 @@ def goals_dashboard():
         return redirect(url_for('academic_dashboard'))
     # GET fallback — redirect to academic dashboard
     return redirect(url_for('academic_dashboard'))
-
 @app.route('/tasks', methods=['GET', 'POST'])
 @require_login
 def tasks_dashboard():
@@ -3908,12 +3422,10 @@ def tasks_dashboard():
     if not user_data:
         flash('User data not found', 'error')
         return redirect(url_for('logout'))
-
     if request.method == 'POST':
         try:
             action = request.form.get('action')
             tasks = user_data.get('tasks', [])
-            
             if action == 'add':
                 title = request.form.get('title')
                 if title:
@@ -3932,7 +3444,6 @@ def tasks_dashboard():
                     flash('Task added successfully!', 'success')
                 else:
                     flash('Task title is required', 'error')
-                    
             elif action == 'toggle':
                 task_id = request.form.get('task_id')
                 for t in tasks:
@@ -3941,7 +3452,6 @@ def tasks_dashboard():
                         t['updated_at'] = datetime.utcnow().isoformat()
                         break
                 db.collection('users').document(uid).update({'tasks': tasks})
-                
             elif action == 'delete':
                 task_id = request.form.get('task_id')
                 tasks = [t for t in tasks if str(t.get('id')) != str(task_id)]
@@ -3950,13 +3460,11 @@ def tasks_dashboard():
         except Exception as e:
             logger.error(f"Task action error: {str(e)}")
             flash(f"An error occurred: {str(e)}", 'error')
-            
         # Redirect back to the referrer or a default page
         referrer = request.referrer or ''
         if 'tasks' in referrer or 'dashboard' in referrer:
             return redirect(referrer)
         return redirect(url_for('profile_dashboard'))
-
     # GET: Render tasks dashboard
     context = {
         'tasks': user_data.get('tasks', []),
@@ -3966,12 +3474,9 @@ def tasks_dashboard():
         'settings': user_data.get('settings', {})
     }
     return render_template('tasks_dashboard.html', **context)
-
 # ============================================================================
 # RESULTS
-
 # ============================================================================
-
 @app.route('/results', methods=['POST'])
 @require_login
 def results_dashboard():
@@ -4011,12 +3516,9 @@ def results_dashboard():
             })
             flash('Result deleted!', 'success')
     return redirect(url_for('academic_dashboard'))
-
 # ============================================================================
 # STATISTICS
-
 # ============================================================================
-
 @app.route('/statistics')
 @require_login
 def statistics_dashboard():
@@ -4083,10 +3585,8 @@ def statistics_dashboard():
         in_institution=bool(user.get('institution_id')),
         has_class=bool(user.get('class_ids'))
     )
-
 # ============================================================================
 # PROJECTS (FUTURE FEATURE)
-
 # ============================================================================
 # @app.route('/projects', methods=['GET', 'POST'])
 # @require_login
@@ -4125,12 +3625,9 @@ def statistics_dashboard():
 #             flash('Project deleted!', 'success')
 #         return redirect(url_for('academic_dashboard'))
 #     return redirect(url_for('academic_dashboard'))
-
 # ============================================================================
 # INTERESTS → CAREERS → COURSES → INTERNSHIPS
-
 # ============================================================================
-
 @app.route('/interests')
 @require_login
 def interests_dashboard():
@@ -4155,7 +3652,6 @@ def interests_dashboard():
         'has_class': bool(user_data.get('class_ids'))
     }
     return render_template('interests_dashboard.html', **context)
-
 @app.route('/career/<career_id>')
 @require_login
 def career_detail(career_id):
@@ -4184,7 +3680,6 @@ def career_detail(career_id):
         'has_class': bool(user_data.get('class_ids'))
     }
     return render_template('career_detail.html', **context)
-
 @app.route('/career/<career_id>/toggle', methods=['POST'])
 @require_login
 def toggle_career_interest(career_id):
@@ -4201,7 +3696,6 @@ def toggle_career_interest(career_id):
     interests['careers'] = saved
     db.collection('users').document(uid).update({'interests': interests})
     return redirect(url_for('career_detail', career_id=career_id))
-
 @app.route('/course/<course_id>')
 @require_login
 def course_detail(course_id):
@@ -4221,7 +3715,6 @@ def course_detail(course_id):
         'has_class': bool(user_data.get('class_ids'))
     }
     return render_template('course_detail.html', **context)
-
 @app.route('/internship/<internship_id>')
 @require_login
 def internship_detail(internship_id):
@@ -4239,39 +3732,31 @@ def internship_detail(internship_id):
         'has_class': bool(user_data.get('class_ids'))
     }
     return render_template('internship_detail.html', **context)
-
 # ============================================================================
 # LEGACY / COMPATIBILITY ROUTES
-
 # ============================================================================
-
 @app.route('/dashboard/highschool')
 @require_login
 def dashboard_highschool():
     return redirect(url_for('profile_dashboard'))
-
 @app.route('/dashboard/exam')
 @require_login
 def dashboard_exam():
     return redirect(url_for('profile_dashboard'))
-
 @app.route('/dashboard/after_tenth')
 @require_login
 def dashboard_after_tenth():
     return redirect(url_for('profile_dashboard'))
-
 @app.route('/todo', methods=['GET', 'POST'])
 @require_login
 def todo():
     return redirect(url_for('academic_dashboard'))
-
 @app.route('/about')
 @require_login
 def about():
     uid = session['uid']
     user_data = get_user_data(uid)
     return render_template('about.html', user=user_data, name=user_data.get('name') if user_data else 'Student', in_institution=bool(user_data.get('institution_id')) if user_data else False, has_class=bool(user_data.get('class_ids')) if user_data else False)
-
 @app.route('/settings', methods=['GET', 'POST'])
 @require_login
 def settings():
@@ -4351,7 +3836,35 @@ def settings():
                          available_streams=available_streams,
                          in_institution=bool(user_data.get('institution_id')),
                          has_class=bool(user_data.get('class_ids')))
-
+@app.route('/api/tutorial/complete', methods=['POST'])
+@require_login
+def tutorial_complete():
+    """API endpoint to save tutorial completion status"""
+    uid = session['uid']
+    
+    try:
+        data = request.get_json() or {}
+        completed = data.get('completed', False)
+        
+        # Update user's tutorial completion status
+        db.collection('users').document(uid).update({
+            'tutorial_completed': completed,
+            'tutorial_completed_at': datetime.utcnow().isoformat() if completed else None
+        })
+        
+        logger.info("tutorial_completion_saved", user_id=uid, completed=completed)
+        
+        return jsonify({
+            'success': True,
+            'message': 'Tutorial status saved successfully'
+        })
+    
+    except Exception as e:
+        logger.error("tutorial_completion_error", error=str(e), user_id=uid)
+        return jsonify({
+            'success': False,
+            'message': 'Failed to save tutorial status'
+        }), 500
 @app.route('/contact', methods=['GET', 'POST'])
 @require_login
 def contact():
@@ -4426,14 +3939,10 @@ This email was sent from the StudyOS contact form.
                          name=user_data.get('name') or 'Student',
                          in_institution=bool(user_data.get('institution_id')),
                          has_class=bool(user_data.get('class_ids')))
-
 # ============================================================================
 # INSTITUTIONAL ECOSYSTEM (PHASE 2)
-
 # ============================================================================
-
 # Legacy require_role deprecated. Use require_institution_role instead.
-
 @app.route('/institution/join', methods=['GET', 'POST'])
 @require_login
 def institution_join():
@@ -4442,7 +3951,6 @@ def institution_join():
     if account_type == 'teacher':
         return redirect(url_for('institution_teacher_join'))
     return redirect(url_for('student_join_class'))
-
 @app.route('/institution/dashboard')
 @require_institution_role(['admin', 'teacher'])
 def institution_dashboard_redirect():
@@ -4451,7 +3959,6 @@ def institution_dashboard_redirect():
     if account_type == 'admin':
         return redirect(url_for('institution_admin_dashboard'))
     return redirect(url_for('institution_teacher_dashboard'))
-
 @app.route('/institution/generate_invite', methods=['POST'])
 @require_institution_role(['admin', 'teacher'])
 def generate_invite():
@@ -4473,7 +3980,6 @@ def generate_invite():
         'one_time': True # or configurable
     })
     return jsonify({'code': code})
-
 @app.route('/institution/nudge', methods=['POST'])
 @require_institution_role(['teacher', 'admin'])
 def send_nudge():
@@ -4482,10 +3988,8 @@ def send_nudge():
     inst_id = profile.get('institution_id')
     student_uid = request.json.get('student_uid')
     message = request.json.get('message', 'Your teacher has sent you a reminder to stay on track!')
-    
     if not inst_id:
         return jsonify({'success': False, 'message': 'No institution context found.'}), 400
-
     # Create notification
     db.collection('institutions').document(inst_id).collection('notifications').add({
         'recipient_uid': student_uid,
@@ -4497,7 +4001,6 @@ def send_nudge():
         'created_at': datetime.utcnow().isoformat()
     })
     return jsonify({'success': True, 'message': 'Nudge sent!'})
-
 @app.route('/institution/broadcast', methods=['POST'])
 @require_institution_role(['teacher', 'admin'])
 def broadcast_message():
@@ -4506,10 +4009,8 @@ def broadcast_message():
     inst_id = profile.get('institution_id')
     message = request.form.get('message')
     class_id = request.form.get('class_id')
-    
     if not message:
         return jsonify({'error': 'Message required'}), 400
-    
     # Get target students
     student_uids = []
     if class_id:
@@ -4520,7 +4021,6 @@ def broadcast_message():
         # Broadcast to all students in institution
         users_ref = db.collection('users').where('institution_id', '==', inst_id)
         student_uids = [u.id for u in users_ref.stream()]
-        
     if student_uids:
         batch = db.batch()
         notif_ref = db.collection('institutions').document(inst_id).collection('notifications')
@@ -4535,11 +4035,9 @@ def broadcast_message():
                 'created_at': datetime.utcnow().isoformat()
             })
         batch.commit()
-        
     flash(f'Message sent to {len(student_uids)} students!', 'success')
     dest = 'institution_admin_dashboard' if profile.get('account_type') == 'admin' else 'institution_teacher_dashboard'
     return redirect(url_for(dest))
-
 @app.route('/institution/class/<class_id>/syllabus', methods=['GET', 'POST'])
 @require_institution_role(['teacher', 'admin'])
 def manage_class_syllabus(class_id):
@@ -4590,7 +4088,6 @@ def manage_class_syllabus(class_id):
         'exclusions': exclusions
     }
     return render_template('class_syllabus.html', **context)
-
 @app.route('/institution/student/<student_uid>')
 @require_institution_role(['teacher', 'admin'])
 def student_detail(student_uid):
@@ -4622,7 +4119,6 @@ def student_detail(student_uid):
         'sessions': sessions
     }
     return render_template('student_detail.html', **context)
-
 @app.route('/institution/students')
 @require_institution_role(['teacher', 'admin'])
 def all_students():
@@ -4670,36 +4166,29 @@ def all_students():
         'total_students': len(students_list),
     }
     return render_template('all_students.html', **context)
-
 @app.route('/institution/teacher/settings')
 @require_institution_role(['teacher'])
 def institution_teacher_settings():
     uid = session['uid']
     profile = _get_teacher_profile(uid)
     inst_id = profile.get('institution_id')
-
     # Get institution data
     institution = {}
     if inst_id:
         inst_doc = db.collection('institutions').document(inst_id).get()
         if inst_doc.exists:
             institution = inst_doc.to_dict()
-
     # Get teacher's classes
     classes_docs = db.collection('classes').where('teacher_id', '==', uid).stream()
     classes = [{'id': c.id, **c.to_dict()} for c in classes_docs]
-
     # Get all students in institution
     students_docs = db.collection('users').where('institution_id', '==', inst_id).stream()
     students = [{'id': s.id, **s.to_dict()} for s in students_docs]
-
     logger.info("fetched_students", count=len(students), institution_id=inst_id)
-
     # Populate students for each class
     for cls in classes:
         cls['students'] = [s['id'] for s in students if cls['id'] in s.get('class_ids', [])]
         logger.info("class_student_count", class_name=cls.get('name', cls['id']), class_id=cls['id'], student_count=len(cls['students']))
-
     context = {
         'profile': profile,
         'institution': institution,
@@ -4708,37 +4197,29 @@ def institution_teacher_settings():
         'settings': profile.get('settings', {})
     }
     return render_template('institution_teacher_settings.html', **context)
-
-
 @app.route('/institution/admin/settings')
 @require_institution_role(['admin'])
 def institution_admin_settings():
     uid = session['uid']
     profile = _get_admin_profile(uid)
     inst_id = profile.get('institution_id')
-
     # Get institution data
     institution = {}
     if inst_id:
         inst_doc = db.collection('institutions').document(inst_id).get()
         if inst_doc.exists:
             institution = inst_doc.to_dict()
-
     # Get all classes in institution
     classes_docs = db.collection('classes').where('institution_id', '==', inst_id).stream()
     classes = [{'id': c.id, **c.to_dict()} for c in classes_docs]
-
     # Get all students in institution
     students_docs = db.collection('users').where('institution_id', '==', inst_id).stream()
     students = [{'id': s.id, **s.to_dict()} for s in students_docs]
-
     logger.info("fetched_students", count=len(students), institution_id=inst_id)
-
     # Populate students for each class
     for cls in classes:
         cls['students'] = [s['id'] for s in students if cls['id'] in s.get('class_ids', [])]
         logger.info("class_student_count", class_name=cls.get('name', cls['id']), class_id=cls['id'], student_count=len(cls['students']))
-
     context = {
         'profile': profile,
         'institution': institution,
@@ -4747,11 +4228,9 @@ def institution_admin_settings():
         'settings': profile.get('settings', {})
     }
     return render_template('institution_admin_settings.html', **context)
-
 # ============================================================================
 # SCLERA AI INSTITUTIONAL ANALYTICS API ROUTES
 # ============================================================================
-
 @app.route('/api/user/profile')
 @require_login
 def get_user_profile():
@@ -4760,18 +4239,15 @@ def get_user_profile():
     user_data = get_user_data(uid)
     if not user_data:
         return jsonify({'error': 'User not found'}), 404
-
     # Get user role from institution system
     profile = _get_any_profile(uid)
     account_type = profile.get('account_type', 'student') if profile else 'student'
-
     return jsonify({
         'name': user_data.get('name', 'User'),
         'email': user_data.get('email'),
         'role': account_type,
         'initials': ''.join([word[0] for word in user_data.get('name', 'User').split()[:2]]).upper()
     })
-
 @app.route('/api/sclera/threads/<mode>/create', methods=['POST'])
 @require_login
 def create_sclera_thread(mode):
@@ -4779,17 +4255,14 @@ def create_sclera_thread(mode):
     uid = session['uid']
     if mode not in ['academic', 'institutional', 'research']:
         return jsonify({'error': 'Invalid mode'}), 400
-
     # Check institutional access
     if mode == 'institutional':
         profile = _get_any_profile(uid)
         institutional_roles = ['administrator', 'curriculum_director', 'institution_teacher', 'admin']
         if not profile or profile.get('account_type') not in institutional_roles:
             return jsonify({'error': 'Access denied: Institutional mode requires administrator privileges'}), 403
-
     data = request.json or {}
     title = data.get('title', f'New {mode.title()} Analysis')
-
     try:
         thread_data = {
             'title': title,
@@ -4798,11 +4271,9 @@ def create_sclera_thread(mode):
             'last_message_at': datetime.utcnow().isoformat(),
             'message_count': 0
         }
-
         # Create thread document
         thread_ref = db.collection('users').document(uid).collection('sclera_threads').document()
         thread_ref.set(thread_data)
-
         return jsonify({
             'success': True,
             'thread_id': thread_ref.id,
@@ -4811,7 +4282,6 @@ def create_sclera_thread(mode):
     except Exception as e:
         logger.error(f"SCLERA create thread error: {str(e)}")
         return jsonify({'success': False, 'error': str(e)}), 500
-
 @app.route('/api/sclera/threads/<mode>/<thread_id>/delete', methods=['DELETE'])
 @require_login
 def delete_sclera_thread(mode, thread_id):
@@ -4819,30 +4289,23 @@ def delete_sclera_thread(mode, thread_id):
     uid = session['uid']
     if mode not in ['academic_planner', 'institutional', 'doubt_solver']:
         return jsonify({'error': 'Invalid mode'}), 400
-
     # Check institutional access
     if mode == 'institutional':
         profile = _get_any_profile(uid)
         institutional_roles = ['administrator', 'curriculum_director', 'institution_teacher', 'admin']
         if not profile or profile.get('account_type') not in institutional_roles:
             return jsonify({'error': 'Access denied: Institutional mode requires administrator privileges'}), 403
-
     try:
         # Delete thread document (messages will be deleted by Firestore rules)
         thread_ref = db.collection('users').document(uid).collection('sclera_threads').document(thread_id)
         thread_doc = thread_ref.get()
-
         if not thread_doc.exists:
             return jsonify({'success': False, 'error': 'Thread not found'}), 404
-
         thread_ref.delete()
-
         return jsonify({'success': True})
-
     except Exception as e:
         logger.error(f"SCLERA delete thread error: {str(e)}")
         return jsonify({'success': False, 'error': str(e)}), 500
-
 @app.route('/api/sclera/threads/<mode>/<thread_id>/export')
 @require_login
 def export_sclera_thread(mode, thread_id):
@@ -4850,35 +4313,27 @@ def export_sclera_thread(mode, thread_id):
     uid = session['uid']
     if mode not in ['academic_planner', 'institutional', 'doubt_solver']:
         return jsonify({'error': 'Invalid mode'}), 400
-
     # Check institutional access
     if mode == 'institutional':
         profile = _get_any_profile(uid)
         institutional_roles = ['administrator', 'curriculum_director', 'institution_teacher', 'admin']
         if not profile or profile.get('account_type') not in institutional_roles:
             return jsonify({'error': 'Access denied: Institutional mode requires administrator privileges'}), 403
-
     format_type = request.args.get('format', 'text')
     if format_type not in ['text', 'markdown', 'json']:
         return jsonify({'error': 'Invalid format. Use text, markdown, or json'}), 400
-
     try:
         # Get AI assistant for export functionality
         ai_assistant = get_ai_assistant()
-
         # Export the thread
         exported_data = ai_assistant.export_thread(uid, mode, format_type, thread_id)
-
         if exported_data is None:
             return jsonify({'error': 'Failed to export thread'}), 500
-
         # Return the exported data as plain text (works for all formats)
         return exported_data, 200, {'Content-Type': 'text/plain'}
-
     except Exception as e:
         logger.error(f"SCLERA export thread error: {str(e)}")
         return jsonify({'error': 'Failed to export thread', 'details': str(e)}), 500
-
 @app.route('/api/sclera/threads/<mode>/<thread_id>/history')
 @require_login
 def get_sclera_thread_history(mode, thread_id):
@@ -4886,19 +4341,16 @@ def get_sclera_thread_history(mode, thread_id):
     uid = session['uid']
     if mode not in ['academic_planner', 'institutional', 'doubt_solver']:
         return jsonify({'error': 'Invalid mode'}), 400
-
     # Check institutional access
     if mode == 'institutional':
         profile = _get_any_profile(uid)
         institutional_roles = ['administrator', 'curriculum_director', 'institution_teacher', 'admin']
         if not profile or profile.get('account_type') not in institutional_roles:
             return jsonify({'error': 'Access denied: Institutional mode requires administrator privileges'}), 403
-
     try:
         # Get thread messages (simplified - no ordering to avoid issues)
         messages_ref = db.collection('users').document(uid).collection('sclera_threads').document(thread_id).collection('messages')
         messages_docs = messages_ref.stream()
-
         history = []
         for msg_doc in messages_docs:
             msg_data = msg_doc.to_dict()
@@ -4907,16 +4359,12 @@ def get_sclera_thread_history(mode, thread_id):
                 'content': msg_data.get('content'),
                 'timestamp': msg_data.get('timestamp')
             })
-
         # Sort in memory instead of Firestore
         history.sort(key=lambda x: x.get('timestamp', ''))
-
         return jsonify({'history': history})
-
     except Exception as e:
         logger.error(f"SCLERA thread history error: {str(e)}")
         return jsonify({'history': [], 'error': str(e)}), 500
-
 @app.route('/api/sclera/threads/<mode>')
 @require_login
 def get_sclera_threads(mode):
@@ -4924,19 +4372,16 @@ def get_sclera_threads(mode):
     uid = session['uid']
     if mode not in ['academic_planner', 'institutional', 'doubt_solver']:
         return jsonify({'error': 'Invalid mode'}), 400
-
     # Check institutional access
     if mode == 'institutional':
         profile = _get_any_profile(uid)
         institutional_roles = ['administrator', 'curriculum_director', 'institution_teacher', 'admin']
         if not profile or profile.get('account_type') not in institutional_roles:
             return jsonify({'error': 'Access denied: Institutional mode requires administrator privileges'}), 403
-
     try:
         # Get all threads for this mode
         threads_ref = db.collection('users').document(uid).collection('sclera_threads')
         thread_docs = list(threads_ref.where('mode', '==', mode).stream())
-
         threads = []
         for doc in thread_docs:
             thread_data = doc.to_dict()
@@ -4948,28 +4393,22 @@ def get_sclera_threads(mode):
                 'last_message_at': thread_data.get('last_message_at'),
                 'message_count': thread_data.get('message_count', 0)
             })
-
         # Sort by last message (most recent first)
         threads.sort(key=lambda x: x.get('last_message_at', ''), reverse=True)
-
         # Find active thread (most recent one)
         active_thread_id = threads[0]['thread_id'] if threads else None
-
         return jsonify({
             'threads': threads,
             'active_thread_id': active_thread_id
         })
-
     except Exception as e:
         logger.error(f"SCLERA get threads error: {str(e)}")
         return jsonify({'threads': [], 'active_thread_id': None, 'error': str(e)}), 500
-
 @app.route('/api/test/gemini', methods=['GET'])
 def test_gemini():
     """Test endpoint to list all available Gemini models"""
     try:
         import google.generativeai as genai
-        
         api_key = os.getenv('GEMINI_API_KEY')
         if not api_key:
             return jsonify({
@@ -4977,14 +4416,11 @@ def test_gemini():
                 'message': 'GEMINI_API_KEY environment variable is not set',
                 'api_key_set': False
             }), 500
-            
         # Configure with just the API key
         genai.configure(api_key=api_key)
-        
         try:
             # Get all available models
             models = genai.list_models()
-            
             # Get detailed information about each model
             model_info = []
             for model in models:
@@ -4996,7 +4432,6 @@ def test_gemini():
                         supports_generate = True
                     except:
                         supports_generate = False
-                        
                     model_info.append({
                         'name': model.name,
                         'display_name': getattr(model, 'display_name', 'N/A'),
@@ -5011,7 +4446,6 @@ def test_gemini():
                         'name': str(model),
                         'error': f"Could not get model info: {str(e)}"
                     })
-            
             return jsonify({
                 'status': 'success',
                 'api_key_set': True,
@@ -5019,7 +4453,6 @@ def test_gemini():
                 'available_models': model_info,
                 'model_count': len(model_info)
             })
-            
         except Exception as e:
             return jsonify({
                 'status': 'error',
@@ -5028,7 +4461,6 @@ def test_gemini():
                 'api_key_prefix': api_key[:5] + '...' + api_key[-4:] if api_key else None,
                 'error_type': type(e).__name__
             }), 500
-        
     except Exception as e:
         return jsonify({
             'status': 'error',
@@ -5036,7 +4468,6 @@ def test_gemini():
             'api_key_set': 'GEMINI_API_KEY' in os.environ,
             'api_key_prefix': os.getenv('GEMINI_API_KEY', '')[:5] + '...' + os.getenv('GEMINI_API_KEY', '')[-4:] if os.getenv('GEMINI_API_KEY') else None
         }), 500
-
 @app.route('/api/sclera/chat/<mode>', methods=['POST'])
 @require_login
 def sclera_chat(mode):
@@ -5044,25 +4475,21 @@ def sclera_chat(mode):
     uid = session['uid']
     if mode not in ['academic_planner', 'institutional', 'doubt_solver']:
         return jsonify({'error': 'Invalid mode'}), 400
-
     # Check institutional access
     if mode == 'institutional':
         profile = _get_any_profile(uid)
         institutional_roles = ['administrator', 'curriculum_director', 'institution_teacher', 'admin']
         if not profile or profile.get('account_type') not in institutional_roles:
             return jsonify({'error': 'Access denied: Institutional mode requires administrator privileges'}), 403
-
     data = request.json or {}
     message = data.get('message', '').strip()
     force_new_thread = data.get('force_new_thread', False)  # New parameter
     if not message:
         return jsonify({'error': 'Message is required'}), 400
-
     try:
         # Get threads for this mode
         threads_ref = db.collection('users').document(uid).collection('sclera_threads')
         thread_docs = list(threads_ref.where('mode', '==', mode).stream())
-
         # Determine which thread to use
         if force_new_thread or not thread_docs:
             # Create new thread
@@ -5080,7 +4507,6 @@ def sclera_chat(mode):
             # Use most recent thread (sort by last_message_at descending)
             thread_docs.sort(key=lambda doc: doc.to_dict().get('last_message_at', ''), reverse=True)
             thread_ref = thread_docs[0].reference
-
         # Save user message
         message_data = {
             'role': 'user',
@@ -5088,16 +4514,13 @@ def sclera_chat(mode):
             'timestamp': get_current_time_for_user({'uid': uid})  # Use user's timezone
         }
         thread_ref.collection('messages').add(message_data)
-
         # Update thread metadata
         thread_ref.update({
             'last_message_at': get_current_time_for_user({'uid': uid}),  # Use user's timezone
             'message_count': firestore.Increment(1)
         })
-
         # Generate AI response using the correct AI assistant
         ai_response = generate_sclera_response(message, mode, uid)
-
         # Save AI response
         ai_message_data = {
             'role': 'assistant',
@@ -5105,21 +4528,17 @@ def sclera_chat(mode):
             'timestamp': get_current_time_for_user({'uid': uid})  # Use user's timezone
         }
         thread_ref.collection('messages').add(ai_message_data)
-
         # Update thread metadata again
         thread_ref.update({
             'last_message_at': get_current_time_for_user({'uid': uid})  # Use user's timezone
         })
-
         return jsonify({
             'response': ai_response,
             'thread_id': thread_ref.id  # Return thread ID so frontend knows which thread was used
         })
-
     except Exception as e:
         logger.error(f"SCLERA chat error: {str(e)}")
         return jsonify({'error': 'Failed to process message', 'details': str(e)}), 500
-
 def generate_sclera_response(message, mode, uid):
     """Generate AI response based on mode and context"""
     try:
@@ -5127,14 +4546,11 @@ def generate_sclera_response(message, mode, uid):
         try:
             ai_assistant = get_ai_assistant()
             error_msg = getattr(ai_assistant, 'error_message', None)
-            
             # Check if AI assistant is available
             if not hasattr(ai_assistant, 'ai_available') or not ai_assistant.ai_available:
                 if not error_msg:
                     error_msg = 'AI Assistant is not available. No specific error information was provided.'
-                
                 logger.error(f"AI Assistant not available: {error_msg}")
-                
                 # Provide a more detailed error message to the user
                 return (
                     "I'm sorry, but the AI Assistant is currently unavailable.\n\n"
@@ -5146,7 +4562,6 @@ def generate_sclera_response(message, mode, uid):
                     "4. Try again in a few moments if the issue is temporary\n\n"
                     "If the problem persists, please contact support with the error details above."
                 )
-                
         except Exception as e:
             error_msg = f"Failed to initialize AI Assistant: {str(e)}"
             logger.error(error_msg, exc_info=True)
@@ -5155,26 +4570,22 @@ def generate_sclera_response(message, mode, uid):
                 f"**Error Details:** {error_msg}\n\n"
                 "Please check the server logs for more information and contact support if the issue persists."
             )
-
         try:
             # Get user context
             user_data = get_user_data(uid)
             profile = _get_any_profile(uid)
-
             # Create context based on mode
             context = {
                 'user_name': user_data.get('name', 'Student') if user_data else 'Student',
                 'purpose': profile.get('account_type', 'student') if profile else 'student',
                 'mode': mode  # Add mode to context for better model responses
             }
-
             # Add academic context if available
             try:
                 academic_context = ai_assistant.get_academic_context(user_data or {})
                 context.update(academic_context)
             except Exception as e:
                 logger.warning(f"Could not load academic context: {str(e)}")
-
             # Generate response based on mode
             try:
                 if mode == 'academic_planner':
@@ -5186,7 +4597,6 @@ def generate_sclera_response(message, mode, uid):
                     response = ai_assistant.generate_planning_response(message, context)
                 else:
                     response = ai_assistant.generate_planning_response(message, context)
-
                 # Format response based on mode
                 if mode == 'institutional' and not any(keyword in response.lower() for keyword in ['analysis', 'assessment', 'recommendations']):
                     response = (
@@ -5195,9 +4605,7 @@ def generate_sclera_response(message, mode, uid):
                         "## Strategic Insights\n\n"
                         "Based on your query, the institutional data suggests the following key points:"
                     )
-
                 return response
-                
             except Exception as e:
                 error_details = f"Error in {mode} response generation: {str(e)}"
                 logger.error(error_details, exc_info=True)
@@ -5206,7 +4614,6 @@ def generate_sclera_response(message, mode, uid):
                     f"**Error Details:** {error_details}\n\n"
                     "The error has been logged. Please try again or contact support if the issue persists."
                 )
-
         except Exception as e:
             error_details = f"Error processing request: {str(e)}"
             logger.error(error_details, exc_info=True)
@@ -5215,7 +4622,6 @@ def generate_sclera_response(message, mode, uid):
                 f"**Error Details:** {error_details}\n\n"
                 "Please try again or contact support if the issue persists."
             )
-            
     except Exception as e:
         error_details = f"Unexpected error in generate_sclera_response: {str(e)}"
         logger.error(error_details, exc_info=True)
@@ -5223,68 +4629,51 @@ def generate_sclera_response(message, mode, uid):
             "An unexpected error occurred. The development team has been notified.\n\n"
             f"**Error:** {error_details}"
         )
-
     except Exception as e:
         logger.error(f"SCLERA response generation error: {str(e)}")
-
         # Fallback responses based on mode
         if mode == 'institutional':
             return f"""Analysis Results:
-
 Based on your query: "{message}"
-
 **Key Findings:**
 - Institutional data indicates trends requiring attention
 - Comparative analysis shows opportunities for improvement
 - Strategic interventions recommended for optimal outcomes
-
 **Recommended Actions:**
 - Implement targeted support programs
 - Monitor key performance indicators
 - Develop comprehensive improvement strategies
-
 **Next Steps:**
 Would you like me to generate a detailed report or analyze specific metrics further?"""
         elif mode == 'academic_planner':
             return f"""Academic Planning Response:
-
 For your question about: "{message}"
-
 **Study Recommendations:**
 - Focus on core concepts and foundational principles
 - Practice regularly with diverse problem sets
 - Utilize active recall and spaced repetition techniques
-
 **Resource Suggestions:**
 - Review course materials and supplementary texts
 - Join study groups for collaborative learning
 - Seek clarification on challenging topics promptly
-
 **Goal Setting:**
 - Break down large objectives into manageable tasks
 - Track progress and adjust strategies as needed
 - Celebrate achievements and maintain motivation
-
 How else can I assist with your academic planning?"""
         else:  # doubt_solver
             return f"""Doubt Resolution Response:
-
 I understand you're asking about: "{message[:50]}..."
-
 **Step-by-step explanation:**
 1. Let's break down your question
 2. Here's the key concept you need to understand
 3. Related examples and applications
 4. Practice problems to help you master this
-
 **Additional Resources:**
 - Textbook references for this topic
 - Online tutorials and video explanations
 - Practice exercises at your level
-
 Would you like me to explain any specific part in more detail?"""
-
-
 @app.route('/api/sclera/threads/<mode>/<thread_id>/rename', methods=['POST'])
 @require_login
 def rename_sclera_thread(mode, thread_id):
@@ -5292,19 +4681,16 @@ def rename_sclera_thread(mode, thread_id):
     uid = session['uid']
     if mode not in ['academic_planner', 'institutional', 'doubt_solver']:
         return jsonify({'error': 'Invalid mode'}), 400
-
     # Check institutional access
     if mode == 'institutional':
         profile = _get_any_profile(uid)
         institutional_roles = ['administrator', 'curriculum_director', 'institution_teacher', 'admin']
         if not profile or profile.get('account_type') not in institutional_roles:
             return jsonify({'error': 'Access denied: Institutional mode requires administrator privileges'}), 403
-
     data = request.json or {}
     new_title = data.get('title', '').strip()
     if not new_title:
         return jsonify({'error': 'Title is required'}), 400
-
     # Map mode to chatbot_type for AIAssistant
     mode_mapping = {
         'academic_planner': 'planning',
@@ -5314,24 +4700,18 @@ def rename_sclera_thread(mode, thread_id):
     chatbot_type = mode_mapping.get(mode)
     if not chatbot_type:
         return jsonify({'error': 'Invalid mode'}), 400
-
     try:
         # Rename SCLERA thread directly in Firestore
         thread_ref = db.collection('users').document(uid).collection('sclera_threads').document(thread_id)
         thread_doc = thread_ref.get()
-
         if not thread_doc.exists:
             return jsonify({'error': 'Thread not found'}), 404
-
         # Update the thread title
         thread_ref.update({'title': new_title.strip()})
-
         return jsonify({'success': True, 'message': 'Thread renamed successfully'})
-
     except Exception as e:
         logger.error(f"SCLERA rename thread error: {str(e)}")
         return jsonify({'error': 'Failed to rename thread', 'details': str(e)}), 500
-
 @app.route('/api/notifications', methods=['GET'])
 @require_login
 def get_notifications():
@@ -5361,7 +4741,6 @@ def get_notifications():
     except Exception as e:
         print(f"Notification error: {e}")
         return jsonify({'notifications': [], 'error': str(e)})
-
 @app.route('/api/notifications/<notif_id>/mark_read', methods=['POST'])
 @require_login
 def mark_notification_read(notif_id):
@@ -5380,16 +4759,12 @@ def mark_notification_read(notif_id):
             notif_ref.update({'read': True})
             return jsonify({'success': True})
     return jsonify({'error': 'Not found'}), 404
-
 # ============================================================================
 # DOCS SYSTEM API ROUTES
-
 # ============================================================================
-
 DOCS_COL = 'documents'
 FOLDERS_COL = 'folders'
 DOC_VERSIONS_COL = 'document_versions'
-
 def docs_login_guard():
     """Check if user is logged in for docs routes"""
     if 'uid' not in session:
@@ -5397,24 +4772,19 @@ def docs_login_guard():
             return jsonify({'error': 'Authentication required', 'message': 'Please log in to access documents'}), 401
         return redirect(url_for('login'))
     return None
-
 @app.route('/docs')
 def docs_dashboard():
     """Main docs dashboard"""
     guard_resp = docs_login_guard()
     if guard_resp:
         return guard_resp
-    
     user_id = session['uid']
-    
     # Get user's academic data for subjects
     user_doc = db.collection('users').document(user_id).get()
     user_data = user_doc.to_dict() if user_doc.exists else {}
-    
     # Get available subjects based on user's academic path
     subjects = []
     purpose = user_data.get('purpose', '')
-    
     if purpose == 'high_school' and user_data.get('highschool'):
         hs = user_data['highschool']
         subjects = get_available_subjects('highschool', hs.get('board'), hs.get('grade'))
@@ -5423,7 +4793,6 @@ def docs_dashboard():
     elif purpose == 'after_tenth' and user_data.get('after_tenth'):
         at = user_data['after_tenth']
         subjects = get_available_subjects('after_tenth', 'CBSE', at.get('grade'))
-    
     # Get user's folders and documents - use simpler queries first
     try:
         folders_ref = db.collection(FOLDERS_COL).where('owner_id', '==', user_id).where('deleted', '==', False).stream()
@@ -5431,15 +4800,12 @@ def docs_dashboard():
         for folder in folders_ref:
             folder_data = folder.to_dict()
             folder_data['id'] = folder.id
-            
             # Convert timestamps to strings for JSON serialization
             if 'created_at' in folder_data and folder_data['created_at']:
                 folder_data['created_at'] = folder_data['created_at'].isoformat() if hasattr(folder_data['created_at'], 'isoformat') else str(folder_data['created_at'])
             if 'updated_at' in folder_data and folder_data['updated_at']:
                 folder_data['updated_at'] = folder_data['updated_at'].isoformat() if hasattr(folder_data['updated_at'], 'isoformat') else str(folder_data['updated_at'])
-            
             folders.append(folder_data)
-        
         # Sort folders by order_index in Python instead of Firestore
         folders.sort(key=lambda x: x.get('order_index', 0))
     except Exception as e:
@@ -5455,25 +4821,20 @@ def docs_dashboard():
                     folder_data['created_at'] = folder_data['created_at'].isoformat() if hasattr(folder_data['created_at'], 'isoformat') else str(folder_data['created_at'])
                 if 'updated_at' in folder_data and folder_data['updated_at']:
                     folder_data['updated_at'] = folder_data['updated_at'].isoformat() if hasattr(folder_data['updated_at'], 'isoformat') else str(folder_data['updated_at'])
-                
                 folders.append(folder_data)
         folders.sort(key=lambda x: x.get('order_index', 0))
-    
     try:
         documents_ref = db.collection(DOCS_COL).where('owner_id', '==', user_id).where('deleted', '==', False).stream()
         documents = []
         for doc in documents_ref:
             doc_data = doc.to_dict()
             doc_data['id'] = doc.id
-            
             # Convert timestamps to strings for JSON serialization
             if 'created_at' in doc_data and doc_data['created_at']:
                 doc_data['created_at'] = doc_data['created_at'].isoformat() if hasattr(doc_data['created_at'], 'isoformat') else str(doc_data['created_at'])
             if 'updated_at' in doc_data and doc_data['updated_at']:
                 doc_data['updated_at'] = doc_data['updated_at'].isoformat() if hasattr(doc_data['updated_at'], 'isoformat') else str(doc_data['updated_at'])
-            
             documents.append(doc_data)
-        
         # Sort documents by updated_at in Python
         documents.sort(key=lambda x: x.get('updated_at', datetime.min), reverse=True)
     except Exception as e:
@@ -5489,10 +4850,8 @@ def docs_dashboard():
                     doc_data['created_at'] = doc_data['created_at'].isoformat() if hasattr(doc_data['created_at'], 'isoformat') else str(doc_data['created_at'])
                 if 'updated_at' in doc_data and doc_data['updated_at']:
                     doc_data['updated_at'] = doc_data['updated_at'].isoformat() if hasattr(doc_data['updated_at'], 'isoformat') else str(doc_data['updated_at'])
-                
                 documents.append(doc_data)
         documents.sort(key=lambda x: x.get('updated_at', datetime.min), reverse=True)
-    
     # Get user settings for theme
     settings = {}
     try:
@@ -5503,38 +4862,30 @@ def docs_dashboard():
     except Exception as e:
         print(f"Error getting user settings: {e}")
         user_data_full = {}
-    
     # Determine institution and class status for topnav
     in_institution = bool(user_data_full.get('institution_id')) if user_data_full else False
     has_class = bool(user_data_full.get('class_ids')) if user_data_full else False
-    
     return render_template('docs_dashboard.html', folders=folders, documents=documents, settings=settings, subjects=subjects, in_institution=in_institution, has_class=has_class)
-
 @app.route('/api/documents', methods=['GET'])
 def get_documents():
     """Get all documents for user"""
     guard_resp = docs_login_guard()
     if guard_resp:
         return guard_resp
-    
     user_id = session['uid']
     folder_id = request.args.get('folder_id')
-    
     try:
         if folder_id:
             query = db.collection(DOCS_COL).where('folder_id', '==', folder_id).where('owner_id', '==', user_id).where('deleted', '==', False)
         else:
             query = db.collection(DOCS_COL).where('owner_id', '==', user_id).where('deleted', '==', False)
-        
         documents = []
         for doc in query.stream():
             doc_data = doc.to_dict()
             doc_data['id'] = doc.id
             documents.append(doc_data)
-        
         # Sort by updated_at in Python
         documents.sort(key=lambda x: x.get('updated_at', datetime.min), reverse=True)
-        
     except Exception as e:
         # Fallback if index not ready
         documents = []
@@ -5546,23 +4897,18 @@ def get_documents():
                 if not folder_id or doc_data.get('folder_id') == folder_id:
                     documents.append(doc_data)
         documents.sort(key=lambda x: x.get('updated_at', datetime.min), reverse=True)
-    
     return jsonify({'documents': documents})
-
 @app.route('/api/documents', methods=['POST'])
 def create_document():
     """Create new document"""
     guard_resp = docs_login_guard()
     if guard_resp:
         return guard_resp
-    
     user_id = session['uid']
     data = request.get_json()
-    
     # Validate required fields
     if not data.get('title'):
         return jsonify({'error': 'Title is required'}), 400
-    
     try:
         # Create document
         doc_data = {
@@ -5576,11 +4922,9 @@ def create_document():
             'updated_at': firestore.SERVER_TIMESTAMP,
             'deleted': False
         }
-        
         doc_ref, doc_id = db.collection(DOCS_COL).add(doc_data)
         created_doc = doc_ref.get().to_dict()
         created_doc['id'] = doc_id
-        
         # Convert timestamps to strings for JSON serialization
         if 'created_at' in created_doc and created_doc['created_at']:
             if hasattr(created_doc['created_at'], 'isoformat'):
@@ -5592,58 +4936,42 @@ def create_document():
                 created_doc['updated_at'] = created_doc['updated_at'].isoformat()
             else:
                 created_doc['updated_at'] = str(created_doc['updated_at'])
-        
         return jsonify({'document': created_doc}), 201
-        
     except Exception as e:
         return jsonify({'error': str(e)}), 500
-
 @app.route('/api/documents/<doc_id>', methods=['GET'])
 def get_document(doc_id):
     """Get specific document"""
     guard_resp = docs_login_guard()
     if guard_resp:
         return guard_resp
-    
     user_id = session['uid']
-    
     doc_ref = db.collection(DOCS_COL).document(doc_id).get()
     if not doc_ref.exists:
         return jsonify({'error': 'Document not found'}), 404
-    
     doc_data = doc_ref.to_dict()
     doc_data['id'] = doc_ref.id
-    
     # Check permission
     if doc_data.get('owner_id') != user_id:
         return jsonify({'error': 'Access denied'}), 403
-    
     return jsonify({'document': doc_data})
-
 @app.route('/api/documents/<doc_id>/export/<format>')
 def export_document(doc_id, format):
     """Export document in different formats"""
     guard_resp = docs_login_guard()
     if guard_resp:
         return guard_resp
-    
     user_id = session['uid']
-    
     doc_ref = db.collection(DOCS_COL).document(doc_id)
     doc = doc_ref.get()
-    
     if not doc.exists:
         return jsonify({'error': 'Document not found'}), 404
-    
     doc_data = doc.to_dict()
-    
     # Check permission
     if doc_data.get('owner_id') != user_id:
         return jsonify({'error': 'Access denied'}), 403
-    
     content = doc_data.get('content', '')
     title = doc_data.get('title', 'Untitled Document')
-    
     if format == 'markdown':
         # Simple markdown conversion
         from flask import Response
@@ -5683,29 +5011,22 @@ def export_document(doc_id, format):
         })
     else:
         return jsonify({'error': 'Unsupported format'}), 400
-
 @app.route('/api/documents/<doc_id>', methods=['PUT'])
 def update_document(doc_id):
     """Update document"""
     guard_resp = docs_login_guard()
     if guard_resp:
         return guard_resp
-    
     user_id = session['uid']
     data = request.get_json()
-    
     doc_ref = db.collection(DOCS_COL).document(doc_id)
     doc = doc_ref.get()
-    
     if not doc.exists:
         return jsonify({'error': 'Document not found'}), 404
-    
     doc_data = doc.to_dict()
-    
     # Check permission
     if doc_data.get('owner_id') != user_id:
         return jsonify({'error': 'Access denied'}), 403
-    
     # Update document
     update_data = {
         'title': data.get('title', doc_data.get('title')),
@@ -5717,9 +5038,7 @@ def update_document(doc_id):
         'tags': data.get('tags', doc_data.get('tags', [])),
         'starred': data.get('starred', doc_data.get('starred', False))
     }
-    
     doc_ref.update(update_data)
-    
     # Create version if significant change
     if data.get('create_version', False):
         version_data = {
@@ -5731,57 +5050,42 @@ def update_document(doc_id):
             'change_type': data.get('change_type', 'edited')
         }
         db.collection(DOC_VERSIONS_COL).add(version_data)
-    
     # Return updated document
     updated_doc = doc_ref.get().to_dict()
     updated_doc['id'] = doc_id
-    
     return jsonify({'document': updated_doc})
-
 @app.route('/api/documents/<doc_id>', methods=['DELETE'])
 def delete_document(doc_id):
     """Soft delete document"""
     guard_resp = docs_login_guard()
     if guard_resp:
         return guard_resp
-    
     user_id = session['uid']
-    
     doc_ref = db.collection(DOCS_COL).document(doc_id)
     doc = doc_ref.get()
-    
     if not doc.exists:
         return jsonify({'error': 'Document not found'}), 404
-    
     doc_data = doc.to_dict()
-    
     # Check permission
     if doc_data.get('owner_id') != user_id:
         return jsonify({'error': 'Access denied'}), 403
-    
     doc_ref.update({'deleted': True, 'deleted_at': firestore.SERVER_TIMESTAMP})
-    
     return jsonify({'message': 'Document deleted'})
-
 @app.route('/api/folders', methods=['GET'])
 def get_folders():
     """Get all folders for user"""
     guard_resp = docs_login_guard()
     if guard_resp:
         return guard_resp
-    
     user_id = session['uid']
-    
     try:
         folders = []
         for folder in db.collection(FOLDERS_COL).where('owner_id', '==', user_id).where('deleted', '==', False).stream():
             folder_data = folder.to_dict()
             folder_data['id'] = folder.id
             folders.append(folder_data)
-        
         # Sort by order_index in Python
         folders.sort(key=lambda x: x.get('order_index', 0))
-        
     except Exception as e:
         # Fallback if index not ready
         folders = []
@@ -5792,19 +5096,15 @@ def get_folders():
             if not folder_data.get('deleted', False):
                 folders.append(folder_data)
         folders.sort(key=lambda x: x.get('order_index', 0))
-    
     return jsonify({'folders': folders})
-
 @app.route('/api/folders', methods=['POST'])
 def create_folder():
     """Create new folder"""
     guard_resp = docs_login_guard()
     if guard_resp:
         return guard_resp
-    
     user_id = session['uid']
     data = request.get_json()
-    
     # Get next order index - use simpler query
     try:
         existing_folders = list(db.collection(FOLDERS_COL).where('owner_id', '==', user_id).where('parent_id', '==', data.get('parent_id', None)).where('deleted', '==', False).stream())
@@ -5814,7 +5114,6 @@ def create_folder():
         all_folders = list(db.collection(FOLDERS_COL).where('owner_id', '==', user_id).stream())
         filtered_folders = [f for f in all_folders if not f.to_dict().get('deleted', False) and f.to_dict().get('parent_id') == data.get('parent_id', None)]
         order_index = len(filtered_folders)
-    
     folder_data = {
         'name': data.get('name', 'New Folder'),
         'parent_id': data.get('parent_id'),
@@ -5825,44 +5124,33 @@ def create_folder():
         'deleted': False,
         'expanded': True
     }
-    
     folder_ref, folder_id = db.collection(FOLDERS_COL).add(folder_data)
-    
     # Get the created folder to return proper data
     created_folder = folder_ref.get()
     folder_response = created_folder.to_dict()
     folder_response['id'] = folder_id
-    
     # Convert timestamps to strings for JSON serialization
     if 'created_at' in folder_response and folder_response['created_at']:
         folder_response['created_at'] = folder_response['created_at'].isoformat() if hasattr(folder_response['created_at'], 'isoformat') else str(folder_response['created_at'])
     if 'updated_at' in folder_response and folder_response['updated_at']:
         folder_response['updated_at'] = folder_response['updated_at'].isoformat() if hasattr(folder_response['updated_at'], 'isoformat') else str(folder_response['updated_at'])
-    
     return jsonify({'folder': folder_response}), 201
-
 @app.route('/api/folders/<folder_id>', methods=['PUT'])
 def update_folder(folder_id):
     """Update folder"""
     guard_resp = docs_login_guard()
     if guard_resp:
         return guard_resp
-    
     user_id = session['uid']
     data = request.get_json()
-    
     folder_ref = db.collection(FOLDERS_COL).document(folder_id)
     folder = folder_ref.get()
-    
     if not folder.exists:
         return jsonify({'error': 'Folder not found'}), 404
-    
     folder_data = folder.to_dict()
-    
     # Check permission
     if folder_data.get('owner_id') != user_id:
         return jsonify({'error': 'Access denied'}), 403
-    
     update_data = {
         'name': data.get('name', folder_data.get('name')),
         'parent_id': data.get('parent_id', folder_data.get('parent_id')),
@@ -5870,35 +5158,25 @@ def update_folder(folder_id):
         'expanded': data.get('expanded', folder_data.get('expanded', True)),
         'updated_at': firestore.SERVER_TIMESTAMP
     }
-    
     folder_ref.update(update_data)
-    
     updated_folder = folder_ref.get().to_dict()
     updated_folder['id'] = folder_id
-    
     return jsonify({'folder': updated_folder})
-
 @app.route('/api/folders/<folder_id>', methods=['DELETE'])
 def delete_folder(folder_id):
     """Soft delete folder and its contents"""
     guard_resp = docs_login_guard()
     if guard_resp:
         return guard_resp
-    
     user_id = session['uid']
-    
     folder_ref = db.collection(FOLDERS_COL).document(folder_id)
     folder = folder_ref.get()
-    
     if not folder.exists:
         return jsonify({'error': 'Folder not found'}), 404
-    
     folder_data = folder.to_dict()
-    
     # Check permission
     if folder_data.get('owner_id') != user_id:
         return jsonify({'error': 'Access denied'}), 403
-    
     try:
         # Delete all documents in this folder
         docs_in_folder = db.collection(DOCS_COL).where('folder_id', '==', folder_id).where('deleted', '==', False).stream()
@@ -5907,7 +5185,6 @@ def delete_folder(folder_id):
                 'deleted': True,
                 'deleted_at': firestore.SERVER_TIMESTAMP
             })
-        
         # Delete all subfolders
         subfolders = db.collection(FOLDERS_COL).where('parent_id', '==', folder_id).where('deleted', '==', False).stream()
         for subfolder in subfolders:
@@ -5915,33 +5192,25 @@ def delete_folder(folder_id):
                 'deleted': True,
                 'deleted_at': firestore.SERVER_TIMESTAMP
             })
-        
         # Delete the folder itself
         folder_ref.update({'deleted': True, 'deleted_at': firestore.SERVER_TIMESTAMP})
-        
         return jsonify({'message': 'Folder and contents deleted successfully'}), 200
-        
     except Exception as e:
         return jsonify({'error': str(e)}), 500
-
 @app.route('/api/documents/<doc_id>/versions', methods=['GET'])
 def get_document_versions(doc_id):
     """Get document version history"""
     guard_resp = docs_login_guard()
     if guard_resp:
         return guard_resp
-    
     user_id = session['uid']
-    
     # Check document permission
     doc_ref = db.collection(DOCS_COL).document(doc_id).get()
     if not doc_ref.exists:
         return jsonify({'error': 'Document not found'}), 404
-    
     doc_data = doc_ref.to_dict()
     if doc_data.get('owner_id') != user_id:
         return jsonify({'error': 'Access denied'}), 403
-    
     try:
         versions = []
         for version in db.collection(DOC_VERSIONS_COL).where('document_id', '==', doc_id).order_by('created_at', direction=firestore.Query.DESCENDING).stream():
@@ -5957,12 +5226,9 @@ def get_document_versions(doc_id):
             version_data['id'] = version.id
             versions.append(version_data)
         versions.sort(key=lambda x: x.get('created_at', datetime.min), reverse=True)
-    
     return jsonify({'versions': versions})
-
 # ============================================================================
 # ERROR HANDLERS
-
 # ============================================================================
 @app.errorhandler(400)
 def bad_request(error):
@@ -5999,10 +5265,8 @@ def internal_error(error):
     if request.is_json:
         return jsonify({'error': 'Internal server error', 'message': 'Something went wrong'}), 500
     return render_template('error.html', error_code=500, error_message="Internal server error"), 500
-
 # ============================================================================
 # REQUEST LOGGING
-
 # ============================================================================
 @app.before_request
 def log_request():
