@@ -1,0 +1,832 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ bubble.name }} - Chat | {{ name }}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap"
+        rel="stylesheet" />
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+</head>
+
+<body>
+    {% include '_topnav.html' %}
+
+    <main class="chat-app">
+        <!-- Main Chat Area -->
+        <div class="chat-main">
+            <!-- Chat Header -->
+            <header class="chat-header">
+                <div class="header-left">
+                    <a href="{{ url_for('bubble_detail', bubble_id=bubble.id) }}" class="back-link"
+                        title="Back to Bubble">
+                        <span class="material-symbols-outlined">arrow_back</span>
+                    </a>
+                    <div class="bubble-info">
+                        <h2>{{ bubble.name }}</h2>
+                        <div class="status-indicator">
+                            <span class="dot online"></span>
+                            <span id="online-text">Connecting...</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="header-right">
+                    <button class="action-icon-btn" onclick="toggleSidebar()" title="Toggle Info">
+                        <span class="material-symbols-outlined">info</span>
+                    </button>
+                </div>
+            </header>
+
+            <!-- Messages List -->
+            <div class="messages-viewport" id="messagesContainer">
+                <div class="messages-list" id="messagesList">
+                    <div class="loading-state">
+                        <span class="material-symbols-outlined spinning">progress_activity</span>
+                        <p>Synchronizing messages...</p>
+                    </div>
+                </div>
+                <div class="typing-notification" id="typingIndicator" style="display: none;">
+                    <div class="typing-wave">
+                        <span></span><span></span><span></span>
+                    </div>
+                    <span id="typingText">Someone is typing...</span>
+                </div>
+            </div>
+
+            <!-- Input Bar -->
+            <footer class="input-section">
+                <div class="input-container">
+                    <textarea id="messageInput" placeholder="Message {{ bubble.name }}..." maxlength="4000" rows="1"
+                        oninput="autoHeight(this)"></textarea>
+                    <div class="input-actions">
+                        <span class="char-count" id="charCount">0/4000</span>
+                        <button id="sendButton" class="send-action-btn" onclick="sendMessage()" disabled>
+                            <span class="material-symbols-outlined">send</span>
+                        </button>
+                    </div>
+                </div>
+            </footer>
+        </div>
+
+        <!-- Right Side Panel -->
+        <aside class="chat-sidebar" id="infoSidebar">
+            <div class="sidebar-content">
+                <section class="sidebar-section">
+                    <h3>About Bubble</h3>
+                    <p>{{ bubble.description or 'A collaborative study space for group learning and progress tracking.'
+                        }}</p>
+                    <div class="bubble-meta-grid">
+                        <div class="meta-item">
+                            <span class="label">Created by</span>
+                            <span class="value">{{ bubble.creator_name }}</span>
+                        </div>
+                        <div class="meta-item">
+                            <span class="label">Total Members</span>
+                            <span class="value">{{ bubble.member_count }}</span>
+                        </div>
+                        <div class="meta-item">
+                            <span class="label">Status</span>
+                            <span class="value success">Active</span>
+                        </div>
+                    </div>
+                </section>
+
+                <section class="sidebar-section">
+                    <h3>Members</h3>
+                    <div id="sidebarMembers" class="member-preview">
+                        <!-- Simplified member list could go here -->
+                        <div class="info-item">
+                            <span class="material-symbols-outlined">group</span>
+                            <span>{{ bubble.member_count }} Participants</span>
+                        </div>
+                    </div>
+                </section>
+
+                <section class="sidebar-section">
+                    <h3>Resources</h3>
+                    <div class="info-list">
+                        <a href="{{ url_for('bubble_detail', bubble_id=bubble.id) }}" class="info-item-link">
+                            <span class="material-symbols-outlined">folder_shared</span>
+                            <span>View Shared Files</span>
+                        </a>
+                        <a href="{{ url_for('bubble_detail', bubble_id=bubble.id) }}" class="info-item-link">
+                            <span class="material-symbols-outlined">checklist</span>
+                            <span>Bubble Todo List</span>
+                        </a>
+                    </div>
+                </section>
+            </div>
+        </aside>
+    </main>
+
+    <script>
+        // Global variables
+        const bubbleId = '{{ bubble.id }}';
+        const currentUserId = '{{ user.uid }}';
+        const currentUserName = '{{ name }}';
+        const isBubbleCreator = '{{ "true" if bubble.creator_uid == user.uid else "false" }}' === 'true';
+        let socket = null;
+        let typingTimeout = null;
+        let isTyping = false;
+
+        // Initialize on page load
+        document.addEventListener('DOMContentLoaded', function () {
+            initializeChat();
+            setupMessageInput();
+            loadMessages();
+        });
+
+        function toggleSidebar() {
+            const sidebar = document.getElementById('infoSidebar');
+            sidebar.classList.toggle('visible');
+        }
+
+        function autoHeight(textarea) {
+            textarea.style.height = 'auto';
+            textarea.style.height = (textarea.scrollHeight) + 'px';
+        }
+
+        // Initialize WebSocket connection
+        function initializeChat() {
+            socket = io();
+
+            socket.on('connect', function () {
+                console.log('Connected to WebSocket');
+                document.getElementById('online-text').textContent = 'Online';
+                socket.emit('join_bubble', { bubble_id: bubbleId });
+            });
+
+            socket.on('disconnect', () => {
+                document.getElementById('online-text').textContent = 'Offline';
+            });
+
+            socket.on('new_message', (data) => {
+                if (data.bubble_id === bubbleId) {
+                    appendMessage(data.message);
+                }
+            });
+
+            socket.on('message_deleted', (data) => {
+                if (data.bubble_id === bubbleId) {
+                    removeMessage(data.message_id);
+                }
+            });
+
+            socket.on('typing_status', (data) => {
+                if (data.bubble_id === bubbleId && data.uid !== currentUserId) {
+                    handleTypingIndicator(data);
+                }
+            });
+        }
+
+        function setupMessageInput() {
+            const input = document.getElementById('messageInput');
+            const sendBtn = document.getElementById('sendButton');
+            const charCount = document.getElementById('charCount');
+
+            input.addEventListener('input', function () {
+                const length = this.value.length;
+                charCount.textContent = `${length}/4000`;
+                sendBtn.disabled = length === 0;
+
+                if (!isTyping && length > 0) {
+                    isTyping = true;
+                    socket.emit('typing', { bubble_id: bubbleId, is_typing: true });
+                } else if (isTyping && length === 0) {
+                    isTyping = false;
+                    socket.emit('typing', { bubble_id: bubbleId, is_typing: false });
+                }
+
+                clearTimeout(typingTimeout);
+                typingTimeout = setTimeout(() => {
+                    if (isTyping) {
+                        isTyping = false;
+                        socket.emit('typing', { bubble_id: bubbleId, is_typing: false });
+                    }
+                }, 3000);
+            });
+
+            input.addEventListener('keydown', function (e) {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    if (this.value.trim()) sendMessage();
+                }
+            });
+        }
+
+        async function loadMessages() {
+            try {
+                const list = document.getElementById('messagesList');
+                const response = await fetch(`/api/bubbles/${bubbleId}/chat/messages`);
+                const data = await response.json();
+
+                list.innerHTML = '';
+                if (data.success && data.messages.length > 0) {
+                    data.messages.forEach(msg => appendMessage(msg, false));
+                    scrollToBottom();
+                } else {
+                    list.innerHTML = `
+                        <div class="empty-state">
+                            <span class="material-symbols-outlined">forum</span>
+                            <h3>Start the conversation</h3>
+                            <p>Messages shared here are visible to all bubble members.</p>
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                console.error('Error loading messages:', error);
+            }
+        }
+
+        async function sendMessage() {
+            const input = document.getElementById('messageInput');
+            const text = input.value.trim();
+            if (!text) return;
+
+            const sendBtn = document.getElementById('sendButton');
+            sendBtn.disabled = true;
+
+            try {
+                const response = await fetch(`/api/bubbles/${bubbleId}/chat/messages`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ content: text })
+                });
+
+                const data = await response.json();
+                if (data.success) {
+                    input.value = '';
+                    input.style.height = 'auto';
+                    document.getElementById('charCount').textContent = '0/4000';
+                    isTyping = false;
+                    socket.emit('typing', { bubble_id: bubbleId, is_typing: false });
+                }
+            } catch (error) {
+                console.error('Send error:', error);
+            } finally {
+                sendBtn.disabled = input.value.length === 0;
+            }
+        }
+
+        function appendMessage(message, scroll = true) {
+            const list = document.getElementById('messagesList');
+            const isOwn = message.sender_uid === currentUserId;
+
+            const empty = list.querySelector('.empty-state');
+            if (empty) empty.remove();
+
+            const messageEl = document.createElement('div');
+            messageEl.id = `msg-${message.message_id}`;
+            messageEl.className = `message-row ${isOwn ? 'own' : 'other'}`;
+
+            const time = message.timestamp ? formatTimestamp(message.timestamp) : 'Just now';
+
+            messageEl.innerHTML = `
+                <div class="message-content">
+                    ${!isOwn ? `<span class="sender">${escapeHtml(message.sender_name)}</span>` : ''}
+                    <div class="bubble">
+                        <div class="text">${escapeHtml(message.content)}</div>
+                        <div class="meta">
+                            <span class="time">${time}</span>
+                            ${(isOwn || isBubbleCreator) ? `
+                                <button class="delete-btn" onclick="deleteMessage('${message.message_id}')">
+                                    <span class="material-symbols-outlined">delete</span>
+                                </button>
+                            ` : ''}
+                        </div >
+                    </div >
+                </div >
+            `;
+
+            list.appendChild(messageEl);
+            if (scroll) scrollToBottom();
+        }
+
+        async function deleteMessage(id) {
+            if (!confirm('Delete message?')) return;
+            try {
+                const resp = await fetch(`/api/bubbles/${bubbleId}/chat/messages/${id}`, { method: 'DELETE' });
+                const data = await resp.json();
+                if (!data.success) alert(data.error);
+            } catch (e) { console.error(e); }
+        }
+
+        function removeMessage(id) {
+            const el = document.getElementById(`msg-${id}`);
+            if (el) el.remove();
+        }
+
+        function handleTypingIndicator(data) {
+            const indicator = document.getElementById('typingIndicator');
+            const text = document.getElementById('typingText');
+            if (data.is_typing) {
+                text.textContent = `${data.user_name} is typing...`;
+                indicator.style.display = 'flex';
+                scrollToBottom();
+            } else {
+                indicator.style.display = 'none';
+            }
+        }
+
+        function scrollToBottom() {
+            const container = document.getElementById('messagesContainer');
+            container.scrollTop = container.scrollHeight;
+        }
+
+        function formatTimestamp(ts) {
+            return new Date(ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        }
+
+        function escapeHtml(t) {
+            const d = document.createElement('div');
+            d.textContent = t;
+            return d.innerHTML;
+        }
+
+        window.addEventListener('beforeunload', () => {
+            if (socket) {
+                socket.emit('leave_bubble', { bubble_id: bubbleId });
+                socket.disconnect();
+            }
+        });
+    </script>
+
+    <style>
+        :root {
+            --header-h: 72px;
+            --input-area-h: 100px;
+            --sidebar-w: 320px;
+        }
+
+        body {
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            margin: 0;
+            overflow: hidden;
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            height: 100vh;
+        }
+
+        .chat-app {
+            display: grid;
+            grid-template-columns: 1fr;
+            height: calc(100vh - 64px);
+            margin-top: 64px;
+            background: var(--bg-primary);
+        }
+
+        @media (min-width: 1024px) {
+            .chat-app {
+                grid-template-columns: 1fr var(--sidebar-w);
+            }
+        }
+
+        .chat-main {
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            min-height: 0;
+            /* CRITICAL for grid children to shrink */
+            border-right: 1px solid var(--border-subtle);
+            position: relative;
+        }
+
+        .chat-header {
+            height: var(--header-h);
+            background: var(--bg-secondary);
+            border-bottom: 1px solid var(--border-subtle);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 1.5rem;
+            backdrop-filter: blur(10px);
+            z-index: 10;
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .back-link {
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            color: var(--text-secondary);
+            transition: all 0.2s;
+        }
+
+        .back-link:hover {
+            background: var(--bg-hover);
+            color: var(--text-primary);
+        }
+
+        .bubble-info h2 {
+            font-size: 1.1rem;
+            margin: 0;
+            font-weight: 600;
+        }
+
+        .status-indicator {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            margin-top: 0.1rem;
+        }
+
+        .dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--text-muted);
+        }
+
+        .dot.online {
+            background: var(--success);
+            box-shadow: 0 0 8px var(--success);
+        }
+
+        .action-icon-btn {
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+        }
+
+        .action-icon-btn:hover {
+            background: var(--bg-hover);
+            color: var(--text-primary);
+        }
+
+        .messages-viewport {
+            flex: 1;
+            overflow-y: auto;
+            overflow-x: hidden;
+            padding: 1.5rem;
+            min-height: 0;
+            scroll-behavior: smooth;
+            /* Keeps scroll at bottom when content expands */
+            overflow-anchor: auto;
+            background-image:
+                radial-gradient(var(--border-subtle) 1px, transparent 1px);
+            background-size: 40px 40px;
+        }
+
+        .messages-list {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            width: 100%;
+            min-height: min-content;
+            /* Ensures flex items don't push the viewport */
+            flex: 0 0 auto;
+        }
+
+        /* Custom Scrollbar */
+        .messages-viewport::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .messages-viewport::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        .messages-viewport::-webkit-scrollbar-thumb {
+            background: var(--border);
+            border-radius: 10px;
+        }
+
+        .messages-viewport::-webkit-scrollbar-thumb:hover {
+            background: var(--text-muted);
+        }
+
+        .message-row {
+            display: flex;
+            width: 100%;
+            animation: slideIn 0.3s ease-out;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .message-row.own {
+            justify-content: flex-end;
+        }
+
+        .message-row.other {
+            justify-content: flex-start;
+        }
+
+        .message-content {
+            max-width: 75%;
+            display: flex;
+            flex-direction: column;
+            width: 100%;
+        }
+
+        .own .message-content {
+            align-items: flex-end;
+        }
+
+        .other .message-content {
+            align-items: flex-start;
+        }
+
+        .sender {
+            font-size: 0.7rem;
+            font-weight: 700;
+            color: var(--text-secondary);
+            margin: 0 0 0.2rem 0.5rem;
+            width: fit-content;
+        }
+
+        .own .sender {
+            margin-right: 0.5rem;
+            margin-left: auto;
+        }
+
+        .bubble {
+            padding: 0.8rem 1.2rem;
+            border-radius: 1.2rem;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+            position: relative;
+        }
+
+        .own .bubble {
+            background: var(--accent);
+            color: var(--btn-text);
+            border-bottom-right-radius: 0.2rem;
+            width: fit-content;
+            margin-left: auto;
+        }
+
+        .other .bubble {
+            background: var(--bg-elevated);
+            color: var(--text-primary);
+            border: 1px solid var(--border-subtle);
+            border-bottom-left-radius: 0.2rem;
+            width: fit-content;
+        }
+
+        .text {
+            font-size: 0.95rem;
+            line-height: 1.6;
+            word-break: break-word;
+            white-space: pre-wrap;
+        }
+
+        .meta {
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            gap: 0.5rem;
+            margin-top: 0.4rem;
+            font-size: 0.65rem;
+            opacity: 0.7;
+        }
+
+        .delete-btn {
+            background: none;
+            border: none;
+            color: inherit;
+            cursor: pointer;
+            padding: 0;
+            opacity: 0.5;
+            transition: opacity 0.2s;
+        }
+
+        .delete-btn:hover {
+            opacity: 1;
+        }
+
+        .delete-btn .material-symbols-outlined {
+            font-size: 14px;
+        }
+
+        .input-section {
+            padding: 1.5rem 2rem;
+            background: var(--bg-secondary);
+            border-top: 1px solid var(--border-subtle);
+        }
+
+        .input-container {
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border);
+            border-radius: 1.5rem;
+            padding: 0.6rem 1.25rem;
+            display: flex;
+            align-items: flex-end;
+            gap: 1rem;
+            transition: all 0.2s;
+        }
+
+        .input-container:focus-within {
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px var(--accent-subtle);
+        }
+
+        #messageInput {
+            flex: 1;
+            background: none;
+            border: none;
+            color: var(--text-primary);
+            font-family: inherit;
+            font-size: 1rem;
+            padding: 0.4rem 0;
+            resize: none;
+            outline: none;
+            max-height: 150px;
+        }
+
+        .input-actions {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding-bottom: 0.3rem;
+        }
+
+        .char-count {
+            font-size: 0.7rem;
+            color: var(--text-muted);
+        }
+
+        .send-action-btn {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: var(--accent);
+            color: var(--btn-text);
+            border: none;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+        }
+
+        .send-action-btn:disabled {
+            background: var(--bg-hover);
+            color: var(--text-muted);
+            cursor: not-allowed;
+        }
+
+        .send-action-btn:not(:disabled):hover {
+            transform: scale(1.05);
+        }
+
+        .chat-sidebar {
+            background: var(--bg-secondary);
+            border-left: 1px solid var(--border-subtle);
+            display: none;
+            overflow-y: auto;
+        }
+
+        @media (min-width: 1024px) {
+            .chat-sidebar {
+                display: block;
+            }
+        }
+
+        .sidebar-content {
+            padding: 2rem;
+            display: flex;
+            flex-direction: column;
+            gap: 2.5rem;
+        }
+
+        .sidebar-section h3 {
+            font-size: 0.7rem;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: var(--text-muted);
+            margin-bottom: 1rem;
+        }
+
+        .sidebar-section p {
+            font-size: 0.9rem;
+            line-height: 1.6;
+            color: var(--text-secondary);
+            margin: 0;
+        }
+
+        .bubble-meta-grid {
+            display: grid;
+            gap: 1rem;
+            margin-top: 1.5rem;
+        }
+
+        .meta-item {
+            display: flex;
+            flex-direction: column;
+            gap: 0.2rem;
+        }
+
+        .meta-item .label {
+            font-size: 0.7rem;
+            color: var(--text-muted);
+        }
+
+        .meta-item .value {
+            font-size: 0.9rem;
+            font-weight: 600;
+        }
+
+        .meta-item .value.success {
+            color: var(--success);
+        }
+
+        .info-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .info-item,
+        .info-item-link {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.75rem 1rem;
+            background: var(--bg-tertiary);
+            border-radius: 1rem;
+            font-size: 0.9rem;
+            color: var(--text-primary);
+            text-decoration: none;
+            transition: all 0.2s;
+        }
+
+        .info-item-link:hover {
+            background: var(--bg-hover);
+            transform: translateX(4px);
+        }
+
+        .info-item .material-symbols-outlined,
+        .info-item-link .material-symbols-outlined {
+            color: var(--accent);
+            font-size: 1.2rem;
+        }
+
+        .typing-notification {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.5rem 1rem;
+            font-size: 0.8rem;
+            color: var(--text-muted);
+        }
+
+        .loading-state,
+        .empty-state {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: var(--text-muted);
+            gap: 1rem;
+            opacity: 0.6;
+        }
+
+        .spinning {
+            animation: rotate 1s linear infinite;
+        }
+
+        @keyframes rotate {
+            from {
+                transform: rotate(0deg);
+            }
+
+            to {
+                transform: rotate(360deg);
+            }
+        }
+    </style>
+
+</body>
+
+</html>

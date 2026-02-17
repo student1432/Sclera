@@ -14,6 +14,7 @@ from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 from flask_talisman import Talisman
 from flask_mail import Mail, Message
+from flask_socketio import SocketIO, emit, join_room, leave_room, rooms
 import os
 from werkzeug.utils import secure_filename
 import time
@@ -28,6 +29,8 @@ from marshmallow import ValidationError
 import traceback
 # AI Assistant import
 from ai_assistant import get_ai_assistant
+# Chat security utilities
+from utils.security import message_validator, bubble_rate_limiter, file_upload_security
 # Load environment variables from .env file
 from dotenv import load_dotenv
 load_dotenv()
@@ -60,11 +63,11 @@ Talisman(app,
     strict_transport_security_include_subdomains=True,
     content_security_policy={
         'default-src': "'self'",
-        'script-src': ["'self'", "'unsafe-inline'", "https://cdn.tailwindcss.com", "https://fonts.googleapis.com", "https://fonts.gstatic.com", "https://cdnjs.cloudflare.com", "https://cdn.jsdelivr.net"],
+        'script-src': ["'self'", "'unsafe-inline'", "https://cdn.tailwindcss.com", "https://fonts.googleapis.com", "https://fonts.gstatic.com", "https://cdnjs.cloudflare.com", "https://cdn.jsdelivr.net", "https://cdn.socket.io"],
         'style-src': ["'self'", "'unsafe-inline'", "https://cdn.tailwindcss.com", "https://fonts.googleapis.com", "https://fonts.gstatic.com", "https://cdnjs.cloudflare.com"],
         'font-src': ["https://fonts.googleapis.com", "https://fonts.gstatic.com", "https://cdnjs.cloudflare.com"],
         'img-src': ["'self'", "data:", "https:"],
-        'connect-src': ["'self'", "https://cdn.jsdelivr.net"],
+        'connect-src': ["'self'", "https://cdn.jsdelivr.net", "https://cdn.socket.io", "wss:", "ws:"],
         'frame-ancestors': "'none'",
         'base-uri': "'self'",
         'form-action': "'self'"
@@ -74,6 +77,14 @@ Talisman(app,
 user_ref = None
 # Initialize Flask-Mail
 mail = Mail(app)
+
+# Initialize Flask-SocketIO for real-time chat
+socketio = SocketIO(app, 
+                   cors_allowed_origins="*",
+                   async_mode='threading',
+                   logger=True,
+                   engineio_logger=False,
+                   manage_session=False)
 # ============================================================================
 # INSTITUTION V2 CONSTANTS / HELPERS
 # ============================================================================
@@ -2457,6 +2468,681 @@ def decline_bubble_invitation(invitation_id):
         })
     except Exception as e:
         return jsonify({'error': f'Failed to decline invitation: {str(e)}'}), 500
+
+
+# ============================================================================
+# BUBBLE CHAT SYSTEM
+# ============================================================================
+
+@app.route('/bubble/<bubble_id>/chat')
+@require_login
+def bubble_chat(bubble_id):
+    """Bubble chat interface"""
+    uid = session['uid']
+    user_data = get_user_data(uid)
+    
+    if not user_data:
+        flash('User data not found', 'error')
+        return redirect(url_for('logout'))
+    
+    # Get bubble data
+    bubble_doc = db.collection('bubbles').document(bubble_id).get()
+    if not bubble_doc.exists:
+        flash('Bubble not found', 'error')
+        return redirect(url_for('community_dashboard'))
+    
+    bubble_data = bubble_doc.to_dict()
+    
+    # Check if user is a member
+    is_member = uid in bubble_data.get('member_uids', [])
+    is_creator = bubble_data.get('creator_uid') == uid
+    
+    if not is_member and not is_creator:
+        flash('You are not a member of this bubble', 'error')
+        return redirect(url_for('community_dashboard'))
+    
+    context = {
+        'user': user_data,
+        'name': user_data.get('name'),
+        'bubble': {
+            'id': bubble_id,
+            'name': bubble_data.get('name'),
+            'description': bubble_data.get('description'),
+            'member_count': len(bubble_data.get('member_uids', [])),
+            'is_creator': is_creator
+        }
+    }
+    
+    return render_template('bubble_chat.html', **context)
+
+
+@app.route('/api/bubbles/<bubble_id>/chat/messages', methods=['GET'])
+@require_login
+def get_chat_messages(bubble_id):
+    """Get chat messages for a bubble"""
+    uid = session['uid']
+    
+    try:
+        # Verify bubble membership
+        bubble_doc = db.collection('bubbles').document(bubble_id).get()
+        if not bubble_doc.exists:
+            return jsonify({'error': 'Bubble not found'}), 404
+        
+        bubble_data = bubble_doc.to_dict()
+        if uid not in bubble_data.get('member_uids', []):
+            return jsonify({'error': 'Not authorized'}), 403
+        
+        # Get pagination parameters
+        limit = min(int(request.args.get('limit', 50)), 100)
+        
+        # Query messages
+        messages_ref = db.collection('bubbles').document(bubble_id).collection('messages')
+        messages_query = messages_ref.order_by('timestamp', direction=firestore.Query.DESCENDING).limit(limit)
+        
+        messages = []
+        for doc in messages_query.stream():
+            msg_data = doc.to_dict()
+            msg_data['message_id'] = doc.id
+            
+            # Convert timestamp to ISO format if it exists
+            if 'timestamp' in msg_data and msg_data['timestamp']:
+                msg_data['timestamp'] = msg_data['timestamp'].isoformat() if hasattr(msg_data['timestamp'], 'isoformat') else str(msg_data['timestamp'])
+            
+            # Skip deleted messages
+            if not msg_data.get('deleted', False):
+                messages.append(msg_data)
+        
+        # Reverse to show oldest first
+        messages.reverse()
+        
+        return jsonify({
+            'success': True,
+            'messages': messages,
+            'count': len(messages)
+        })
+        
+    except Exception as e:
+        logger.error(f"Get messages error: {str(e)}")
+        return jsonify({'error': 'Failed to fetch messages'}), 500
+
+
+@app.route('/api/bubbles/<bubble_id>/chat/messages', methods=['POST'])
+@require_login
+def send_chat_message(bubble_id):
+    """Send a chat message"""
+    uid = session['uid']
+    
+    try:
+        # Verify bubble membership
+        bubble_doc = db.collection('bubbles').document(bubble_id).get()
+        if not bubble_doc.exists:
+            return jsonify({'error': 'Bubble not found'}), 404
+        
+        bubble_data = bubble_doc.to_dict()
+        if uid not in bubble_data.get('member_uids', []):
+            return jsonify({'error': 'Not authorized'}), 403
+        
+        # Get message content
+        data = request.get_json()
+        content = data.get('content', '').strip()
+        
+        if not content:
+            return jsonify({'error': 'Message content required'}), 400
+        
+        # Rate limiting check
+        is_allowed, rate_msg = bubble_rate_limiter.check_user_rate_limit(uid, 'send_message', bubble_id)
+        if not is_allowed:
+            return jsonify({'error': rate_msg}), 429
+        
+        # Validate and sanitize message
+        validation = message_validator.validate_message_content(content, uid)
+        if not validation['is_valid']:
+            return jsonify({'error': validation['errors'][0]}), 400
+        
+        # Get user data for sender info
+        user_data = get_user_data(uid)
+        
+        # Create message document
+        message_id = str(uuid.uuid4())
+        message_data = {
+            'message_id': message_id,
+            'content': validation['sanitized_content'],
+            'sender_uid': uid,
+            'sender_name': user_data.get('name', 'Unknown'),
+            'timestamp': firestore.SERVER_TIMESTAMP,
+            'message_type': 'text',
+            'deleted': False,
+            'reactions': {}
+        }
+        
+        # Save message
+        db.collection('bubbles').document(bubble_id).collection('messages').document(message_id).set(message_data)
+        
+        # Prepare message for broadcast (with current timestamp)
+        broadcast_message = message_data.copy()
+        broadcast_message['timestamp'] = datetime.utcnow().isoformat()
+        
+        # Broadcast via SocketIO
+        socketio.emit('new_message', {
+            'bubble_id': bubble_id,
+            'message': broadcast_message
+        }, room=f'bubble_{bubble_id}')
+        
+        return jsonify({
+            'success': True,
+            'message_id': message_id,
+            'message': 'Message sent successfully'
+        })
+        
+    except Exception as e:
+        logger.error(f"Send message error: {str(e)}")
+        return jsonify({'error': 'Failed to send message'}), 500
+
+
+@app.route('/api/bubbles/<bubble_id>/chat/messages/<message_id>', methods=['DELETE'])
+@require_login
+def delete_chat_message(bubble_id, message_id):
+    """Delete a chat message"""
+    uid = session['uid']
+    
+    try:
+        # Verify bubble membership
+        bubble_doc = db.collection('bubbles').document(bubble_id).get()
+        if not bubble_doc.exists:
+            return jsonify({'error': 'Bubble not found'}), 404
+        
+        bubble_data = bubble_doc.to_dict()
+        is_creator = bubble_data.get('creator_uid') == uid
+        
+        # Get message
+        message_doc = db.collection('bubbles').document(bubble_id).collection('messages').document(message_id).get()
+        if not message_doc.exists:
+            return jsonify({'error': 'Message not found'}), 404
+        
+        message_data = message_doc.to_dict()
+        
+        # Check permissions (sender or bubble creator)
+        if message_data.get('sender_uid') != uid and not is_creator:
+            return jsonify({'error': 'Not authorized'}), 403
+        
+        # Soft delete
+        db.collection('bubbles').document(bubble_id).collection('messages').document(message_id).update({
+            'deleted': True,
+            'deleted_by': uid,
+            'deleted_at': firestore.SERVER_TIMESTAMP
+        })
+        
+        # Broadcast deletion
+        socketio.emit('message_deleted', {
+            'bubble_id': bubble_id,
+            'message_id': message_id
+        }, room=f'bubble_{bubble_id}')
+        
+        return jsonify({
+            'success': True,
+            'message': 'Message deleted successfully'
+        })
+        
+    except Exception as e:
+        logger.error(f"Delete message error: {str(e)}")
+        return jsonify({'error': 'Failed to delete message'}), 500
+
+
+# ============================================================================
+# SOCKETIO EVENT HANDLERS
+# ============================================================================
+
+@socketio.on('connect')
+def handle_connect():
+    """Handle WebSocket connection"""
+    uid = session.get('uid')
+    if uid:
+        logger.info(f"User {uid} connected to WebSocket")
+        emit('connection_status', {'status': 'connected'})
+    else:
+        logger.warning("Unauthenticated WebSocket connection attempt")
+        return False
+
+
+@socketio.on('disconnect')
+def handle_disconnect():
+    """Handle WebSocket disconnection"""
+    uid = session.get('uid')
+    if uid:
+        logger.info(f"User {uid} disconnected from WebSocket")
+
+
+@socketio.on('join_bubble')
+def handle_join_bubble(data):
+    """User joins a bubble chat room"""
+    uid = session.get('uid')
+    if not uid:
+        return
+    
+    bubble_id = data.get('bubble_id')
+    if not bubble_id:
+        return
+    
+    # Verify membership
+    try:
+        bubble_doc = db.collection('bubbles').document(bubble_id).get()
+        if bubble_doc.exists:
+            bubble_data = bubble_doc.to_dict()
+            if uid in bubble_data.get('member_uids', []):
+                join_room(f'bubble_{bubble_id}')
+                logger.info(f"User {uid} joined bubble room {bubble_id}")
+                
+                # Notify others
+                user_data = get_user_data(uid)
+                emit('user_joined', {
+                    'uid': uid,
+                    'name': user_data.get('name', 'Unknown'),
+                    'bubble_id': bubble_id
+                }, room=f'bubble_{bubble_id}', include_self=False)
+    except Exception as e:
+        logger.error(f"Join bubble error: {str(e)}")
+
+
+@socketio.on('leave_bubble')
+def handle_leave_bubble(data):
+    """User leaves a bubble chat room"""
+    uid = session.get('uid')
+    if not uid:
+        return
+    
+    bubble_id = data.get('bubble_id')
+    if not bubble_id:
+        return
+    
+    leave_room(f'bubble_{bubble_id}')
+    logger.info(f"User {uid} left bubble room {bubble_id}")
+    
+    # Notify others
+    user_data = get_user_data(uid)
+    emit('user_left', {
+        'uid': uid,
+        'name': user_data.get('name', 'Unknown'),
+        'bubble_id': bubble_id
+    }, room=f'bubble_{bubble_id}', include_self=False)
+
+
+@socketio.on('typing_start')
+def handle_typing_start(data):
+    """User starts typing"""
+    uid = session.get('uid')
+    if not uid:
+        return
+    
+    bubble_id = data.get('bubble_id')
+    if not bubble_id:
+        return
+    
+    user_data = get_user_data(uid)
+    emit('user_typing', {
+        'uid': uid,
+        'name': user_data.get('name', 'Unknown'),
+        'bubble_id': bubble_id,
+        'action': 'start'
+    }, room=f'bubble_{bubble_id}', include_self=False)
+
+
+@socketio.on('typing_stop')
+def handle_typing_stop(data):
+    """User stops typing"""
+    uid = session.get('uid')
+    if not uid:
+        return
+    
+    bubble_id = data.get('bubble_id')
+    if not bubble_id:
+        return
+    
+    emit('user_typing', {
+        'uid': uid,
+        'action': 'stop',
+        'bubble_id': bubble_id
+    }, room=f'bubble_{bubble_id}', include_self=False)
+
+
+# ============================================================================
+# BUBBLE TODO SYSTEM
+# ============================================================================
+
+@app.route('/api/bubbles/<bubble_id>/todos', methods=['GET'])
+@require_login
+def get_bubble_todos(bubble_id):
+    """Fetch all todos for a bubble"""
+    uid = session['uid']
+    try:
+        # Verify membership
+        bubble_doc = db.collection('bubbles').document(bubble_id).get()
+        if not bubble_doc.exists:
+            return jsonify({'error': 'Bubble not found'}), 404
+        
+        bubble_data = bubble_doc.to_dict()
+        if uid not in bubble_data.get('member_uids', []):
+            return jsonify({'error': 'Not authorized'}), 403
+            
+        todos_ref = db.collection('bubbles').document(bubble_id).collection('todos')
+        todos = []
+        for doc in todos_ref.order_by('created_at', direction=firestore.Query.DESCENDING).stream():
+            todo_data = doc.to_dict()
+            todo_data['id'] = doc.id
+            if 'created_at' in todo_data and todo_data['created_at']:
+                todo_data['created_at'] = todo_data['created_at'].isoformat() if hasattr(todo_data['created_at'], 'isoformat') else str(todo_data['created_at'])
+            todos.append(todo_data)
+            
+        return jsonify({'success': True, 'todos': todos})
+    except Exception as e:
+        logger.error(f"Get todos error: {str(e)}")
+        return jsonify({'error': 'Failed to fetch todos'}), 500
+
+@app.route('/api/bubbles/<bubble_id>/todos', methods=['POST'])
+@require_login
+def create_bubble_todo(bubble_id):
+    """Create a new todo for a bubble"""
+    uid = session['uid']
+    try:
+        data = request.get_json()
+        task = data.get('task', '').strip()
+        if not task:
+            return jsonify({'error': 'Task description required'}), 400
+            
+        # Verify membership
+        bubble_doc = db.collection('bubbles').document(bubble_id).get()
+        if not bubble_doc.exists:
+            return jsonify({'error': 'Bubble not found'}), 404
+        
+        bubble_data = bubble_doc.to_dict()
+        if uid not in bubble_data.get('member_uids', []):
+            return jsonify({'error': 'Not authorized'}), 403
+            
+        user_data = get_user_data(uid)
+        
+        todo_data = {
+            'task': task,
+            'completed': False,
+            'created_by': uid,
+            'creator_name': user_data.get('name', 'Unknown'),
+            'created_at': firestore.SERVER_TIMESTAMP,
+            'assigned_to': data.get('assigned_to'), # Optional UID
+            'priority': data.get('priority', 'medium') # low, medium, high
+        }
+        
+        todo_ref = db.collection('bubbles').document(bubble_id).collection('todos').document()
+        todo_ref.set(todo_data)
+        
+        # Prepare for broadcast
+        todo_data['id'] = todo_ref.id
+        todo_data['created_at'] = datetime.utcnow().isoformat()
+        
+        socketio.emit('todo_update', {
+            'bubble_id': bubble_id,
+            'todo': todo_data,
+            'action': 'create'
+        }, room=f'bubble_{bubble_id}')
+        
+        return jsonify({'success': True, 'todo': todo_data})
+    except Exception as e:
+        logger.error(f"Create todo error: {str(e)}")
+        return jsonify({'error': 'Failed to create todo'}), 500
+
+@app.route('/api/bubbles/<bubble_id>/todos/<todo_id>', methods=['PATCH'])
+@require_login
+def update_bubble_todo(bubble_id, todo_id):
+    """Update a todo (e.g. toggle completion)"""
+    uid = session['uid']
+    try:
+        data = request.get_json()
+        # Verify membership
+        bubble_doc = db.collection('bubbles').document(bubble_id).get()
+        if not bubble_doc.exists:
+            return jsonify({'error': 'Bubble not found'}), 404
+        
+        bubble_data = bubble_doc.to_dict()
+        if uid not in bubble_data.get('member_uids', []):
+            return jsonify({'error': 'Not authorized'}), 403
+            
+        todo_ref = db.collection('bubbles').document(bubble_id).collection('todos').document(todo_id)
+        todo_doc = todo_ref.get()
+        if not todo_doc.exists:
+            return jsonify({'error': 'Todo not found'}), 404
+            
+        # Update allowed fields
+        update_data = {}
+        if 'completed' in data:
+            update_data['completed'] = bool(data['completed'])
+            update_data['completed_by'] = uid if update_data['completed'] else None
+        if 'task' in data:
+            update_data['task'] = data['task'].strip()
+        if 'assigned_to' in data:
+            update_data['assigned_to'] = data['assigned_to']
+            
+        if update_data:
+            todo_ref.update(update_data)
+            
+        # Get final state for broadcast
+        updated_todo = todo_ref.get().to_dict()
+        updated_todo['id'] = todo_id
+        if 'created_at' in updated_todo:
+            updated_todo['created_at'] = updated_todo['created_at'].isoformat() if hasattr(updated_todo['created_at'], 'isoformat') else str(updated_todo['created_at'])
+            
+        socketio.emit('todo_update', {
+            'bubble_id': bubble_id,
+            'todo': updated_todo,
+            'action': 'update'
+        }, room=f'bubble_{bubble_id}')
+        
+        return jsonify({'success': True, 'todo': updated_todo})
+    except Exception as e:
+        logger.error(f"Update todo error: {str(e)}")
+        return jsonify({'error': 'Failed to update todo'}), 500
+
+@app.route('/api/bubbles/<bubble_id>/todos/<todo_id>', methods=['DELETE'])
+@require_login
+def delete_bubble_todo(bubble_id, todo_id):
+    """Delete a todo"""
+    uid = session['uid']
+    try:
+        # Verify membership and permission (creator or assigner)
+        bubble_doc = db.collection('bubbles').document(bubble_id).get()
+        if not bubble_doc.exists:
+            return jsonify({'error': 'Bubble not found'}), 404
+        
+        bubble_data = bubble_doc.to_dict()
+        is_bubble_creator = bubble_data.get('creator_uid') == uid
+        
+        todo_ref = db.collection('bubbles').document(bubble_id).collection('todos').document(todo_id)
+        todo_doc = todo_ref.get()
+        if not todo_doc.exists:
+            return jsonify({'error': 'Todo not found'}), 404
+            
+        todo_data = todo_doc.to_dict()
+        if not is_bubble_creator and todo_data.get('created_by') != uid:
+            return jsonify({'error': 'Not authorized'}), 403
+            
+        todo_ref.delete()
+        
+        socketio.emit('todo_delete', {
+            'bubble_id': bubble_id,
+            'todo_id': todo_id
+        }, room=f'bubble_{bubble_id}')
+        
+        return jsonify({'success': True})
+    except Exception as e:
+        logger.error(f"Delete todo error: {str(e)}")
+        return jsonify({'error': 'Failed to delete todo'}), 500
+
+# ============================================================================
+# BUBBLE FILE SHARING SYSTEM
+# ============================================================================
+
+UPLOAD_FOLDER = 'uploads'
+if not os.path.exists(UPLOAD_FOLDER):
+    os.makedirs(UPLOAD_FOLDER)
+
+@app.route('/api/bubbles/<bubble_id>/files', methods=['GET'])
+@require_login
+def get_bubble_files(bubble_id):
+    """Fetch all files shared in a bubble"""
+    uid = session['uid']
+    try:
+        # Verify membership
+        bubble_doc = db.collection('bubbles').document(bubble_id).get()
+        if not bubble_doc.exists:
+            return jsonify({'error': 'Bubble not found'}), 404
+        
+        bubble_data = bubble_doc.to_dict()
+        if uid not in bubble_data.get('member_uids', []):
+            return jsonify({'error': 'Not authorized'}), 403
+            
+        files_ref = db.collection('bubbles').document(bubble_id).collection('files')
+        files = []
+        for doc in files_ref.order_by('uploaded_at', direction=firestore.Query.DESCENDING).stream():
+            file_data = doc.to_dict()
+            file_data['id'] = doc.id
+            if 'uploaded_at' in file_data and file_data['uploaded_at']:
+                file_data['uploaded_at'] = file_data['uploaded_at'].isoformat() if hasattr(file_data['uploaded_at'], 'isoformat') else str(file_data['uploaded_at'])
+            files.append(file_data)
+            
+        return jsonify({'success': True, 'files': files})
+    except Exception as e:
+        logger.error(f"Get bubble files error: {str(e)}")
+        return jsonify({'error': 'Failed to fetch files'}), 500
+
+@app.route('/api/bubbles/<bubble_id>/files', methods=['POST'])
+@require_login
+def upload_bubble_file(bubble_id):
+    """Upload a file to a bubble"""
+    uid = session['uid']
+    try:
+        if 'file' not in request.files:
+            return jsonify({'error': 'No file part'}), 400
+        
+        file = request.files['file']
+        if file.filename == '':
+            return jsonify({'error': 'No selected file'}), 400
+            
+        # Verify membership
+        bubble_doc = db.collection('bubbles').document(bubble_id).get()
+        if not bubble_doc.exists:
+            return jsonify({'error': 'Bubble not found'}), 404
+        
+        bubble_data = bubble_doc.to_dict()
+        if uid not in bubble_data.get('member_uids', []):
+            return jsonify({'error': 'Not authorized'}), 403
+
+        # Validate file
+        validation = file_upload_security.validate_file_upload(file, bubble_id, uid)
+        if not validation['is_valid']:
+            return jsonify({'error': validation['errors'][0]}), 400
+            
+        # Secure filename and save
+        filename = secure_filename(file.filename)
+        unique_filename = f"{uuid.uuid4()}_{filename}"
+        file_path = os.path.join(UPLOAD_FOLDER, unique_filename)
+        
+        file.seek(0)
+        file.save(file_path)
+        
+        user_data = get_user_data(uid)
+        
+        file_info = {
+            'filename': filename,
+            'storage_name': unique_filename,
+            'file_size': validation['file_info']['file_size'],
+            'mime_type': validation['file_info']['mime_type'],
+            'uploaded_by': uid,
+            'uploader_name': user_data.get('name', 'Unknown'),
+            'uploaded_at': firestore.SERVER_TIMESTAMP,
+            'description': request.form.get('description', '')
+        }
+        
+        file_ref = db.collection('bubbles').document(bubble_id).collection('files').document()
+        file_ref.set(file_info)
+        
+        # Prepare for broadcast
+        file_info['id'] = file_ref.id
+        file_info['uploaded_at'] = datetime.utcnow().isoformat()
+        
+        socketio.emit('file_update', {
+            'bubble_id': bubble_id,
+            'file': file_info,
+            'action': 'upload'
+        }, room=f'bubble_{bubble_id}')
+        
+        return jsonify({'success': True, 'file': file_info})
+    except Exception as e:
+        logger.error(f"Upload bubble file error: {str(e)}")
+        # Partial traceback for debugging
+        logger.error(traceback.format_exc())
+        return jsonify({'error': f'Failed to upload file: {str(e)}'}), 500
+
+@app.route('/api/bubbles/<bubble_id>/files/<file_id>/download')
+@require_login
+def download_bubble_file(bubble_id, file_id):
+    """Download a bubble file"""
+    uid = session['uid']
+    try:
+        # Verify membership
+        bubble_doc = db.collection('bubbles').document(bubble_id).get()
+        if not bubble_doc.exists:
+            return jsonify({'error': 'Bubble not found'}), 404
+        
+        bubble_data = bubble_doc.to_dict()
+        if uid not in bubble_data.get('member_uids', []):
+            return jsonify({'error': 'Not authorized'}), 403
+            
+        file_doc = db.collection('bubbles').document(bubble_id).collection('files').document(file_id).get()
+        if not file_doc.exists:
+            return jsonify({'error': 'File not found'}), 404
+            
+        file_data = file_doc.to_dict()
+        return send_from_directory(UPLOAD_FOLDER, file_data['storage_name'], as_attachment=True, download_name=file_data['filename'])
+    except Exception as e:
+        logger.error(f"Download file error: {str(e)}")
+        return jsonify({'error': 'Failed to download file'}), 500
+
+@app.route('/api/bubbles/<bubble_id>/files/<file_id>', methods=['DELETE'])
+@require_login
+def delete_bubble_file(bubble_id, file_id):
+    """Delete a shared file"""
+    uid = session['uid']
+    try:
+        # Verify permission
+        bubble_doc = db.collection('bubbles').document(bubble_id).get()
+        if not bubble_doc.exists:
+            return jsonify({'error': 'Bubble not found'}), 404
+        
+        bubble_data = bubble_doc.to_dict()
+        is_bubble_creator = bubble_data.get('creator_uid') == uid
+        
+        file_ref = db.collection('bubbles').document(bubble_id).collection('files').document(file_id)
+        file_doc = file_ref.get()
+        if not file_doc.exists:
+            return jsonify({'error': 'File not found'}), 404
+            
+        file_data = file_doc.to_dict()
+        if not is_bubble_creator and file_data.get('uploaded_by') != uid:
+            return jsonify({'error': 'Not authorized'}), 403
+            
+        # Delete from disk
+        file_path = os.path.join(UPLOAD_FOLDER, file_data['storage_name'])
+        if os.path.exists(file_path):
+            os.remove(file_path)
+            
+        file_ref.delete()
+        
+        socketio.emit('file_delete', {
+            'bubble_id': bubble_id,
+            'file_id': file_id
+        }, room=f'bubble_{bubble_id}')
+        
+        return jsonify({'success': True})
+    except Exception as e:
+        logger.error(f"Delete file error: {str(e)}")
+        return jsonify({'error': 'Failed to delete file'}), 500
+
 @app.route('/api/people/search/debug', methods=['GET'])
 def debug_search_people():
     """Debug version of search without authentication"""
@@ -5293,4 +5979,4 @@ if __name__ == '__main__':
     debug = env == 'development'
     port = int(os.environ.get('PORT', 5000))  # Use PORT env var for deployment, default to 5000 for local dev
     logger.info("application_startup", environment=env, debug=debug, port=port)
-    app.run(debug=debug, host='0.0.0.0', port=port)
+    socketio.run(app, debug=debug, host='0.0.0.0', port=port)
