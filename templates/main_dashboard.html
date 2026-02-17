@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Home — Sclera</title>
-    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght@100..700,0..1&display=swap" rel="stylesheet"/>
     <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
@@ -34,16 +34,16 @@
                     <div class="academic-content">
                         <div class="island-chart">
                             <canvas id="academicDonut"></canvas>
-                            <div class="chart-center-text" style="font-size: 18px;">{{ overall_progress }}%</div>
+                            <div class="chart-center-text">{{ overall_progress }}%</div>
                         </div>
-                        <div class="academic-legend" style="gap: 8px;">
+                        <div class="academic-legend">
                             <div class="legend-item">
-                                <span class="legend-label" style="font-size: 12px;">Done:</span>
-                                <span class="legend-value" style="font-size: 20px;">{{ completed_chapters }}</span>
+                                <span class="legend-label">Done:</span>
+                                <span class="legend-value">{{ completed_chapters }}</span>
                             </div>
                             <div class="legend-item">
-                                <span class="legend-label" style="font-size: 12px;">Total:</span>
-                                <span class="legend-value" style="font-size: 20px;">{{ total_chapters }}</span>
+                                <span class="legend-label">Total:</span>
+                                <span class="legend-value">{{ total_chapters }}</span>
                             </div>
                         </div>
                     </div>
@@ -52,7 +52,7 @@
                 <!-- 2. STREAK ISLAND -->
                 <div class="island streak-island">
                     <div class="streak-icon">
-                        <span class="material-symbols-outlined" style="font-size: 48px;">local_fire_department</span>
+                        <span class="material-symbols-outlined">local_fire_department</span>
                     </div>
                     <div class="streak-info">
                         <h4>Daily Streak</h4>
@@ -63,17 +63,17 @@
                 <!-- 3. PROFILE ISLAND (Compact) -->
                 <a href="{{ url_for('profile_resume') }}" class="island" style="text-decoration:none;">
                     <h3>Profile</h3>
-                    <div style="display: flex; align-items: center; gap: 12px; margin-top: 10px;">
+                    <div class="profile-content-compact">
                         {% if profile_picture %}
-                        <img src="{{ url_for('serve_profile_picture', filename=profile_picture.split('/')[1]) }}" alt="PFP" style="width: 50px; height: 50px; border-radius: 50%; object-fit: cover;">
+                        <img src="{{ url_for('serve_profile_picture', filename=profile_picture.split('/')[1]) }}" alt="PFP" class="profile-pic-small">
                         {% else %}
-                        <div style="width: 50px; height: 50px; border-radius: 50%; background: var(--bg-tertiary); display: flex; align-items: center; justify-content: center;">
+                        <div class="profile-pic-small-placeholder">
                             <span class="material-symbols-outlined">person</span>
                         </div>
                         {% endif %}
-                        <div>
-                            <p style="margin:0; font-weight: 600; color: var(--text-primary);">{{ name }}</p>
-                            <p style="margin:0; font-size: 12px;">{{ purpose_display }}</p>
+                        <div class="profile-meta-compact">
+                            <p class="name">{{ name }}</p>
+                            <p class="purpose">{{ purpose_display }}</p>
                         </div>
                     </div>
                 </a>
@@ -87,61 +87,67 @@
                         {% for event in recent_events[:5] %}
                         <div class="mini-event-item">
                             <div class="mini-event-dot dot-{{ event.type }}"></div>
-                            <div style="flex:1;">
-                                <div style="font-weight: 500; color: var(--text-primary);">{{ event.title }}</div>
-                                <div style="font-size: 11px; color: var(--text-muted);">{{ event.start }}</div>
+                            <div class="event-details">
+                                <div class="event-title">{{ event.title }}</div>
+                                <div class="event-date">{{ event.start }}</div>
                             </div>
                             {% if event.completed %}
-                            <span class="material-symbols-outlined" style="font-size: 16px; color: var(--success);">check_circle</span>
+                            <span class="material-symbols-outlined success-icon">check_circle</span>
                             {% endif %}
                         </div>
                         {% else %}
-                        <p style="text-align: center; padding: 20px 0;">No upcoming events</p>
+                        <div class="empty-state-mini">
+                            <span class="material-symbols-outlined">event_busy</span>
+                            <p>No upcoming events</p>
+                        </div>
                         {% endfor %}
                     </div>
-                    <span style="font-size: 12px; color: var(--accent); margin-top: auto; padding-top: 12px;">View full calendar →</span>
+                    <span class="cta-link">View full calendar →</span>
                 </a>
 
                 <!-- 5. PERFORMANCE ISLAND -->
                 <div class="island">
                     <h3>Performance</h3>
+                    {% if last_exam %}
                     <div class="performance-metrics">
                         <div class="perf-item">
-                            <div style="display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 4px;">
+                            <div class="perf-label-row">
                                 <span>Average Score</span>
-                                <span>{{ avg_performance }}%</span>
+                                <span class="perf-val">{{ avg_performance }}%</span>
                             </div>
                             <div class="perf-bar-container">
-                                <div class="perf-bar-fill" style="width: {{ avg_performance }}%; background: #3b82f6;"></div>
+                                <div class="perf-bar-fill" style="width: {{ avg_performance }}%; background: var(--info);"></div>
                             </div>
                         </div>
 
                         <div class="perf-item">
-                            <div style="display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 4px;">
+                            <div class="perf-label-row">
                                 <span>Last Exam</span>
-                                <span>{{ last_exam.pct if last_exam else 0 }}%</span>
+                                <span class="perf-val">{{ last_exam.pct }}%</span>
                             </div>
                             <div class="perf-bar-container">
-                                <div class="perf-bar-fill" style="width: {{ last_exam.pct if last_exam else 0 }}%; background: #22c55e;"></div>
+                                <div class="perf-bar-fill" style="width: {{ last_exam.pct }}%; background: var(--success);"></div>
                             </div>
-                            {% if last_exam %}
-                            <div style="font-size: 10px; color: var(--text-muted); margin-top: 2px;">{{ last_exam.subject }}</div>
-                            {% endif %}
+                            <div class="perf-meta">{{ last_exam.subject }}</div>
                         </div>
 
                         <div class="perf-item">
-                            <div style="display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 4px;">
+                            <div class="perf-label-row">
                                 <span>Highest Score</span>
-                                <span>{{ highest_exam.pct if highest_exam else 0 }}%</span>
+                                <span class="perf-val">{{ highest_exam.pct }}%</span>
                             </div>
                             <div class="perf-bar-container">
-                                <div class="perf-bar-fill" style="width: {{ highest_exam.pct if highest_exam else 0 }}%; background: #a855f7;"></div>
+                                <div class="perf-bar-fill" style="width: {{ highest_exam.pct }}%; background: var(--warning);"></div>
                             </div>
-                            {% if highest_exam %}
-                            <div style="font-size: 10px; color: var(--text-muted); margin-top: 2px;">{{ highest_exam.subject }}</div>
-                            {% endif %}
+                            <div class="perf-meta">{{ highest_exam.subject }}</div>
                         </div>
                     </div>
+                    {% else %}
+                    <div class="empty-state-mini">
+                        <span class="material-symbols-outlined">analytics</span>
+                        <p>No exam data available yet</p>
+                    </div>
+                    {% endif %}
                 </div>
 
                 <!-- 6. STATS ISLAND -->
@@ -170,7 +176,7 @@
                 <!-- 7. STUDY TIME GRAPH -->
                 <div class="island" style="grid-column: span 2;">
                     <h3>Study Time (Last 7 Days)</h3>
-                    <div style="height: 200px; margin-top: 10px;">
+                    <div class="study-time-container">
                         <canvas id="studyTimeChart"></canvas>
                     </div>
                 </div>
@@ -180,8 +186,8 @@
                     <h3>Quick Access TODO</h3>
                     <div class="quick-todo-container">
                         <div class="todo-input-row">
-                            <input type="text" id="newTodoInput" placeholder="New task...">
-                            <button class="btn btn-secondary" onclick="addTodo()" style="padding: 0 12px;">+</button>
+                            <input type="text" id="newTodoInput" placeholder="New task..." aria-label="New todo task">
+                            <button class="btn btn-secondary" onclick="addTodo()" title="Add Task">+</button>
                         </div>
                         <div class="mini-todo-list" id="todoList">
                             <!-- JS populated -->
@@ -195,6 +201,10 @@
     </div>
 
     <script>
+        // Charts Global Configuration
+        Chart.defaults.color = getComputedStyle(document.documentElement).getPropertyValue('--text-secondary');
+        Chart.defaults.font.family = "'Inter', sans-serif";
+
         // ACADEMIC DONUT
         let academicChart = null;
         function updateAcademicChart() {
@@ -220,6 +230,11 @@
                     responsive: true,
                     maintainAspectRatio: false,
                     cutout: '80%',
+                    animation: {
+                        animateRotate: true,
+                        duration: 1500,
+                        easing: 'easeOutQuart'
+                    },
                     plugins: { legend: { display: false }, tooltip: { enabled: false } }
                 }
             });
@@ -227,7 +242,9 @@
 
         // STUDY TIME CHART
         function initStudyChart() {
-            const ctx = document.getElementById('studyTimeChart').getContext('2d');
+            const canvas = document.getElementById('studyTimeChart');
+            if (!canvas) return;
+            const ctx = canvas.getContext('2d');
             const data = {{ study_stats | tojson | safe }};
 
             new Chart(ctx, {
@@ -238,38 +255,58 @@
                         label: 'Hours Studied',
                         data: data.map(d => d.hours),
                         backgroundColor: '#3b82f6',
-                        borderRadius: 4
+                        borderRadius: 6,
+                        hoverBackgroundColor: '#60a5fa'
                     }]
                 },
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
                     scales: {
-                        y: { beginAtZero: true, grid: { color: 'rgba(255,255,255,0.05)' } },
-                        x: { grid: { display: false } }
+                        y: {
+                            beginAtZero: true,
+                            grid: { color: 'rgba(255,255,255,0.05)', drawBorder: false },
+                            ticks: { font: { size: 10 } }
+                        },
+                        x: {
+                            grid: { display: false },
+                            ticks: { font: { size: 10 } }
+                        }
                     },
-                    plugins: { legend: { display: false } }
+                    plugins: { legend: { display: false } },
+                    animation: { duration: 1000, easing: 'easeOutBack' }
                 }
             });
         }
 
         // QUICK TODO LOGIC
         async function fetchTodos() {
-            const res = await fetch('/api/todos');
-            const todos = await res.json();
-            renderTodos(todos);
+            try {
+                const res = await fetch('/api/todos');
+                if (!res.ok) throw new Error('Failed to fetch');
+                const todos = await res.json();
+                renderTodos(todos);
+            } catch (err) {
+                console.error(err);
+            }
         }
 
         function renderTodos(todos) {
             const list = document.getElementById('todoList');
             list.innerHTML = '';
+
+            if (todos.length === 0) {
+                list.innerHTML = '<p class="empty-state-small">No tasks today</p>';
+                return;
+            }
+
             todos.forEach(todo => {
                 const div = document.createElement('div');
                 div.className = `mini-todo-item ${todo.completed ? 'done' : ''}`;
                 div.innerHTML = `
                     <input type="checkbox" ${todo.completed ? 'checked' : ''} onchange="toggleTodo('${todo.id}')">
                     <span>${todo.text}</span>
-                    <span class="material-symbols-outlined" style="font-size: 16px; cursor: pointer; color: var(--text-muted);" onclick="deleteTodo('${todo.id}')">delete</span>
+                    <span class="material-symbols-outlined delete-btn-small" onclick="deleteTodo('${todo.id}')">delete</span>
                 `;
                 list.appendChild(div);
             });
@@ -279,40 +316,76 @@
             const input = document.getElementById('newTodoInput');
             const text = input.value.trim();
             if (!text) return;
-            const res = await fetch('/api/todos', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ action: 'add', text })
-            });
-            const data = await res.json();
-            input.value = '';
-            renderTodos(data.todos);
+
+            try {
+                const res = await fetch('/api/todos', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ action: 'add', text })
+                });
+                const data = await res.json();
+                input.value = '';
+                renderTodos(data.todos);
+            } catch (err) {
+                alert('Failed to add task');
+            }
         }
 
         async function toggleTodo(id) {
-            const res = await fetch('/api/todos', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ action: 'toggle', id })
-            });
-            const data = await res.json();
-            renderTodos(data.todos);
+            try {
+                const res = await fetch('/api/todos', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ action: 'toggle', id })
+                });
+                const data = await res.json();
+                renderTodos(data.todos);
+            } catch (err) {
+                console.error(err);
+            }
         }
 
         async function deleteTodo(id) {
-            const res = await fetch('/api/todos', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ action: 'delete', id })
+            if (!confirm('Delete this task?')) return;
+
+            // Optimistic UI removal
+            const items = document.querySelectorAll('.mini-todo-item');
+            items.forEach(item => {
+                if (item.querySelector(`span[onclick*="${id}"]`) || item.querySelector(`input[onchange*="${id}"]`)) {
+                    item.classList.add('removing');
+                }
             });
-            const data = await res.json();
-            renderTodos(data.todos);
+
+            try {
+                const res = await fetch('/api/todos', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ action: 'delete', id })
+                });
+                const data = await res.json();
+
+                // Wait for animation before re-rendering
+                setTimeout(() => {
+                    renderTodos(data.todos);
+                }, 300);
+            } catch (err) {
+                console.error(err);
+                fetchTodos(); // Revert on error
+            }
         }
 
+        // Initialize Everything
         document.addEventListener('DOMContentLoaded', function() {
             updateAcademicChart();
             initStudyChart();
             fetchTodos();
+
+            // Form submission for new todo
+            document.getElementById('newTodoInput').addEventListener('keypress', function (e) {
+                if (e.key === 'Enter') {
+                    addTodo();
+                }
+            });
         });
     </script>
 

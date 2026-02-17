@@ -405,6 +405,68 @@ def calculate_average_percentage(results):
         return 0
     return round(sum(valid_percentages) / len(valid_percentages), 1)
 
+def get_dashboard_stats(uid, user_data):
+    """Aggregates all stats for the refined dashboard islands."""
+    # 1. Performance stats
+    results = user_data.get('exam_results', [])
+    avg_performance = calculate_average_percentage(results)
+
+    last_exam = None
+    highest_exam = None
+    if results:
+        for r in results:
+            try: r['pct'] = round((float(r.get('score', 0)) / float(r.get('max_score', 100))) * 100, 1)
+            except: r['pct'] = 0
+        sorted_by_date = sorted(results, key=lambda x: x.get('exam_date', ''), reverse=True)
+        last_exam = sorted_by_date[0]
+        sorted_by_score = sorted(results, key=lambda x: x.get('pct', 0), reverse=True)
+        highest_exam = sorted_by_score[0]
+
+    # 2. Completion stats
+    goals = user_data.get('goals', [])
+    tasks = user_data.get('tasks', [])
+    assignments = user_data.get('assignments', [])
+
+    # 3. Study Time (7 days)
+    study_stats = []
+    today = date.today()
+    for i in range(6, -1, -1):
+        day = today - timedelta(days=i)
+        day_str = day.strftime("%Y-%m-%d")
+        day_total_seconds = 0
+        sessions = db.collection('users').document(uid).collection('study_sessions')\
+                     .where('start_time', '>=', day_str + "T00:00:00")\
+                     .where('start_time', '<=', day_str + "T23:59:59").stream()
+        for s in sessions:
+            day_total_seconds += s.to_dict().get('duration_seconds', 0)
+        study_stats.append({'day': day.strftime("%a"), 'hours': round(day_total_seconds / 3600, 2)})
+
+    # 4. Calendar events
+    calendar_events = []
+    for r in results:
+        if r.get('exam_date'):
+            calendar_events.append({'title': f"Exam: {r.get('subject')}", 'start': r.get('exam_date'), 'type': 'exam'})
+    for t in tasks:
+        if t.get('due_date'):
+            calendar_events.append({'title': t.get('title'), 'start': t.get('due_date'), 'type': 'task', 'completed': t.get('completed')})
+    for a in assignments:
+        if a.get('due_date'):
+            calendar_events.append({'title': a.get('title'), 'start': a.get('due_date'), 'type': 'assignment', 'completed': a.get('completed')})
+
+    return {
+        'avg_performance': avg_performance,
+        'last_exam': last_exam,
+        'highest_exam': highest_exam,
+        'total_goals': len(goals),
+        'completed_goals': sum(1 for g in goals if g.get('completed')),
+        'total_tasks': len(tasks),
+        'completed_tasks': sum(1 for t in tasks if t.get('completed')),
+        'total_assignments': len(assignments),
+        'completed_assignments': sum(1 for a in assignments if a.get('completed')),
+        'study_stats': study_stats,
+        'calendar_events': calendar_events
+    }
+
 def initialize_profile_fields(uid):
     user_doc = db.collection('users').document(uid).get()
     user_data = user_doc.to_dict() if user_doc.exists else {}
@@ -1289,93 +1351,7 @@ def profile_dashboard():
         academic_summary = f"{at.get('stream', '')} – Grade {at.get('grade', '')}"
 
     progress_data = calculate_academic_progress(user_data)
-
-    # --- PERFORMANCE STATS ---
-    results = user_data.get('exam_results', [])
-    avg_performance = calculate_average_percentage(results)
-
-    last_exam = None
-    highest_exam = None
-    if results:
-        # Calculate percentages for all
-        for r in results:
-            try:
-                r['pct'] = round((float(r.get('score', 0)) / float(r.get('max_score', 100))) * 100, 1)
-            except:
-                r['pct'] = 0
-
-        # Last exam by date
-        sorted_by_date = sorted(results, key=lambda x: x.get('exam_date', ''), reverse=True)
-        last_exam = sorted_by_date[0]
-
-        # Highest exam by percentage
-        sorted_by_score = sorted(results, key=lambda x: x.get('pct', 0), reverse=True)
-        highest_exam = sorted_by_score[0]
-
-    # --- GOALS & TASKS STATS ---
-    goals = user_data.get('goals', [])
-    tasks = user_data.get('tasks', [])
-    assignments = user_data.get('assignments', [])
-
-    total_goals = len(goals)
-    completed_goals = sum(1 for g in goals if g.get('completed'))
-
-    total_tasks = len(tasks)
-    completed_tasks = sum(1 for t in tasks if t.get('completed'))
-
-    total_assignments = len(assignments)
-    completed_assignments = sum(1 for a in assignments if a.get('completed'))
-
-    # --- STUDY TIME GRAPH (Last 7 Days) ---
-    study_stats = []
-    today = date.today()
-    for i in range(6, -1, -1):
-        day = today - timedelta(days=i)
-        day_str = day.strftime("%Y-%m-%d")
-
-        # Sum all sessions for this day
-        day_total_seconds = 0
-        sessions = db.collection('users').document(uid).collection('study_sessions')\
-                     .where('start_time', '>=', day_str + "T00:00:00")\
-                     .where('start_time', '<=', day_str + "T23:59:59")\
-                     .stream()
-
-        for s in sessions:
-            day_total_seconds += s.to_dict().get('duration_seconds', 0)
-
-        study_stats.append({
-            'day': day.strftime("%a"),
-            'hours': round(day_total_seconds / 3600, 2)
-        })
-
-    # --- CALENDAR EVENTS ---
-    calendar_events = []
-    # Add exams
-    for r in results:
-        if r.get('exam_date'):
-            calendar_events.append({
-                'title': f"Exam: {r.get('subject')}",
-                'start': r.get('exam_date'),
-                'type': 'exam'
-            })
-    # Add tasks
-    for t in tasks:
-        if t.get('due_date'):
-            calendar_events.append({
-                'title': t.get('title'),
-                'start': t.get('due_date'),
-                'type': 'task',
-                'completed': t.get('completed')
-            })
-    # Add assignments
-    for a in assignments:
-        if a.get('due_date'):
-            calendar_events.append({
-                'title': a.get('title'),
-                'start': a.get('due_date'),
-                'type': 'assignment',
-                'completed': a.get('completed')
-            })
+    stats = get_dashboard_stats(uid, user_data)
 
     # Get user's saved career interests for the interests island
     interests = user_data.get('interests', {})
@@ -1402,19 +1378,8 @@ def profile_dashboard():
         'settings': user_data.get('settings', {}),
         'in_institution': bool(user_data.get('institution_id')),
         'has_class': bool(user_data.get('class_ids')),
-        # New Dashboard Data
-        'avg_performance': avg_performance,
-        'last_exam': last_exam,
-        'highest_exam': highest_exam,
-        'total_goals': total_goals,
-        'completed_goals': completed_goals,
-        'total_tasks': total_tasks,
-        'completed_tasks': completed_tasks,
-        'total_assignments': total_assignments,
-        'completed_assignments': completed_assignments,
-        'study_stats': study_stats,
-        'calendar_events': calendar_events,
-        'quick_todos': user_data.get('quick_todos', [])
+        'quick_todos': user_data.get('quick_todos', []),
+        **stats
     }
     return render_template('main_dashboard.html', **context)
 
@@ -3412,28 +3377,12 @@ def delete_study_todo(tid):
 def calendar_dashboard():
     uid = session['uid']
     user_data = get_user_data(uid)
-
-    # Similar data gathering as main dashboard but for a full view
-    goals = user_data.get('goals', [])
-    tasks = user_data.get('tasks', [])
-    assignments = user_data.get('assignments', [])
-    results = user_data.get('exam_results', [])
-
-    events = []
-    for r in results:
-        if r.get('exam_date'):
-            events.append({'title': f"Exam: {r.get('subject')}", 'start': r.get('exam_date'), 'type': 'exam'})
-    for t in tasks:
-        if t.get('due_date'):
-            events.append({'title': t.get('title'), 'start': t.get('due_date'), 'type': 'task', 'completed': t.get('completed')})
-    for a in assignments:
-        if a.get('due_date'):
-            events.append({'title': a.get('title'), 'start': a.get('due_date'), 'type': 'assignment', 'completed': a.get('completed')})
+    stats = get_dashboard_stats(uid, user_data)
 
     context = {
         'user': user_data,
         'name': user_data.get('name'),
-        'events': events,
+        'events': stats['calendar_events'],
         'settings': user_data.get('settings', {}),
         'in_institution': bool(user_data.get('institution_id')),
         'has_class': bool(user_data.get('class_ids'))
