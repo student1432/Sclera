@@ -164,6 +164,24 @@
         .docs-progress-fill {
             background-color: var(--progress-fill);
         }
+
+        /* Fix for form elements in dark mode */
+        .docs-bg-tertiary input,
+        .docs-bg-tertiary select,
+        .docs-bg-tertiary textarea {
+            background-color: var(--bg-tertiary) !important;
+            color: var(--text-primary) !important;
+        }
+        
+        .docs-bg-tertiary input::placeholder,
+        .docs-bg-tertiary textarea::placeholder {
+            color: var(--text-muted) !important;
+        }
+        
+        .docs-bg-tertiary select option {
+            background-color: var(--bg-tertiary) !important;
+            color: var(--text-primary) !important;
+        }
     </style>
 </head>
 

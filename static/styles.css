@@ -616,7 +616,7 @@ a:hover {
 }
 
 /* ============================================================================
-   FORMS
+   FORMS - Enhanced for dark mode support
    ============================================================================ */
 .form-card {
     background: var(--bg-secondary);
@@ -651,6 +651,61 @@ a:hover {
     font-family: inherit;
     border-radius: 5px;
     transition: border-color 0.2s;
+}
+
+/* Global fix for all form elements in dark mode */
+input[type="text"],
+input[type="number"],
+input[type="date"],
+input[type="datetime-local"],
+input[type="email"],
+input[type="password"],
+input[type="search"],
+textarea,
+select {
+    background-color: var(--bg-tertiary) !important;
+    color: var(--text-primary) !important;
+    border: 1px solid var(--border) !important;
+}
+
+input::placeholder,
+textarea::placeholder {
+    color: var(--text-muted) !important;
+}
+
+select option {
+    background-color: var(--bg-tertiary) !important;
+    color: var(--text-primary) !important;
+}
+
+/* Specific fixes for template-specific classes */
+.calendar-bg-tertiary input,
+.calendar-bg-tertiary select,
+.calendar-bg-tertiary textarea,
+.docs-bg-tertiary input,
+.docs-bg-tertiary select,
+.docs-bg-tertiary textarea,
+.academic-bg-tertiary input,
+.academic-bg-tertiary select,
+.academic-bg-tertiary textarea {
+    background-color: var(--bg-tertiary) !important;
+    color: var(--text-primary) !important;
+}
+
+.calendar-bg-tertiary input::placeholder,
+.calendar-bg-tertiary textarea::placeholder,
+.docs-bg-tertiary input::placeholder,
+.docs-bg-tertiary textarea::placeholder,
+.academic-bg-tertiary input::placeholder,
+.academic-bg-tertiary textarea::placeholder {
+    color: var(--text-muted) !important;
+}
+
+.calendar-bg-tertiary select option,
+.docs-bg-tertiary select option,
+.academic-bg-tertiary select option {
+    background-color: var(--bg-tertiary) !important;
+    color: var(--text-primary) !important;
 }
 
 .form-group input:focus,

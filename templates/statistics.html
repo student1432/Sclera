@@ -7,35 +7,155 @@
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
+        .stats-hero {
+            border-radius: 16px;
+            padding: 32px;
+            margin-bottom: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: var(--shadow-lg);
+        }
+        [data-theme="dark"] .stats-hero {
+            background: linear-gradient(135deg, #1f1f1f 0%, #27272a 100%);
+            color: #fafafa;
+        }
+        [data-theme="light"] .stats-hero {
+            background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+            color: #0f172a;
+        }
+        .stats-hero h1 {
+            margin: 0;
+            font-size: 2.5rem;
+            font-weight: 700;
+        }
+        .stats-hero .hero-streak {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            font-size: 1.5rem;
+        }
+        .stats-hero .hero-streak .material-symbols-outlined {
+            font-size: 2rem;
+        }
+        .stats-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 32px;
+            margin-bottom: 32px;
+        }
+        .top-row {
+            display: grid;
+            grid-template-columns: 1fr 2fr 2fr;
+            gap: 24px;
+        }
+        .stats-card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 24px;
+            transition: all var(--transition) ease;
+            box-shadow: var(--shadow);
+        }
+        .stats-card:hover {
+            transform: translateY(-4px);
+            box-shadow: var(--shadow-lg);
+            border-color: var(--border-focus);
+        }
+        .stats-card-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+        .stats-card-header .material-symbols-outlined {
+            font-size: 1.5rem;
+            color: var(--accent);
+        }
+        .stats-card h3 {
+            margin: 0;
+            font-size: 1.25rem;
+            font-weight: 600;
+        }
+        .progress-container {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+        .progress-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+        .progress-item span:first-child {
+            font-weight: 600;
+            font-size: 0.875rem;
+        }
+        .progress-item span:last-child {
+            color: var(--text-muted);
+            font-size: 0.8125rem;
+        }
+        .progress-bar-track {
+            height: 8px;
+            border-radius: 4px;
+            background: var(--bg-tertiary);
+            overflow: hidden;
+        }
+        .progress-bar-fill {
+            height: 100%;
+            border-radius: 4px;
+            background: var(--tick-color);
+            transition: width 0.5s ease;
+        }
+        .chart-card {
+            min-height: 500px;
+        }
         .chart-container {
             position: relative;
             width: 100%;
-            min-height: 200px;
+            height: 400px;
+            margin-top: 16px;
+        }
+        .subject-card {
+            grid-column: 1 / -1;
+            min-height: 500px;
+        }
+        .subject-header {
             display: flex;
-            justify-content: center;
+            justify-content: space-between;
             align-items: center;
-            padding: 20px 0;
+            margin-bottom: 20px;
         }
-        canvas {
-            display: block;
-            max-width: 100%;
-            max-height: 100%;
+        .subject-header h3 {
+            margin: 0;
         }
-        .chart-wrapper {
-            position: relative;
-            height: 300px;
-            margin: 20px 0;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-        }
-        .study-island {
-            display: flex;
-            flex-direction: column;
+        .subject-select {
+            padding: 8px 12px;
+            border-radius: 8px;
+            border: 1px solid var(--border);
             background: var(--bg-tertiary);
-            border-radius: 12px;
-            padding: 20px;
-            min-height: 200px;
+            color: var(--text-primary);
+            font-size: 0.875rem;
+        }
+        .no-data {
+            text-align: center;
+            padding: 40px;
+            color: var(--text-muted);
+            font-size: 1rem;
+        }
+        @media (max-width: 768px) {
+            .stats-hero {
+                flex-direction: column;
+                text-align: center;
+                gap: 16px;
+            }
+            .stats-hero h1 {
+                font-size: 2rem;
+            }
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
         }
     </style>
 </head>
@@ -49,95 +169,113 @@
 
 
         <main class="main-content">
-            <h2>Statistics</h2>
-            <!-- Grid Container for Statistics -->
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-top: 24px;">
-
-                <!-- 1. Daily Streak -->
-                <div class="study-island"
-                    style="display: flex; flex-direction: column; justify-content: center; min-height: 200px;">
-                    <h3>Daily Streak</h3>
-                    <div class="streak-box"
-                        style="font-size: 3em; font-weight: 700; margin-top: 10px; color: var(--accent);">{{ streak }}
-                        Days</div>
+            <!-- Hero Section -->
+            <div class="stats-hero">
+                <h1>Statistics Dashboard</h1>
+                <div class="hero-streak">
+                    <span class="material-symbols-outlined">local_fire_department</span>
+                    <span>{{ streak }} Days Streak</span>
                 </div>
+            </div>
 
-                <!-- 2. Productivity Overview -->
-                <div class="study-island"
-                    style="display: flex; flex-direction: column; justify-content: center; min-height: 200px;">
-                    <h3>Productivity Overview</h3>
-                    <div class="productivity-container"
-                        style="display:flex; flex-direction: column; gap:16px; margin-top:15px;">
-                        <!-- Goals -->
-                        <div>
-                            <div style="display:flex; justify-content:space-between; margin-bottom:6px;">
-                                <span style="font-weight:600; font-size:14px;">Goals</span>
-                                <span style="color:var(--text-muted); font-size:13px;">{{ productivity.goals.completed
-                                    }}/{{ productivity.goals.total }}</span>
+            <!-- Stats Grid -->
+            <div class="stats-grid">
+                <!-- Top Row: Daily Progress and Graphs -->
+                <div class="top-row">
+                    <!-- Daily Progress Card (Combined Streak and Productivity) -->
+                    <div class="stats-card">
+                        <div class="stats-card-header">
+                            <span class="material-symbols-outlined">today</span>
+                            <h3>Daily Progress</h3>
+                        </div>
+                        <div class="daily-progress-content" style="display: flex; flex-direction: column; gap: 24px;">
+                            <!-- Daily Streak Section -->
+                            <div class="progress-section">
+                                <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px;">
+                                    <span class="material-symbols-outlined" style="font-size: 1.2rem; color: var(--accent);">local_fire_department</span>
+                                    <span style="font-weight: 600; font-size: 0.9rem; color: var(--text-secondary);">Daily Streak</span>
+                                </div>
+                                <div class="streak-box" style="font-size: 2.5em; font-weight: 700; color: var(--accent);">{{ streak }}</div>
+                                <span style="color: var(--text-muted); font-size: 0.8rem;">Days</span>
                             </div>
-                            <div class="progress-bar-track"
-                                style="height:10px; border-radius:5px; background:var(--bg-tertiary);">
-                                <div class="progress-bar-fill"
-                                    style="width:{{ productivity.goals.pct }}%; background:var(--tick-color); border-radius:5px;">
+
+                            <!-- Productivity Overview Section -->
+                            <div class="progress-section">
+                                <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px;">
+                                    <span class="material-symbols-outlined" style="font-size: 1.2rem; color: var(--accent);">trending_up</span>
+                                    <span style="font-weight: 600; font-size: 0.9rem; color: var(--text-secondary);">Productivity Overview</span>
+                                </div>
+                                <div class="progress-container">
+                                    <!-- Goals -->
+                                    <div>
+                                        <div class="progress-item">
+                                            <span>Goals</span>
+                                            <span>{{ productivity.goals.completed }}/{{ productivity.goals.total }}</span>
+                                        </div>
+                                        <div class="progress-bar-track">
+                                            <div class="progress-bar-fill" style="width: {{ productivity.goals.pct }}%;"></div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Tasks -->
+                                    <div>
+                                        <div class="progress-item">
+                                            <span>Tasks</span>
+                                            <span>{{ productivity.tasks.completed }}/{{ productivity.tasks.total }}</span>
+                                        </div>
+                                        <div class="progress-bar-track">
+                                            <div class="progress-bar-fill" style="width: {{ productivity.tasks.pct }}%;"></div>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
+                    </div>
 
-                        <!-- Tasks -->
-                        <div>
-                            <div style="display:flex; justify-content:space-between; margin-bottom:6px;">
-                                <span style="font-weight:600; font-size:14px;">Tasks</span>
-                                <span style="color:var(--text-muted); font-size:13px;">{{ productivity.tasks.completed
-                                    }}/{{ productivity.tasks.total }}</span>
-                            </div>
-                            <div class="progress-bar-track"
-                                style="height:10px; border-radius:5px; background:var(--bg-tertiary);">
-                                <div class="progress-bar-fill"
-                                    style="width:{{ productivity.tasks.pct }}%; background:var(--tick-color); border-radius:5px;">
-                                </div>
-                            </div>
+                    <!-- Exam Performance Card -->
+                    <div class="stats-card chart-card">
+                        <div class="stats-card-header">
+                            <span class="material-symbols-outlined">bar_chart</span>
+                            <h3>Exam Performance (Average)</h3>
+                        </div>
+                        <div class="chart-container">
+                            <canvas id="barChart"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- Exam Progress Over Time Card -->
+                    <div class="stats-card chart-card">
+                        <div class="stats-card-header">
+                            <span class="material-symbols-outlined">show_chart</span>
+                            <h3>Exam Progress (Overall)</h3>
+                        </div>
+                        <div class="chart-container">
+                            <canvas id="lineChart"></canvas>
                         </div>
                     </div>
                 </div>
 
-                <!-- 3. Exam Performance (Average) - BIGGER -->
-                <div class="study-island" style="min-height: 400px; display:flex; flex-direction:column;">
-                    <h3>Exam Performance (Average)</h3>
-                    <div style="flex:1; position: relative; min-height: 300px;">
-                        <canvas id="barChart"></canvas>
-                    </div>
-                </div>
-
-                <!-- 4. Exam Progress Over Time - BIGGER -->
-                <div class="study-island" style="min-height: 400px; display:flex; flex-direction:column;">
-                    <h3>Exam Progress (Overall)</h3>
-                    <div style="flex:1; position: relative; min-height: 300px;">
-                        <canvas id="lineChart"></canvas>
-                    </div>
-                </div>
-
-                <!-- 5. Subject Analytics (Spans Full Width) - LARGEST -->
-                <div class="study-island" style="grid-column: 1 / -1; min-height: 500px; display:flex; flex-direction:column;">
-                    <div class="study-island-header" style="margin-bottom: 20px;">
-                        <h3>Subject-wise Performance</h3>
-                        <select id="subjectSelect"
-                            style="padding:8px 12px; border-radius:6px; border:1px solid var(--border); background:var(--bg-tertiary); color:var(--text-primary); font-size:14px;">
+                <!-- Subject Analytics Card -->
+                <div class="stats-card subject-card">
+                    <div class="subject-header">
+                        <div class="stats-card-header" style="margin-bottom: 0;">
+                            <span class="material-symbols-outlined">analytics</span>
+                            <h3>Subject-wise Performance</h3>
+                        </div>
+                        <select id="subjectSelect" class="subject-select">
                             {% for subj in subjects %}
                             <option value="{{ subj }}">{{ subj }}</option>
                             {% endfor %}
                         </select>
                     </div>
-                    <div class="chart-wrapper">
+                    <div class="chart-container">
                         <canvas id="subjectChart"></canvas>
                     </div>
                     {% if not subjects %}
-                    <p style="text-align:center; padding:40px; color:var(--text-muted); font-size: 16px;">No subject
-                        data available yet. Add exam results to see analytics.</p>
+                    <div class="no-data">No subject data available yet. Add exam results to see analytics.</div>
                     {% endif %}
                 </div>
-
             </div>
-
         </main>
     </div>
 </body>
@@ -263,30 +401,6 @@
             subjectSelect.addEventListener('change', updateSubjectChart);
         }
     });
-</script>
-
-<script>
-    (function () {
-        const root = document.documentElement;
-        const toggle = document.getElementById("themeToggle");
-
-        const savedTheme = localStorage.getItem("sclera-theme");
-        if (savedTheme) {
-            root.setAttribute("data-theme", savedTheme);
-        }
-
-        if (toggle) {
-            toggle.addEventListener("click", () => {
-                const next =
-                    root.getAttribute("data-theme") === "dark"
-                        ? "light"
-                        : "dark";
-
-                root.setAttribute("data-theme", next);
-                localStorage.setItem('sclera-theme', next);
-            });
-        }
-    })();
 </script>
 
 </html>
