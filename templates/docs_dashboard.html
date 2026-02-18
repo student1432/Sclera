@@ -1188,6 +1188,10 @@
                 return;
             }
             
+            // Get values safely - elements might be hidden
+            const subjectValue = subjectSelect ? subjectSelect.value : null;
+            const folderValue = folderSelect ? folderSelect.value : null;
+            
             try {
                 if (type === 'document') {
                     const response = await fetch('/api/documents', {
@@ -1198,8 +1202,8 @@
                         body: JSON.stringify({
                             title: title,
                             content: '',
-                            subject: subjectSelect.value || null,
-                            folder_id: folderSelect.value || null
+                            subject: subjectValue,
+                            folder_id: folderValue
                         })
                     });
                     
@@ -1234,14 +1238,13 @@
                             'Content-Type': 'application/json'
                         },
                         body: JSON.stringify({
-                            name: title,
-                            parent_id: folderSelect.value || null
+                            name: title
                         })
                     });
                     
                     if (response.ok) {
                         const data = await response.json();
-                        folders.push(data.folder);
+                        folders.unshift(data.folder);
                         
                         hideModal();
                         showToast(`Folder "${title}" created successfully!`, 'success');
@@ -1540,22 +1543,29 @@
                 toolbar.classList.add('opacity-0', 'pointer-events-none');
                 toolbar.classList.remove('opacity-100');
             }
+            
+            // Update toolbar button states
+            updateToolbarStates();
         }
 
         // Update toolbar states
         function updateToolbarStates() {
             const selection = window.getSelection();
+            console.log('Updating toolbar states, selection:', selection.toString());
+            
             document.querySelectorAll('.toolbar-button').forEach(btn => {
                 btn.classList.remove('bg-white/20');
                 
                 const command = btn.dataset.command;
                 if (command && selection.queryCommandState) {
                     try {
-                        if (selection.queryCommandState(command)) {
+                        const state = selection.queryCommandState(command);
+                        console.log(`Command ${command} state:`, state);
+                        if (state) {
                             btn.classList.add('bg-white/20');
                         }
                     } catch (e) {
-                        // Some commands might not be supported
+                        console.log(`Command ${command} not supported:`, e);
                     }
                 }
             });
@@ -1638,31 +1648,7 @@
                 // Handle filter change
                 subjectFilter.addEventListener('change', (e) => {
                     currentFilter = e.target.value;
-                    renderRecentDocs();
-                    updateFilteredItems();
                 });
-            }
-            
-            // Filtered subject filter
-            if (filteredSubjectFilter) {
-                // Populate subject options
-                subjects.forEach(subject => {
-                    const option = document.createElement('option');
-                    option.value = subject;
-                    option.textContent = subject;
-                    filteredSubjectFilter.appendChild(option);
-                });
-                
-                // Handle filter change
-                filteredSubjectFilter.addEventListener('change', (e) => {
-                    currentFilter = e.target.value;
-                    updateFilteredItems();
-                });
-            }
-            
-            // Filtered search
-            if (filteredSearchInput) {
-                filteredSearchInput.addEventListener('input', handleFilteredSearch);
             }
             
             // Save button
@@ -1696,6 +1682,72 @@
             
             // Scroll for reading progress
             document.getElementById('editor').addEventListener('scroll', updateReadingProgress);
+            
+            // Toolbar buttons - ADD DEBUGGING
+            console.log('Looking for toolbar buttons...');
+            const toolbarButtons = document.querySelectorAll('.toolbar-button');
+            console.log('Found toolbar buttons:', toolbarButtons.length);
+            
+            toolbarButtons.forEach((btn, index) => {
+                console.log(`Setting up button ${index}:`, btn.dataset.command, btn.dataset.value);
+                btn.addEventListener('click', (e) => {
+                    console.log(`Button ${index} clicked!`, btn.dataset.command);
+                    e.preventDefault();
+                    const command = btn.dataset.command;
+                    const value = btn.dataset.value;
+                    
+                    if (command) {
+                        // Focus the editor first
+                        const editor = document.getElementById('editor');
+                        editor.focus();
+                        
+                        // Debug: Check editor state
+                        console.log('Editor contentEditable:', editor.contentEditable);
+                        console.log('Editor isEditable:', editor.isContentEditable);
+                        
+                        // Don't set document design mode - it makes whole page editable
+                        // Just ensure the editor is contentEditable
+                        editor.contentEditable = true;
+                        
+                        try {
+                            // Use document.execCommand for all formatting
+                            if (command === 'formatBlock') {
+                                console.log('Applying formatBlock:', value);
+                                const success = document.execCommand('formatBlock', false, value);
+                                console.log('formatBlock success:', success);
+                            } else if (command === 'createLink') {
+                                const url = prompt('Enter URL:');
+                                if (url) {
+                                    console.log('Creating link with URL:', url);
+                                    const success = document.execCommand('createLink', false, url);
+                                    console.log('createLink success:', success);
+                                }
+                            } else if (command === 'formatBlockquote') {
+                                console.log('Creating blockquote');
+                                const success = document.execCommand('formatBlock', false, 'blockquote');
+                                console.log('formatBlockquote success:', success);
+                            } else {
+                                console.log('Executing command:', command);
+                                const success = document.execCommand(command, false, null);
+                                console.log('Command success:', success);
+                            }
+                            
+                            console.log('Command executed successfully');
+                            
+                            // Trigger save and update
+                            handleEditorInput();
+                            
+                            // Update toolbar states after command
+                            setTimeout(() => updateToolbarStates(), 10);
+                        } catch (error) {
+                            console.error('Error executing command:', error);
+                            alert('Formatting command failed: ' + error.message);
+                        }
+                    }
+                });
+            });
+            
+            console.log('Toolbar event listeners set up!');
             
             // Close modal on escape key
             document.addEventListener('keydown', (e) => {

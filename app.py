@@ -5495,20 +5495,26 @@ def docs_dashboard():
         # Sort folders by order_index in Python instead of Firestore
         folders.sort(key=lambda x: x.get('order_index', 0))
     except Exception as e:
+        # Log the error for debugging
+        logger.error(f"Error getting folders in dashboard: {str(e)}")
         # Fallback if index not ready - get all folders and filter
-        folders = []
-        all_folders = db.collection(FOLDERS_COL).where('owner_id', '==', user_id).stream()
-        for folder in all_folders:
-            folder_data = folder.to_dict()
-            folder_data['id'] = folder.id
-            if not folder_data.get('deleted', False):
-                # Convert timestamps to strings
-                if 'created_at' in folder_data and folder_data['created_at']:
-                    folder_data['created_at'] = folder_data['created_at'].isoformat() if hasattr(folder_data['created_at'], 'isoformat') else str(folder_data['created_at'])
-                if 'updated_at' in folder_data and folder_data['updated_at']:
-                    folder_data['updated_at'] = folder_data['updated_at'].isoformat() if hasattr(folder_data['updated_at'], 'isoformat') else str(folder_data['updated_at'])
-                folders.append(folder_data)
-        folders.sort(key=lambda x: x.get('order_index', 0))
+        try:
+            folders = []
+            all_folders = db.collection(FOLDERS_COL).where('owner_id', '==', user_id).stream()
+            for folder in all_folders:
+                folder_data = folder.to_dict()
+                folder_data['id'] = folder.id
+                if not folder_data.get('deleted', False):
+                    # Convert timestamps to strings
+                    if 'created_at' in folder_data and folder_data['created_at']:
+                        folder_data['created_at'] = folder_data['created_at'].isoformat() if hasattr(folder_data['created_at'], 'isoformat') else str(folder_data['created_at'])
+                    if 'updated_at' in folder_data and folder_data['updated_at']:
+                        folder_data['updated_at'] = folder_data['updated_at'].isoformat() if hasattr(folder_data['updated_at'], 'isoformat') else str(folder_data['updated_at'])
+                    folders.append(folder_data)
+            folders.sort(key=lambda x: x.get('order_index', 0))
+        except Exception as fallback_error:
+            logger.error(f"Fallback folders also failed: {str(fallback_error)}")
+            folders = []
     try:
         documents_ref = db.collection(DOCS_COL).where('owner_id', '==', user_id).where('deleted', '==', False).stream()
         documents = []
@@ -5522,22 +5528,28 @@ def docs_dashboard():
                 doc_data['updated_at'] = doc_data['updated_at'].isoformat() if hasattr(doc_data['updated_at'], 'isoformat') else str(doc_data['updated_at'])
             documents.append(doc_data)
         # Sort documents by updated_at in Python
-        documents.sort(key=lambda x: x.get('updated_at', datetime.min), reverse=True)
+        documents.sort(key=lambda x: x.get('updated_at', datetime(1970, 1, 1)), reverse=True)
     except Exception as e:
+        # Log error for debugging
+        logger.error(f"Error getting documents in dashboard: {str(e)}")
         # Fallback if index not ready
-        documents = []
-        all_docs = db.collection(DOCS_COL).where('owner_id', '==', user_id).stream()
-        for doc in all_docs:
-            doc_data = doc.to_dict()
-            doc_data['id'] = doc.id
-            if not doc_data.get('deleted', False):
-                # Convert timestamps to strings
-                if 'created_at' in doc_data and doc_data['created_at']:
-                    doc_data['created_at'] = doc_data['created_at'].isoformat() if hasattr(doc_data['created_at'], 'isoformat') else str(doc_data['created_at'])
-                if 'updated_at' in doc_data and doc_data['updated_at']:
-                    doc_data['updated_at'] = doc_data['updated_at'].isoformat() if hasattr(doc_data['updated_at'], 'isoformat') else str(doc_data['updated_at'])
-                documents.append(doc_data)
-        documents.sort(key=lambda x: x.get('updated_at', datetime.min), reverse=True)
+        try:
+            documents = []
+            all_docs = db.collection(DOCS_COL).where('owner_id', '==', user_id).stream()
+            for doc in all_docs:
+                doc_data = doc.to_dict()
+                doc_data['id'] = doc.id
+                if not doc_data.get('deleted', False):
+                    # Convert timestamps to strings
+                    if 'created_at' in doc_data and doc_data['created_at']:
+                        doc_data['created_at'] = doc_data['created_at'].isoformat() if hasattr(doc_data['created_at'], 'isoformat') else str(doc_data['created_at'])
+                    if 'updated_at' in doc_data and doc_data['updated_at']:
+                        doc_data['updated_at'] = doc_data['updated_at'].isoformat() if hasattr(doc_data['updated_at'], 'isoformat') else str(doc_data['updated_at'])
+                    documents.append(doc_data)
+            documents.sort(key=lambda x: x.get('updated_at', datetime(1970, 1, 1)), reverse=True)
+        except Exception as fallback_error:
+            logger.error(f"Fallback documents also failed: {str(fallback_error)}")
+            documents = []
     # Get user settings for theme
     settings = {}
     try:
@@ -5571,19 +5583,26 @@ def get_documents():
             doc_data['id'] = doc.id
             documents.append(doc_data)
         # Sort by updated_at in Python
-        documents.sort(key=lambda x: x.get('updated_at', datetime.min), reverse=True)
+        documents.sort(key=lambda x: x.get('updated_at', datetime(1970, 1, 1)), reverse=True)
+        return jsonify({'documents': documents})
     except Exception as e:
+        # Log the error for debugging
+        logger.error(f"Error getting documents: {str(e)}")
         # Fallback if index not ready
-        documents = []
-        all_docs = db.collection(DOCS_COL).where('owner_id', '==', user_id).stream()
-        for doc in all_docs:
-            doc_data = doc.to_dict()
-            doc_data['id'] = doc.id
-            if not doc_data.get('deleted', False):
-                if not folder_id or doc_data.get('folder_id') == folder_id:
-                    documents.append(doc_data)
-        documents.sort(key=lambda x: x.get('updated_at', datetime.min), reverse=True)
-    return jsonify({'documents': documents})
+        try:
+            documents = []
+            all_docs = db.collection(DOCS_COL).where('owner_id', '==', user_id).stream()
+            for doc in all_docs:
+                doc_data = doc.to_dict()
+                doc_data['id'] = doc.id
+                if not doc_data.get('deleted', False):
+                    if not folder_id or doc_data.get('folder_id') == folder_id:
+                        documents.append(doc_data)
+            documents.sort(key=lambda x: x.get('updated_at', datetime(1970, 1, 1)), reverse=True)
+            return jsonify({'documents': documents})
+        except Exception as fallback_error:
+            logger.error(f"Fallback also failed: {str(fallback_error)}")
+            return jsonify({'error': f'Failed to load documents: {str(e)}', 'documents': []}), 500
 @app.route('/api/documents', methods=['POST'])
 def create_document():
     """Create new document"""
@@ -5608,8 +5627,9 @@ def create_document():
             'updated_at': firestore.SERVER_TIMESTAMP,
             'deleted': False
         }
-        doc_ref, doc_id = db.collection(DOCS_COL).add(doc_data)
-        created_doc = doc_ref.get().to_dict()
+        doc_ref = db.collection(DOCS_COL).add(doc_data)
+        doc_id = doc_ref[1].id
+        created_doc = doc_ref[1].get().to_dict()
         created_doc['id'] = doc_id
         # Convert timestamps to strings for JSON serialization
         if 'created_at' in created_doc and created_doc['created_at']:
@@ -5772,17 +5792,24 @@ def get_folders():
             folders.append(folder_data)
         # Sort by order_index in Python
         folders.sort(key=lambda x: x.get('order_index', 0))
+        return jsonify({'folders': folders})
     except Exception as e:
+        # Log the error for debugging
+        logger.error(f"Error getting folders: {str(e)}")
         # Fallback if index not ready
-        folders = []
-        all_folders = db.collection(FOLDERS_COL).where('owner_id', '==', user_id).stream()
-        for folder in all_folders:
-            folder_data = folder.to_dict()
-            folder_data['id'] = folder.id
-            if not folder_data.get('deleted', False):
-                folders.append(folder_data)
-        folders.sort(key=lambda x: x.get('order_index', 0))
-    return jsonify({'folders': folders})
+        try:
+            folders = []
+            all_folders = db.collection(FOLDERS_COL).where('owner_id', '==', user_id).stream()
+            for folder in all_folders:
+                folder_data = folder.to_dict()
+                folder_data['id'] = folder.id
+                if not folder_data.get('deleted', False):
+                    folders.append(folder_data)
+            folders.sort(key=lambda x: x.get('order_index', 0))
+            return jsonify({'folders': folders})
+        except Exception as fallback_error:
+            logger.error(f"Fallback also failed: {str(fallback_error)}")
+            return jsonify({'error': f'Failed to load folders: {str(e)}', 'folders': []}), 500
 @app.route('/api/folders', methods=['POST'])
 def create_folder():
     """Create new folder"""
@@ -5810,9 +5837,10 @@ def create_folder():
         'deleted': False,
         'expanded': True
     }
-    folder_ref, folder_id = db.collection(FOLDERS_COL).add(folder_data)
+    folder_ref = db.collection(FOLDERS_COL).add(folder_data)
+    folder_id = folder_ref[1].id
     # Get the created folder to return proper data
-    created_folder = folder_ref.get()
+    created_folder = folder_ref[1].get()
     folder_response = created_folder.to_dict()
     folder_response['id'] = folder_id
     # Convert timestamps to strings for JSON serialization
@@ -5911,7 +5939,7 @@ def get_document_versions(doc_id):
             version_data = version.to_dict()
             version_data['id'] = version.id
             versions.append(version_data)
-        versions.sort(key=lambda x: x.get('created_at', datetime.min), reverse=True)
+        versions.sort(key=lambda x: x.get('created_at', datetime(1970, 1, 1)), reverse=True)
     return jsonify({'versions': versions})
 # ============================================================================
 # ERROR HANDLERS
