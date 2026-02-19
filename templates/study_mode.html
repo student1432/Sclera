@@ -236,11 +236,7 @@
         <!-- Timer Section (2/3 width) -->
         <section class="flex-1 flex flex-col gap-4">
             <div class="glass-panel rounded-xl flex-1 py-16 px-8 mx-4 flex flex-col items-center justify-center relative">
-                
-                <!-- Fullscreen Toggle -->
-                <button id="fullscreenBtn" class="absolute top-4 right-4 study-bg-tertiary study-border rounded-full p-3 hover:study-bg-hover transition-all">
-                    <span class="material-symbols-outlined study-text-secondary">fullscreen</span>
-                </button>
+              
 
                 <!-- Large Timer Display -->
                 <div class="timer-wrapper relative flex items-center justify-center">
@@ -340,11 +336,26 @@
         const display = document.getElementById('timeDisplay');
         const progress = document.querySelector('.donut-progress');
         const sessionBtn = document.getElementById('sessionBtn');
-        const fullscreenBtn = document.getElementById('fullscreenBtn');
         const mainContent = document.getElementById('mainContent');
 
-        // Fullscreen functionality
+        // Fullscreen functionality - create button if it doesn't exist
         let isFullscreen = false;
+        let fullscreenBtn = document.getElementById('fullscreenBtn');
+        
+        // Create fullscreen button if it doesn't exist
+        if (!fullscreenBtn) {
+            fullscreenBtn = document.createElement('button');
+            fullscreenBtn.id = 'fullscreenBtn';
+            fullscreenBtn.className = 'study-border study-text rounded-full p-2 hover:study-bg-hover transition-all';
+            fullscreenBtn.innerHTML = '<span class="material-symbols-outlined study-text-secondary">fullscreen</span>';
+            fullscreenBtn.title = 'Toggle Fullscreen';
+            
+            // Add it to the timer controls
+            const timerControls = document.querySelector('.flex.gap-3.justify-center.items-center.mt-8');
+            if (timerControls) {
+                timerControls.appendChild(fullscreenBtn);
+            }
+        }
 
         fullscreenBtn.onclick = () => {
             if (!isFullscreen) {
@@ -484,12 +495,12 @@
                 // End session
                 sessionActive = false;
                 sessionBtn.textContent = 'Start Session';
-                sessionBtn.className = 'session-start';
+                sessionBtn.className = 'study-accent font-bold text-sm py-3 px-8 rounded-full study-accent-hover transition-all';
             } else {
                 // Start session
                 sessionActive = true;
                 sessionBtn.textContent = 'End Session';
-                sessionBtn.className = 'session-end';
+                sessionBtn.className = 'study-error-bg study-error font-bold text-sm py-3 px-8 rounded-full hover:opacity-80 transition-all';
             }
         };
 

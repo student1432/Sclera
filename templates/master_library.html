@@ -259,6 +259,15 @@
             line-height: 1.4;
         }
 
+        .subject-name {
+            font-size: 0.875rem;
+            font-weight: 500;
+            margin-bottom: 0.25rem;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.025em;
+        }
+
         .library-item-meta {
             font-size: 0.875rem;
             color: var(--text-muted);
@@ -269,6 +278,21 @@
 
         .library-item-meta .material-symbols-outlined {
             font-size: 1rem;
+        }
+
+        .topics-grid {
+            display: block;
+            width: 100%;
+        }
+
+        .topics-section {
+            margin-top: 1rem;
+        }
+
+        .no-topics {
+            text-align: center;
+            padding: 2rem;
+            color: var(--text-muted);
         }
 
         .library-modal {
@@ -284,13 +308,16 @@
 
         .modal-content {
             background: var(--bg-secondary);
-            max-width: 900px;
+            max-width: 1200px;
+            width: 90vw;
             margin: 0 auto;
             border-radius: 1.5rem;
             border: 1px solid var(--border);
-            padding: 2rem;
+            padding: 2.5rem;
             position: relative;
             box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+            max-height: 85vh;
+            overflow-y: auto;
         }
 
         .close-modal {
@@ -344,28 +371,33 @@
         }
 
         .topic-item {
-            padding: 1rem;
-            border-left: 3px solid var(--accent);
-            margin-bottom: 0.75rem;
-            background: var(--bg-secondary);
-            border-radius: 0 0.75rem 0.75rem 0;
+            padding: 2rem 1.5rem;
+            border-left: 4px solid var(--accent);
+            margin-bottom: 2rem;
+            background: var(--bg-tertiary);
+            border-radius: 0 1rem 1rem 0;
             transition: all 0.2s;
+            width: 100%;
         }
 
         .topic-item:hover {
             background: var(--bg-hover);
+            border-left-color: var(--accent-hover);
         }
 
         .topic-name {
-            font-weight: 600;
-            margin-bottom: 0.25rem;
+            font-weight: 700;
+            font-size: 1.25rem;
+            margin-bottom: 1rem;
             color: var(--text-primary);
+            line-height: 1.3;
         }
 
         .topic-overview {
-            font-size: 0.875rem;
+            font-size: 1rem;
             color: var(--text-secondary);
-            line-height: 1.4;
+            line-height: 1.6;
+            margin-bottom: 1rem;
         }
 
         .no-results {
@@ -607,7 +639,7 @@
             let hasAnyVisible = false;
             const fragment = document.createDocumentFragment();
 
-            // Render Highschool
+            // Render Highschool Chapters
             if (libraryData.highschool) {
                 for (const [board, grades] of Object.entries(libraryData.highschool)) {
                     for (const [grade, subjects] of Object.entries(grades)) {
@@ -615,19 +647,22 @@
 
                         for (const [subjectName, subjectData] of Object.entries(subjects)) {
                             const chapters = subjectData.chapters || {};
-                            const chapterList = Object.keys(chapters);
+                            
+                            for (const [chapterName, chapterData] of Object.entries(chapters)) {
+                                // Search filter across all metadata
+                                const matchesSearch = !searchTerm || 
+                                    subjectName.toLowerCase().includes(searchTerm) ||
+                                    board.toLowerCase().includes(searchTerm) ||
+                                    grade.toLowerCase().includes(searchTerm) ||
+                                    chapterName.toLowerCase().includes(searchTerm) ||
+                                    (chapterData.topics && chapterData.topics.some(t => t.name && t.name.toLowerCase().includes(searchTerm)));
 
-                            // Search filter
-                            const matchesSearch = !searchTerm || 
-                                subjectName.toLowerCase().includes(searchTerm) ||
-                                board.toLowerCase().includes(searchTerm) ||
-                                chapterList.some(c => c.toLowerCase().includes(searchTerm));
+                                if (!matchesSearch) continue;
 
-                            if (!matchesSearch) continue;
-
-                            const card = createLibraryCard('highschool', board, grade, subjectName, chapterList.length);
-                            fragment.appendChild(card);
-                            hasAnyVisible = true;
+                                const card = createChapterCard('highschool', board, grade, subjectName, chapterName, chapterData);
+                                fragment.appendChild(card);
+                                hasAnyVisible = true;
+                            }
                         }
                     }
                 }
@@ -637,23 +672,26 @@
             // Clear fragment for exams
             fragment.innerHTML = '';
 
-            // Render Exams
+            // Render Exam Chapters
             if (libraryData.exams) {
                 for (const [examName, subjects] of Object.entries(libraryData.exams)) {
                     for (const [subjectName, subjectData] of Object.entries(subjects)) {
                         const chapters = subjectData.chapters || {};
-                        const chapterList = Object.keys(chapters);
+                        
+                        for (const [chapterName, chapterData] of Object.entries(chapters)) {
+                            // Search filter across all metadata
+                            const matchesSearch = !searchTerm ||
+                                subjectName.toLowerCase().includes(searchTerm) ||
+                                examName.toLowerCase().includes(searchTerm) ||
+                                chapterName.toLowerCase().includes(searchTerm) ||
+                                (chapterData.topics && chapterData.topics.some(t => t.name && t.name.toLowerCase().includes(searchTerm)));
 
-                        const matchesSearch = !searchTerm ||
-                            subjectName.toLowerCase().includes(searchTerm) ||
-                            examName.toLowerCase().includes(searchTerm) ||
-                            chapterList.some(c => c.toLowerCase().includes(searchTerm));
+                            if (!matchesSearch) continue;
 
-                        if (!matchesSearch) continue;
-
-                        const card = createLibraryCard('exams', examName, null, subjectName, chapterList.length);
-                        fragment.appendChild(card);
-                        hasAnyVisible = true;
+                            const card = createChapterCard('exams', examName, null, subjectName, chapterName, chapterData);
+                            fragment.appendChild(card);
+                            hasAnyVisible = true;
+                        }
                     }
                 }
             }
@@ -662,64 +700,62 @@
             elements.noResults.style.display = hasAnyVisible ? 'none' : 'block';
         }
 
-        // Performance: Extract card creation to separate function
-        function createLibraryCard(category, boardOrExam, grade, subjectName, chapterCount) {
+        // Performance: Extract chapter card creation to separate function
+        function createChapterCard(category, boardOrExam, grade, subjectName, chapterName, chapterData) {
             const card = document.createElement('div');
             card.className = 'library-card';
-            card.onclick = () => showDrillDown(category, boardOrExam, grade, subjectName);
+            card.onclick = () => showChapterModal(category, boardOrExam, grade, subjectName, chapterName, chapterData);
             
             const tagText = grade ? `${boardOrExam} • Grade ${grade}` : boardOrExam;
+            const topicCount = chapterData.topics ? chapterData.topics.length : 0;
             
             card.innerHTML = `
                 <div class="board-tag">${tagText}</div>
-                <div class="library-item-title">${subjectName}</div>
+                <div class="subject-name">${subjectName}</div>
+                <div class="library-item-title">${chapterName}</div>
                 <div class="library-item-meta">
-                    <span class="material-symbols-outlined">menu_book</span>
-                    ${chapterCount} Chapters
+                    <span class="material-symbols-outlined">bookmark</span>
+                    ${topicCount} Topics
                 </div>
             `;
             
             return card;
         }
 
-        function showDrillDown(category, boardOrExam, grade, subjectName) {
+        function showChapterModal(category, boardOrExam, grade, subjectName, chapterName, chapterData) {
             const modal = document.getElementById('libraryModal');
             const body = document.getElementById('modalBody');
 
-            let syllabus;
-            if (category === 'highschool') {
-                syllabus = libraryData.highschool[boardOrExam][grade][subjectName];
-            } else {
-                syllabus = libraryData.exams[boardOrExam][subjectName];
-            }
+            const topics = chapterData.topics || [];
+            const tagText = grade ? `${boardOrExam} • Grade ${grade}` : boardOrExam;
 
             let html = `
-                <div class="board-tag">${boardOrExam} ${grade ? '• Grade ' + grade : ''}</div>
-                <h1 class="text-2xl font-bold library-text mb-6">${subjectName}</h1>
-                <div class="syllabus-structure space-y-4">
+                <div class="board-tag">${tagText}</div>
+                <div class="subject-name">${subjectName}</div>
+                <h1 class="text-2xl font-bold library-text mb-6">${chapterName}</h1>
+                <div class="chapter-content space-y-4">
             `;
 
-            if (syllabus && syllabus.chapters) {
-                for (const [chapterName, chapterData] of Object.entries(syllabus.chapters)) {
-                    const topics = chapterData.topics || [];
-                    html += `
-                        <div class="collapsible-item">
-                            <div class="collapsible-header" onclick="toggleCollapsible(this)">
-                                <span>${chapterName}</span>
-                                <span class="chevron">▼</span>
-                            </div>
-                            <div class="collapsible-content">
-                                ${topics.map(t => `
-                                    <div class="topic-item">
-                                        <div class="topic-name">${t.name}</div>
-                                        <div class="topic-overview">${t.overview || 'Standard academic curriculum topic.'}</div>
-                                    </div>
-                                `).join('')}
-                                ${topics.length === 0 ? '<p class="library-text-muted text-sm">No topics listed for this chapter.</p>' : ''}
-                            </div>
+            if (topics.length > 0) {
+                html += `
+                    <div class="topics-section">
+                        <h2 class="text-lg font-semibold library-text mb-4">Chapter Topics</h2>
+                        <div class="topics-grid">
+                            ${topics.map(topic => `
+                                <div class="topic-item">
+                                    <div class="topic-name">${topic.name || 'Untitled Topic'}</div>
+                                    <div class="topic-overview">${topic.overview || 'Detailed topic content and learning objectives.'}</div>
+                                </div>
+                            `).join('')}
                         </div>
-                    `;
-                }
+                    </div>
+                `;
+            } else {
+                html += `
+                    <div class="no-topics">
+                        <p class="library-text-muted">No specific topics listed for this chapter.</p>
+                    </div>
+                `;
             }
 
             html += `</div>`;
