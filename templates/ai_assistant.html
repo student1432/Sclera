@@ -1,0 +1,944 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SCLERA AI — Institutional Analytics Chat</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/icon?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+
+<body>
+    <div class="dashboard-layout">
+
+        <!-- TOPNAV -->
+        {% include '_topnav.html' %}
+
+        <!-- MAIN -->
+        <main class="main-content sclera-main-content">
+            <!-- SCLERA AI Interface -->
+            <div class="sclera-app">
+                <!-- Left Sidebar (~260px) -->
+                <div class="sclera-sidebar">
+                    <!-- Logo -->
+                    <div class="sclera-logo">
+                        <div class="logo-text">
+                            <span class="logo-bold">Sclera</span>
+                            <span class="logo-light">AI</span>
+                        </div>
+                    </div>
+
+                    <!-- New Chat CTA -->
+                    <button class="new-chat-btn" id="newChatBtn">
+                        <span class="material-symbols-outlined">add</span>
+                        New Chat
+                    </button>
+
+                    <!-- AI Modes Section -->
+                    <div class="modes-section">
+                        <div class="section-label">AI MODES</div>
+                        <div class="modes-list">
+                            <button class="mode-item active" id="academicPlannerModeBtn" data-mode="academic_planner">
+                                <span class="material-symbols-outlined">school</span>
+                                Academic Planner
+                            </button>
+                            <button class="mode-item" id="institutionalModeBtn" data-mode="institutional">
+                                <span class="material-symbols-outlined">business_center</span>
+                                Institutional
+                            </button>
+                            <button class="mode-item" id="doubtSolverModeBtn" data-mode="doubt_solver">
+                                <span class="material-symbols-outlined">help_center</span>
+                                Doubt Solver
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Recent Threads Section -->
+                    <div class="threads-section">
+                        <div class="section-label">RECENT THREADS</div>
+                        <div class="threads-list" id="threadsList">
+                            <!-- Threads will be loaded dynamically -->
+                        </div>
+                    </div>
+
+                    <!-- User Panel -->
+                    <div class="user-panel" onclick="window.location.href='/profile/resume'" style="cursor: pointer;">
+                        <div class="user-avatar">
+                            <span class="avatar-initials" id="userInitials">JD</span>
+                        </div>
+                        <div class="user-info">
+                            <div class="user-name" id="userName">Dr. Jane Doe</div>
+                            <div class="user-role" id="userRole">Curriculum Director</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Main Workspace -->
+                <div class="sclera-main">
+                    <!-- Top Bar -->
+                    <div class="sclera-topbar">
+                        <div class="topbar-left">
+                            <div class="mode-tag" id="currentModeTag">Institutional Mode</div>
+                            <div class="main-heading" id="currentThreadTitle">Institutional Heatmap Analysis</div>
+                        </div>
+                        <div class="topbar-right">
+                            <button class="topbar-btn" id="shareBtn" title="Share">
+                                <span class="material-symbols-outlined">share</span>
+                            </button>
+                            <button class="topbar-btn" id="moreBtn" title="More options">
+                                <span class="material-symbols-outlined">more_vert</span>
+                            </button>
+                            <button class="topbar-btn danger" id="deleteThreadBtn" title="Delete Conversation">
+                                <span class="material-symbols-outlined">delete</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Chat Area -->
+                    <div class="sclera-chat">
+                        <!-- Messages Container -->
+                        <div class="chat-messages" id="chatMessages">
+                            <!-- Welcome message will be loaded dynamically -->
+                        </div>
+
+                        <!-- Input Area -->
+                        <div class="chat-input">
+                            <div class="input-container">
+                                <button class="input-attachment" id="attachmentBtn">
+                                    <span class="material-symbols-outlined">attach_file</span>
+                                </button>
+                                <input
+                                    type="text"
+                                    id="messageInput"
+                                    class="input-field"
+                                    placeholder="Ask Sclera about institutional analytics…"
+                                    maxlength="1000"
+                                />
+                                <button class="input-send" id="sendButton">
+                                    <span class="material-symbols-outlined">arrow_forward</span>
+                                </button>
+                            </div>
+                            <div class="input-footer">
+                                <span class="character-count" id="characterCount">0/1000</span>
+                                <span class="typing-indicator" id="typingIndicator" style="display: none;">
+                                    <span class="material-symbols-outlined">more_horiz</span>
+                                    SCLERA is analyzing...
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- JavaScript -->
+    <script>
+        // SCLERA AI Institutional Analytics Chat Interface
+        class ScleraAI {
+            constructor() {
+                this.currentMode = 'institutional';
+                this.activeThreadId = null;
+                this.threads = [];
+                this.user = null;
+                this.isTyping = false;
+                this.isInitialized = false;
+
+                this.init();
+            }
+
+            async init() {
+                try {
+                    console.log('SCLERA AI: Initializing...');
+                    await this.loadUserProfile();
+                    this.checkInstitutionalAccess();
+                    this.setupEventListeners();
+                    await this.loadThreads();
+                    this.showWelcomeMessage();
+                    this.isInitialized = true;
+                    console.log('SCLERA AI: Initialization complete');
+                } catch (error) {
+                    console.error('SCLERA AI initialization error:', error);
+                    // Show fallback UI even if initialization fails
+                    this.showFallbackUI();
+                }
+            }
+
+            showFallbackUI() {
+                console.log('SCLERA AI: Showing fallback UI');
+                // Set up basic UI even if API fails
+                this.user = {
+                    name: 'Demo User',
+                    role: 'Student',
+                    initials: 'DU'
+                };
+                this.updateUserDisplay();
+                this.checkInstitutionalAccess();
+                this.setupEventListeners();
+                this.showWelcomeMessage();
+                this.isInitialized = true;
+            }
+
+            async loadUserProfile() {
+                try {
+                    console.log('SCLERA AI: Loading user profile...');
+                    const response = await fetch('/api/user/profile', {
+                        credentials: 'same-origin'
+                    });
+
+                    if (!response.ok) {
+                        console.warn('SCLERA AI: User profile API failed, using fallback');
+                        throw new Error('Failed to load user profile');
+                    }
+
+                    this.user = await response.json();
+                    console.log('SCLERA AI: User profile loaded:', this.user);
+                    this.updateUserDisplay();
+
+                } catch (error) {
+                    console.warn('SCLERA AI: Error loading user profile, using fallback:', error);
+                    // Fallback to demo user - don't throw error
+                    this.user = {
+                        name: 'Demo User',
+                        role: 'Student',
+                        initials: 'DU'
+                    };
+                    this.updateUserDisplay();
+                }
+            }
+
+            updateUserDisplay() {
+                const userNameEl = document.getElementById('userName');
+                const userRoleEl = document.getElementById('userRole');
+                const userInitialsEl = document.getElementById('userInitials');
+
+                if (userNameEl && this.user.name) {
+                    userNameEl.textContent = this.user.name;
+                }
+                if (userRoleEl && this.user.role) {
+                    userRoleEl.textContent = this.user.role;
+                }
+                if (userInitialsEl && this.user.initials) {
+                    userInitialsEl.textContent = this.user.initials;
+                }
+            }
+
+            checkInstitutionalAccess() {
+                // Check if user has institutional access
+                const institutionalRoles = ['administrator', 'curriculum_director', 'institution_teacher', 'admin'];
+                const hasInstitutionalAccess = this.user && institutionalRoles.includes(this.user.role?.toLowerCase());
+
+                const institutionalBtn = document.getElementById('institutionalModeBtn');
+
+                if (!hasInstitutionalAccess) {
+                    // Hide institutional mode for non-authorized users
+                    if (institutionalBtn) {
+                        institutionalBtn.style.display = 'none';
+                    }
+
+                    // Switch to academic planner mode if institutional was active
+                    if (this.currentMode === 'institutional') {
+                        this.switchMode('academic_planner');
+                    }
+                }
+            }
+
+            setupEventListeners() {
+                // Mode switching - fixed button ID mapping
+                const modeButtonMap = {
+                    'academic_planner': 'academicPlannerModeBtn',
+                    'institutional': 'institutionalModeBtn',
+                    'doubt_solver': 'doubtSolverModeBtn'
+                };
+
+                Object.keys(modeButtonMap).forEach(mode => {
+                    const btn = document.getElementById(modeButtonMap[mode]);
+                    if (btn) {
+                        btn.addEventListener('click', () => this.switchMode(mode));
+                    }
+                });
+
+                // Thread management
+                const newChatBtn = document.getElementById('newChatBtn');
+                const deleteThreadBtn = document.getElementById('deleteThreadBtn');
+                const shareBtn = document.getElementById('shareBtn');
+                const moreBtn = document.getElementById('moreBtn');
+
+                if (newChatBtn) {
+                    newChatBtn.addEventListener('click', () => this.createNewThread());
+                }
+
+                if (deleteThreadBtn) {
+                    deleteThreadBtn.addEventListener('click', () => this.deleteCurrentThread());
+                }
+
+                if (shareBtn) {
+                    shareBtn.addEventListener('click', () => this.shareThread());
+                }
+
+                if (moreBtn) {
+                    moreBtn.addEventListener('click', () => this.showMoreOptions());
+                }
+
+                // Message input
+                const messageInput = document.getElementById('messageInput');
+                const sendButton = document.getElementById('sendButton');
+                const attachmentBtn = document.getElementById('attachmentBtn');
+
+                if (messageInput) {
+                    messageInput.addEventListener('input', () => this.updateCharacterCount());
+                    messageInput.addEventListener('keypress', (e) => {
+                        if (e.key === 'Enter' && !e.shiftKey) {
+                            e.preventDefault();
+                            this.sendMessage();
+                        }
+                    });
+                }
+
+                if (sendButton) {
+                    sendButton.addEventListener('click', () => this.sendMessage());
+                }
+
+                if (attachmentBtn) {
+                    attachmentBtn.addEventListener('click', () => this.handleAttachment());
+                }
+            }
+
+            async switchMode(mode) {
+                // Check permissions for institutional mode
+                if (mode === 'institutional') {
+                    const institutionalRoles = ['administrator', 'curriculum_director', 'institution_teacher', 'admin'];
+                    const hasAccess = this.user && institutionalRoles.includes(this.user.role?.toLowerCase());
+
+                    if (!hasAccess) {
+                        alert('Access denied: Institutional mode requires administrator privileges.');
+                        return;
+                    }
+                }
+
+                // Always create a new thread when switching modes
+                this.currentMode = mode;
+
+                // Update UI - fix button ID mapping
+                document.querySelectorAll('.mode-item').forEach(btn => btn.classList.remove('active'));
+                const modeButtonMap = {
+                    'academic_planner': 'academicPlannerModeBtn',
+                    'institutional': 'institutionalModeBtn',
+                    'doubt_solver': 'doubtSolverModeBtn'
+                };
+                const activeBtn = document.getElementById(modeButtonMap[mode]);
+                if (activeBtn) activeBtn.classList.add('active');
+
+                // Update mode tag - use proper display names
+                const modeTag = document.getElementById('currentModeTag');
+                const modeDisplayNames = {
+                    'academic_planner': 'Academic Planner',
+                    'institutional': 'Institutional',
+                    'doubt_solver': 'Doubt Solver'
+                };
+                if (modeTag) {
+                    modeTag.textContent = `${modeDisplayNames[mode] || mode.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())} Mode`;
+                }
+
+                // Clear current thread and create new one for this mode
+                this.activeThreadId = null;
+                this.threads = [];
+                this.updateThreadsList();
+
+                // Load threads for new mode (this will create a new thread if none exists)
+                await this.loadThreads();
+            }
+
+            async loadThreads() {
+                try {
+                    const response = await fetch(`/api/sclera/threads/${this.currentMode}`, {
+                        credentials: 'same-origin'
+                    });
+
+                    if (!response.ok) {
+                        throw new Error(`HTTP ${response.status}`);
+                    }
+
+                    const data = await response.json();
+                    this.threads = data.threads || [];
+                    this.activeThreadId = data.active_thread_id;
+                    this.updateThreadsList();
+                    this.loadCurrentThread();
+
+                } catch (error) {
+                    console.error('Error loading threads:', error);
+                    this.showWelcomeMessage();
+                }
+            }
+
+            updateThreadsList() {
+                const threadsList = document.getElementById('threadsList');
+                if (!threadsList) return;
+
+                threadsList.innerHTML = '';
+
+                if (this.threads.length === 0) {
+                    threadsList.innerHTML = '<div class="no-threads">No conversations yet</div>';
+                    return;
+                }
+
+                this.threads.forEach(thread => {
+                    const threadItem = document.createElement('div');
+                    threadItem.className = `thread-item ${thread.thread_id === this.activeThreadId ? 'active' : ''}`;
+
+                    // Main thread click handler
+                    threadItem.onclick = (e) => {
+                        // Don't switch if clicking on edit button
+                        if (e.target.closest('.thread-edit-btn')) return;
+                        this.switchToThread(thread.thread_id);
+                    };
+
+                    threadItem.innerHTML = `
+                        <div class="thread-content">
+                            <div class="thread-title">${thread.title || 'Untitled'}</div>
+                            <div class="thread-meta">${this.formatDate(thread.last_message_at)}</div>
+                        </div>
+                        <button class="thread-edit-btn" onclick="event.stopPropagation(); window.scleraAI.editThreadName('${thread.thread_id}')" title="Edit conversation name">
+                            <span class="material-symbols-outlined">edit</span>
+                        </button>
+                    `;
+
+                    threadsList.appendChild(threadItem);
+                });
+
+                // Show delete button if there are multiple threads
+                const deleteBtn = document.getElementById('deleteThreadBtn');
+                if (deleteBtn) {
+                    deleteBtn.style.display = this.threads.length > 1 ? 'block' : 'none';
+                }
+            }
+
+            formatDate(dateString) {
+                if (!dateString) return 'Never';
+
+                try {
+                    const date = new Date(dateString);
+                    const now = new Date();
+                    const diffMs = now - date;
+                    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+
+                    if (diffDays === 0) {
+                        return date.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+                    } else if (diffDays === 1) {
+                        return 'Yesterday';
+                    } else if (diffDays < 7) {
+                        return `${diffDays} days ago`;
+                    } else {
+                        return date.toLocaleDateString();
+                    }
+                } catch (e) {
+                    return 'Unknown';
+                }
+            }
+
+            async switchToThread(threadId) {
+                // Don't switch if already on this thread
+                if (this.activeThreadId === threadId) return;
+
+                const previousThreadId = this.activeThreadId;
+
+                try {
+                    // Update UI immediately for responsive feel
+                    this.activeThreadId = threadId;
+                    this.updateThreadsList();
+
+                    // Update thread title in header immediately
+                    const currentThread = this.threads.find(t => t.thread_id === threadId);
+                    const titleElement = document.getElementById('currentThreadTitle');
+                    if (currentThread && titleElement) {
+                        titleElement.textContent = currentThread.title || 'Untitled Conversation';
+                    }
+
+                    // Try to call backend switch endpoint (though it may not do much)
+                    const response = await fetch(`/api/sclera/threads/${this.currentMode}/${threadId}/switch`, {
+                        method: 'POST',
+                        credentials: 'same-origin'
+                    });
+
+                    if (!response.ok) {
+                        console.warn('Backend switch endpoint failed, but continuing with frontend switch');
+                    }
+
+                    // Load conversation history
+                    await this.loadCurrentThread();
+
+                } catch (error) {
+                    // Revert on error
+                    console.error('Error switching thread:', error);
+                    this.activeThreadId = previousThreadId;
+                    this.updateThreadsList();
+
+                    alert('Failed to switch conversation. Please try again.');
+                }
+            }
+
+            async createNewThread() {
+                // Don't clear existing threads - just reset active thread and chat
+                this.activeThreadId = null;
+
+                // Clear chat messages and show welcome message
+                const chatMessages = document.getElementById('chatMessages');
+                if (chatMessages) {
+                    chatMessages.innerHTML = '';
+                    this.showWelcomeMessage();
+                }
+
+                // Update UI (threads list stays the same, just no active thread)
+                this.updateThreadsList();
+
+                console.log(`Started new conversation in ${this.currentMode} mode`);
+            }
+
+            async deleteCurrentThread() {
+                if (!this.activeThreadId) {
+                    alert('No conversation to delete');
+                    return;
+                }
+
+                if (!confirm('Are you sure you want to delete this conversation? This action cannot be undone.')) {
+                    return;
+                }
+
+                try {
+                    const response = await fetch(`/api/sclera/threads/${this.currentMode}/${this.activeThreadId}/delete`, {
+                        method: 'DELETE',
+                        credentials: 'same-origin'
+                    });
+
+                    const data = await response.json();
+                    if (data.success) {
+                        await this.loadThreads(); // Refresh to remove deleted thread
+                    } else {
+                        alert('Failed to delete conversation: ' + (data.error || 'Unknown error'));
+                    }
+                } catch (error) {
+                    console.error('Error deleting thread:', error);
+                    alert('Failed to delete conversation');
+                }
+            }
+
+            async exportThread(format) {
+                if (!this.activeThreadId) {
+                    alert('No active conversation to export');
+                    return;
+                }
+
+                try {
+                    console.log(`Exporting thread ${this.activeThreadId} as ${format}`);
+
+                    const response = await fetch(`/api/sclera/threads/${this.currentMode}/${this.activeThreadId}/export?format=${format}`, {
+                        credentials: 'same-origin'
+                    });
+
+                    if (!response.ok) {
+                        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                    }
+
+                    const data = await response.text(); // Get as text since it could be JSON, markdown, or plain text
+
+                    // Create a blob and download it
+                    const blob = new Blob([data], {
+                        type: format === 'json' ? 'application/json' :
+                              format === 'markdown' ? 'text/markdown' : 'text/plain'
+                    });
+
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+
+                    // Generate filename
+                    const currentThread = this.threads.find(t => t.thread_id === this.activeThreadId);
+                    const threadTitle = currentThread?.title || 'Untitled';
+                    const safeTitle = threadTitle.replace(/[^a-z0-9]/gi, '_').toLowerCase();
+                    const extension = format === 'json' ? 'json' : format === 'markdown' ? 'md' : 'txt';
+                    a.download = `${safeTitle}_conversation.${extension}`;
+
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    URL.revokeObjectURL(url);
+
+                    console.log(`Successfully exported thread as ${format}`);
+
+                } catch (error) {
+                    console.error('Error exporting thread:', error);
+                    alert('Failed to export conversation. Please try again.');
+                }
+            }
+
+            showMoreOptions() {
+                // Show export options menu
+                if (!this.activeThreadId) {
+                    alert('No active conversation to export');
+                    return;
+                }
+
+                const exportOptions = [
+                    { label: 'Export as Text', format: 'text', icon: 'description' },
+                    { label: 'Export as Markdown', format: 'markdown', icon: 'article' },
+                    { label: 'Export as JSON', format: 'json', icon: 'data_object' }
+                ];
+
+                // Create a simple modal-like interface for export options
+                const modal = document.createElement('div');
+                modal.style.cssText = `
+                    position: fixed;
+                    top: 0;
+                    left: 0;
+                    right: 0;
+                    bottom: 0;
+                    background: rgba(0, 0, 0, 0.5);
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    z-index: 1000;
+                `;
+
+                const modalContent = document.createElement('div');
+                modalContent.style.cssText = `
+                    background: var(--bg-primary);
+                    border: 1px solid var(--border);
+                    border-radius: 12px;
+                    padding: 24px;
+                    max-width: 400px;
+                    width: 90%;
+                    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+                `;
+
+                modalContent.innerHTML = `
+                    <h3 style="margin: 0 0 20px 0; color: var(--text-primary); font-size: 18px;">Export Conversation</h3>
+                    <div style="display: flex; flex-direction: column; gap: 12px;">
+                        ${exportOptions.map(option => `
+                            <button onclick="window.scleraAI.exportThread('${option.format}'); this.closest('div').parentElement.remove();" style="
+                                display: flex;
+                                align-items: center;
+                                gap: 12px;
+                                padding: 12px 16px;
+                                background: var(--bg-secondary);
+                                border: 1px solid var(--border);
+                                border-radius: 8px;
+                                color: var(--text-primary);
+                                cursor: pointer;
+                                transition: all 150ms ease;
+                                font-size: 14px;
+                            " onmouseover="this.style.background='var(--bg-hover)'" onmouseout="this.style.background='var(--bg-secondary)'">
+                                <span class="material-symbols-outlined" style="font-size: 20px; color: var(--accent);">${option.icon}</span>
+                                ${option.label}
+                            </button>
+                        `).join('')}
+                    </div>
+                    <button onclick="this.parentElement.parentElement.remove();" style="
+                        margin-top: 20px;
+                        padding: 8px 16px;
+                        background: transparent;
+                        border: 1px solid var(--border);
+                        border-radius: 6px;
+                        color: var(--text-secondary);
+                        cursor: pointer;
+                        font-size: 14px;
+                        width: 100%;
+                    ">Cancel</button>
+                `;
+
+                modal.appendChild(modalContent);
+                document.body.appendChild(modal);
+
+                // Close modal when clicking outside
+                modal.addEventListener('click', (e) => {
+                    if (e.target === modal) {
+                        modal.remove();
+                    }
+                });
+            }
+
+            async editThreadName(threadId) {
+                const currentThread = this.threads.find(t => t.thread_id === threadId);
+                if (!currentThread) return;
+
+                const newTitle = prompt('Enter a new name for this conversation:', currentThread.title || 'Untitled');
+                if (!newTitle || newTitle.trim() === currentThread.title) return;
+
+                try {
+                    const response = await fetch(`/api/sclera/threads/${this.currentMode}/${threadId}/rename`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        credentials: 'same-origin',
+                        body: JSON.stringify({ title: newTitle.trim() })
+                    });
+
+                    const data = await response.json();
+                    if (data.success) {
+                        // Update local thread data
+                        currentThread.title = newTitle.trim();
+                        this.updateThreadsList();
+
+                        // Update thread title in header if this is the active thread
+                        if (threadId === this.activeThreadId) {
+                            const titleElement = document.getElementById('currentThreadTitle');
+                            if (titleElement) {
+                                titleElement.textContent = newTitle.trim();
+                            }
+                        }
+                    } else {
+                        alert('Failed to rename conversation: ' + (data.error || 'Unknown error'));
+                    }
+                } catch (error) {
+                    console.error('Error renaming thread:', error);
+                    alert('Failed to rename conversation');
+                }
+            }
+
+            async loadCurrentThread() {
+                if (!this.activeThreadId) {
+                    this.showWelcomeMessage();
+                    return;
+                }
+
+                // Update thread title
+                const currentThread = this.threads.find(t => t.thread_id === this.activeThreadId);
+                const titleElement = document.getElementById('currentThreadTitle');
+                if (currentThread && titleElement) {
+                    titleElement.textContent = currentThread.title || 'Untitled Conversation';
+                }
+
+                try {
+                    const response = await fetch(`/api/sclera/threads/${this.currentMode}/${this.activeThreadId}/history`, {
+                        credentials: 'same-origin'
+                    });
+
+                    const data = await response.json();
+                    if (data.history && data.history.length > 0) {
+                        this.displayConversationHistory(data.history);
+                    } else {
+                        this.showWelcomeMessage();
+                    }
+                } catch (error) {
+                    console.error('Error loading thread history:', error);
+                    this.showWelcomeMessage();
+                }
+            }
+
+            showWelcomeMessage() {
+                const chatMessages = document.getElementById('chatMessages');
+                if (!chatMessages) return;
+
+                chatMessages.innerHTML = '';
+
+                const welcomeMessages = {
+                    academic_planner: "Welcome to Academic Planner! I'm here to help you create effective study plans, manage your time, and achieve your academic goals. I can help with study schedules, exam preparation, goal setting, and productivity strategies. What would you like to plan today?",
+                    institutional: "Welcome to SCLERA AI Institutional Analytics. I'm here to provide data-driven insights for curriculum directors and administrators. I can analyze enrollment trends, risk factors, and strategic planning. How can I assist with your institutional analytics needs?",
+                    doubt_solver: "Welcome to Doubt Solver! I'm here to help clarify your academic questions and resolve any doubts you have about subjects, concepts, or problems. Feel free to ask anything - from basic explanations to complex problem-solving. What would you like help understanding?"
+                };
+
+                const welcomeText = welcomeMessages[this.currentMode] || welcomeMessages.academic_planner;
+                this.addAssistantMessage(welcomeText);
+            }
+
+            displayConversationHistory(history) {
+                const chatMessages = document.getElementById('chatMessages');
+                if (!chatMessages) return;
+
+                chatMessages.innerHTML = '';
+
+                history.forEach(message => {
+                    if (message.role === 'user') {
+                        this.addUserMessage(message.content);
+                    } else {
+                        this.addAssistantMessage(message.content);
+                    }
+                });
+            }
+
+            sendMessage() {
+                const messageInput = document.getElementById('messageInput');
+                const message = messageInput?.value?.trim();
+                if (!message) return;
+
+                // Add user message
+                this.addUserMessage(message);
+                messageInput.value = '';
+                this.updateCharacterCount();
+
+                // Show typing indicator
+                this.showTypingIndicator();
+
+                // Send to API - include force_new_thread flag if no active thread
+                const endpoint = `/api/sclera/chat/${this.currentMode}`;
+                const requestData = {
+                    message: message,
+                    force_new_thread: !this.activeThreadId  // Force new thread if none is active
+                };
+
+                fetch(endpoint, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    credentials: 'same-origin',
+                    body: JSON.stringify(requestData)
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    if (data.response) {
+                        this.addAssistantMessage(data.response);
+                        // Set the active thread to the one returned by the backend
+                        if (data.thread_id) {
+                            this.activeThreadId = data.thread_id;
+                            this.updateThreadsList(); // Update UI to show active thread
+                        }
+                        // Refresh threads list to show any newly created threads
+                        this.loadThreads();
+                    } else {
+                        this.addAssistantMessage(`Sorry, I encountered an error: ${data.error || 'Unknown error'}`);
+                    }
+                })
+                .catch(error => {
+                    console.error('API Error:', error);
+                    this.addAssistantMessage('Sorry, I\'m having trouble connecting right now. Please try again later.');
+                })
+                .finally(() => {
+                    this.hideTypingIndicator();
+                });
+            }
+
+            addUserMessage(content) {
+                const messages = document.getElementById('chatMessages');
+                const messageGroup = document.createElement('div');
+                messageGroup.className = 'message-group user-message';
+                messageGroup.innerHTML = `
+                    <div class="user-bubble">
+                        <p>${content}</p>
+                    </div>
+                `;
+                messages.appendChild(messageGroup);
+                messages.scrollTop = messages.scrollHeight;
+            }
+
+            addAssistantMessage(content) {
+                const messages = document.getElementById('chatMessages');
+                const messageGroup = document.createElement('div');
+                messageGroup.className = 'message-group assistant-message';
+                messageGroup.innerHTML = `
+                    <div class="assistant-card">
+                        <div class="assistant-header">
+                            <div class="assistant-icon">
+                                <span class="material-symbols-outlined">${this.getIconForMode()}</span>
+                            </div>
+                        </div>
+                        <div class="assistant-content">
+                            ${this.formatAssistantResponse(content)}
+                        </div>
+                    </div>
+                `;
+                messages.appendChild(messageGroup);
+                messages.scrollTop = messages.scrollHeight;
+            }
+
+            getIconForMode() {
+                const icons = {
+                    academic_planner: 'school',
+                    institutional: 'business_center',
+                    doubt_solver: 'help_center'
+                };
+                return icons[this.currentMode] || 'smart_toy';
+            }
+
+            formatAssistantResponse(content) {
+                // Format institutional responses with structured sections
+                if (this.currentMode === 'institutional') {
+                    // Simple formatting for institutional responses
+                    return `<div class="analysis-section">${content.replace(/\n/g, '<br>')}</div>`;
+                }
+                return content.replace(/\n/g, '<br>');
+            }
+
+            updateCharacterCount() {
+                const input = document.getElementById('messageInput');
+                const counter = document.getElementById('characterCount');
+                if (input && counter) {
+                    counter.textContent = `${input.value.length}/1000`;
+                }
+            }
+
+            showTypingIndicator() {
+                const indicator = document.getElementById('typingIndicator');
+                const sendButton = document.getElementById('sendButton');
+                if (indicator) indicator.style.display = 'block';
+                if (sendButton) sendButton.disabled = true;
+            }
+
+            hideTypingIndicator() {
+                const indicator = document.getElementById('typingIndicator');
+                const sendButton = document.getElementById('sendButton');
+                if (indicator) indicator.style.display = 'none';
+                if (sendButton) sendButton.disabled = false;
+            }
+
+            showError(message) {
+                const chatMessages = document.getElementById('chatMessages');
+                if (chatMessages) {
+                    chatMessages.innerHTML = `
+                        <div class="message-group assistant-message">
+                            <div class="assistant-card">
+                                <div class="assistant-header">
+                                    <div class="assistant-icon">
+                                        <span class="material-symbols-outlined">error</span>
+                                    </div>
+                                </div>
+                                <div class="assistant-content">
+                                    <div class="analysis-section">
+                                        <strong>System Error</strong>
+                                        <p>${message}</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }
+            }
+        }
+
+        // Theme toggle functionality
+        const themeToggle = document.getElementById('themeToggle');
+        const html = document.documentElement;
+
+        // Load saved theme
+        const savedTheme = localStorage.getItem('sclera-theme') || 'light';
+        html.setAttribute('data-theme', savedTheme);
+
+        if (themeToggle) {
+            themeToggle.addEventListener('click', () => {
+                const currentTheme = html.getAttribute('data-theme');
+                const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+                html.setAttribute('data-theme', newTheme);
+                localStorage.setItem('sclera-theme', newTheme);
+
+                // Update icon
+                const icon = themeToggle.querySelector('.theme-icon');
+                if (icon) {
+                    icon.textContent = newTheme === 'light' ? 'dark_mode' : 'light_mode';
+                }
+            });
+        }
+
+        // Initialize SCLERA AI when DOM is ready
+        document.addEventListener('DOMContentLoaded', () => {
+            window.scleraAI = new ScleraAI();
+        });
+    </script>
+</body>
+</html>

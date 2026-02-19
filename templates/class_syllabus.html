@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Manage Syllabus | StudyOS</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+
+<body>
+    <div class="dashboard-layout">
+        {% if profile.get('account_type') == 'admin' %}
+            {% include '_admin_topnav.html' %}
+        {% else %}
+            {% include '_teacher_topnav.html' %}
+        {% endif %}
+
+        <main class="main-content">
+            <div class="header-row">
+                <h1>{{ class_data.get('name', 'Class') }} - Syllabus Management</h1>
+                <p class="text-muted">Exclude chapters to hide them from all students in this class</p>
+            </div>
+
+            <div class="syllabus-container">
+                {% for subject_name, subject_data in syllabus.items() %}
+                <details class="syllabus-subject" open>
+                    <summary>
+                        <h4>{{ subject_name }}</h4>
+                    </summary>
+
+                    <div class="syllabus-chapters">
+                        {% for chapter_name in subject_data.get('chapters', {}).keys() %}
+                        {% set exclusion_key = subject_name + "::" + chapter_name %}
+                        {% set is_excluded = exclusions.get(exclusion_key, False) %}
+
+                        <div class="chapter-row {% if is_excluded %}excluded{% endif %}">
+                            <span class="chapter-name">{{ chapter_name }}</span>
+
+                            <form method="POST" style="display:inline;">
+                                <input type="hidden" name="subject" value="{{ subject_name }}">
+                                <input type="hidden" name="chapter" value="{{ chapter_name }}">
+                                <input type="hidden" name="action"
+                                    value="{% if is_excluded %}include{% else %}exclude{% endif %}">
+                                <button type="submit" class="toggle-btn">
+                                    {% if is_excluded %}
+                                    ↺ Include
+                                    {% else %}
+                                    ✕ Exclude
+                                    {% endif %}
+                                </button>
+                            </form>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </details>
+                {% endfor %}
+            </div>
+        </main>
+    </div>
+</body>
+
+</html>

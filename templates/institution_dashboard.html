@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Institution Dashboard | StudyOS</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+
+<body>
+    <div class="dashboard-layout">
+        {% include '_topnav.html' %}
+
+        <!-- MAIN CONTENT -->
+        <main class="main-content">
+            <div class="header-row">
+                <h1>Institution Overview</h1>
+                <div class="actions">
+                    <button id="inviteBtn" class="btn-secondary">Generate Invite</button>
+                    <!-- Invite Modal placeholder -->
+                </div>
+            </div>
+
+            <div class="inst-grid">
+
+                <!-- ISLAND A: BEHAVIORAL HEATMAP -->
+                <div class="island heatmap-island">
+                    <h3>Institutional Behavior Heatmap</h3>
+                    <div id="heatmapContainer" class="heatmap-grid"
+                        style="grid-template-columns: 40px repeat(12, 1fr) 10px repeat(12, 1fr);">
+                        <!-- Labels for hours -->
+                        <div></div>
+                        {% for h in range(24) %}
+                        <div style="font-size: 8px; text-align: center; color: var(--text-muted);">{{ h }}</div>
+                        {% if h == 11 %} <div></div> {% endif %}
+                        {% endfor %}
+
+                        {% set days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'] %}
+                        {% for d in range(7) %}
+                        <div class="heatmap-label">{{ days[d] }}</div>
+                        {% for h in range(24) %}
+                        {% set key = d|string + "-" + h|string %}
+                        {% set count = heatmap_data.get(key, 0) %}
+                        {% set level = 0 %}
+                        {% if count > 10 %} {% set level = 3 %}
+                        {% elif count > 5 %} {% set level = 2 %}
+                        {% elif count > 0 %} {% set level = 1 %}
+                        {% endif %}
+                        <div class="heatmap-cell level-{{ level }}"
+                            title="{{ days[d] }} {{ h }}:00 - {{ count }} sessions">
+                        </div>
+                        {% if h == 11 %} <div class="heatmap-spacer"></div> {% endif %}
+                        {% endfor %}
+                        {% endfor %}
+                    </div>
+                    <div class="heatmap-legend">
+                        <span>Less Active</span>
+                        <div class="legend-scale">
+                            <div class="scale-box level-0"></div>
+                            <div class="scale-box level-1"></div>
+                            <div class="scale-box level-2"></div>
+                            <div class="scale-box level-3"></div>
+                        </div>
+                        <span>Highly Active</span>
+                    </div>
+                </div>
+
+                <!-- ISLAND B: AI PREDICTION ENGINE -->
+                <div class="island risk-island">
+                    <h3>Risk & Momentum Analytics (AI)</h3>
+                    <div class="risk-list">
+                        {% if at_risk_students %}
+                        {% for student in at_risk_students %}
+                        <div class="risk-row {{ student.status }}">
+                            <div class="risk-info">
+                                <strong>{{ student.name }}</strong>
+                                <span>{{ student.class }}</span>
+                            </div>
+                            <div class="risk-metrics">
+                                {% if student.days_inactive > 7 %}
+                                <span class="tag stagnating">Inactive {{ student.days_inactive }}d</span>
+                                {% endif %}
+                                {% if student.status == 'declining' or student.status == 'critical' %}
+                                <span class="tag declining">Grades Drop</span>
+                                {% endif %}
+                            </div>
+                            <div class="risk-actions">
+                                <button class="nudge-btn" data-uid="{{ student.uid }}">Nudge</button>
+                                <a href="{{ url_for('student_detail', student_uid=student.uid) }}"
+                                    class="view-btn">View</a>
+                            </div>
+                        </div>
+                        {% endfor %}
+                        {% else %}
+                        <div class="empty-state">
+                            <p>All students active and healthy.</p>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!--ISLAND C: CLASS MANAGEMENT-->
+                <div class="island syllabus-island">
+                    <h3>Class Management</h3>
+                    <div class="class-list">
+                        {% for cid, cdata in classes.items() %}
+                        <div class="class-row">
+                            <span style="font-weight: 600;">{{ cdata.get('name', cid) }}</span>
+                            <span class="student-count">{{ cdata.get('students', [])|length }} Students</span>
+                            <a href="{{ url_for('manage_class_syllabus', class_id=cid) }}" class="small-btn">Manage
+                                Syllabus</a>
+                        </div>
+                        {% else %}
+                        <p class="text-muted">No classes assigned.</p>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <!--ISLAND D: BROADCAST CENTER-->
+                <div class="island broadcast-island">
+                    <h3>Broadcast Center</h3>
+                    <form method="POST" action="{{ url_for('broadcast_message') }}">
+                        <div style="margin-bottom: 12px;">
+                            <label
+                                style="font-size: 12px; color: var(--text-muted); display: block; margin-bottom: 4px;">Target
+                                Recipients</label>
+                            <select name="class_id"
+                                style="width: 100%; background: var(--bg-tertiary); color: var(--text-primary); border: 1px solid var(--border); padding: 8px; border-radius: 6px; font-family: inherit;">
+                                <option value="">All Students (Global)</option>
+                                {% for cid, cdata in classes.items() %}
+                                <option value="{{ cid }}">{{ cdata.get('name', cid) }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <textarea name="message" placeholder="Type your announcement here..." required></textarea>
+                        <button type="submit" class="btn-secondary" style="width: 100%;">Send Announcement</button>
+                    </form>
+                </div>
+
+            </div>
+        </main>
+    </div>
+
+    <!--Invite Modal Logic Script-->
+    <script>
+        document.getElementById('inviteBtn').onclick = async () => {
+            // Simplified prompt for demo. In real app, use a modal UI.
+            const role = prompt("Role (student/teacher)?", "student");
+            if (!role) return;
+            const classId = prompt("Class ID (optional):", "");
+
+            const formData = new FormData();
+            formData.append('role', role);
+            if (classId) formData.append('class_id', classId);
+
+            const res = await fetch('/institution/generate_invite', {
+                method: 'POST',
+                body: formData
+            });
+            const data = await res.json();
+            alert("Invite Code: " + data.code);
+        };
+
+        document.querySelectorAll('.nudge-btn').forEach(btn => {
+            btn.onclick = async () => {
+                const studentUid = btn.dataset.uid;
+                const message = prompt("Enter message (or leave blank for default):", "");
+
+                if (message === null) return; // Cancelled
+
+                const res = await fetch('/institution/nudge', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        student_uid: studentUid,
+                        message: message || undefined
+                    })
+                });
+
+                const data = await res.json();
+                if (data.success) {
+                    alert("✓ " + data.message);
+                    btn.textContent = "Sent!";
+                    btn.disabled = true;
+                    setTimeout(() => {
+                        btn.textContent = "Nudge";
+                        btn.disabled = false;
+                    }, 3000);
+                }
+            };
+        });
+    </script>
+    {% include 'notifications_snippet.html' %}
+</body>
+
+</html>

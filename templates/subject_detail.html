@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ subject_name }} — Sclera</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+<body>
+    <div class="dashboard-layout">
+
+        <main class="main-content">
+            <div class="detail-header">
+                <button onclick="history.back()" class="btn btn-secondary back-btn">← Back</button>
+                <div class="breadcrumb">
+                    <a href="{{ url_for('profile_dashboard') }}">Profile</a>
+                    <span class="breadcrumb-separator">/</span>
+                    <a href="{{ url_for('academic_dashboard') }}">Academic</a>
+                    <span class="breadcrumb-separator">/</span>
+                    <span>{{ subject_name }}</span>
+                </div>
+            </div>
+            
+            <h2>Chapters</h2>
+            
+            {% if chapters %}
+                <div class="chapters-list">
+                    {% for chapter_name, chapter_data in chapters.items() %}
+                        <a href="{{ url_for('chapter_detail', subject_name=subject_name, chapter_name=chapter_name) }}" class="chapter-item">
+                            <div class="chapter-info">
+                                <h4>{{ chapter_name }}</h4>
+                                <p class="chapter-meta">
+                                    {{ chapter_data.topics|length if chapter_data.topics else 0 }} topics
+                                </p>
+                            </div>
+                            <span>→</span>
+                        </a>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="empty-state">
+                    <h3>No Chapters Available</h3>
+                    <p>Chapter content is being prepared.</p>
+                </div>
+            {% endif %}
+        </main>
+    </div>
+</body>
+</html>

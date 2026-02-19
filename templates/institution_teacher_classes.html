@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Classes - Teacher | StudyOS</title>
+    <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+    <div class="dashboard-layout">
+        {% include '_teacher_topnav.html' %}
+
+        <main class="main-content">
+            <div class="content-header">
+                <h1>Your Classes</h1>
+                <p>Manage classes and invite codes</p>
+            </div>
+
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    {% for category, message in messages %}
+                        <div class="alert alert-{{ category }}">{{ message }}</div>
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
+
+            <div class="academic-split">
+                <div class="syllabus-panel">
+                    <div class="study-island">
+                        <div class="study-island-header">
+                            <h3>Classes</h3>
+                            <a href="{{ url_for('institution_teacher_create_class') }}" class="btn btn-primary">Create New Class</a>
+                        </div>
+
+                        {% if classes %}
+                            {% for cls in classes %}
+                                <div class="study-item">
+                                    <div class="study-item-body">
+                                        <div class="study-item-title">{{ cls.get('name', cls.get('id')) }}</div>
+                                        <div class="study-item-meta">
+                                            {{ cls.get('board', 'Board') }} · Grade {{ cls.get('grade', '-') }} · {{ cls.get('purpose', 'Class') }}
+                                        </div>
+                                        {% if cls.get('invite_code') %}
+                                            <div class="study-item-meta">Invite Code: <strong>{{ cls.invite_code }}</strong></div>
+                                        {% endif %}
+                                    </div>
+                                    <div class="study-item-actions">
+                                        <span class="pct-badge avg">{{ (cls.get('student_uids', [])|length) }} students</span>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        {% else %}
+                            <div class="empty-state">
+                                <h3>No classes yet</h3>
+                                <p>Create your first class to invite students.</p>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div class="study-tools-panel">
+                    <div class="study-island">
+                        <div class="study-island-header">
+                            <h3>How Students Join</h3>
+                        </div>
+                        <p style="color:var(--text-muted); font-size:14px; line-height:1.6;">
+                            Students go to <strong>/student/join/class</strong> or use the Join Class link in their student dashboard sidebar and enter the 6-character code. This links them to your class and institution without affecting their academic progress.
+                        </p>
+                    </div>
+
+                    <div class="study-island">
+                        <div class="study-island-header">
+                            <h3>Institution</h3>
+                        </div>
+                        <p style="color:var(--text-muted); font-size:14px;">Institution ID: <strong>{{ institution_id }}</strong></p>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        (function () {
+            const root = document.documentElement;
+            const savedTheme = localStorage.getItem("sclera-theme");
+            if (savedTheme) root.setAttribute("data-theme", savedTheme);
+        })();
+    </script>
+</body>
+</html>

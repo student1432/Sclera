@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="{{ settings.get('theme', 'dark') }}">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Class Management — Sclera</title>
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+
+<body>
+    <div class="dashboard-layout">
+
+        <!-- TOPNAV -->
+        {% include '_topnav.html' %}
+
+        <!-- MAIN -->
+        <main class="main-content">
+
+            {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+            {% for category, message in messages %}
+            <div class="alert alert-{{ category }}">{{ message }}</div>
+            {% endfor %}
+            {% endif %}
+            {% endwith %}
+
+            <div class="content-header">
+                <h1 style="display: flex; align-items: center; gap: 12px; margin-bottom: 8px;">
+                    <span class="material-symbols-outlined" style="font-size: 32px; color: var(--accent-primary);">school</span>
+                    Class Management
+                </h1>
+                <p style="color: var(--text-muted); margin: 0;">Manage your classes and access shared materials</p>
+            </div>
+
+            {% for class_info in classes_info %}
+            <div class="study-island" style="{% if loop.first %}margin-top: 40px;{% endif %} margin-bottom: 40px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); overflow: hidden; position: relative;">
+                {% if not loop.first %}
+                <div style="position: absolute; top: -20px; left: 0; right: 0; height: 1px; background: linear-gradient(to right, transparent, var(--border), transparent);"></div>
+                {% endif %}
+                <div class="study-island-header" style="background: var(--bg-secondary); padding: 24px; border-bottom: 1px solid var(--border);">
+                    <div style="display: flex; align-items: center; width: 100%;">
+                        <div style="display: flex; align-items: center; gap: 16px; flex: 1;">
+                            <span class="material-symbols-outlined" style="font-size: 24px; color: var(--accent-primary);">class</span>
+                            <h3 style="margin: 0; color: var(--text-primary);">{{ class_info.name }}</h3>
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 12px;">
+                            <div style="display: flex; align-items: center; gap: 6px;">
+                                <span class="material-symbols-outlined" style="font-size: 16px;">folder</span>
+                                <span style="font-size: 14px; color: var(--text-muted);">{{ class_info.files|length }} file(s)</span>
+                            </div>
+                            <form action="{{ url_for('leave_class', class_id=class_info.id) }}" method="POST" style="display: inline;">
+                                <button type="submit" style="background: none; border: none; cursor: pointer; padding: 4px; color: var(--error); display: flex; align-items: center;" onclick="return confirm('Are you sure you want to leave this class?')" title="Leave Class">
+                                    <span class="material-symbols-outlined" style="font-size: 18px;">logout</span>
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+                <div style="padding: 20px;">
+                    <div style="display: flex; align-items: center; gap: 20px; flex-wrap: wrap; margin-bottom: 20px;">
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <span class="material-symbols-outlined" style="font-size: 18px; color: var(--text-muted);">location_on</span>
+                            <div>
+                                <p style="margin: 0; font-weight: 500; color: var(--text-primary);">Institution</p>
+                                <p style="margin: 0; color: var(--text-muted);">{{ class_info.institution_name }}</p>
+                            </div>
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <span class="material-symbols-outlined" style="font-size: 18px; color: var(--text-muted);">person</span>
+                            <div>
+                                <p style="margin: 0; font-weight: 500; color: var(--text-primary);">Teacher</p>
+                                <p style="margin: 0; color: var(--text-muted);">{{ class_info.teacher_name }}</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div style="padding: 20px; background: var(--bg-secondary); border-top: 1px solid var(--border);">
+                    <h4 style="margin: 0 0 16px 0; color: var(--text-primary);">Shared Files</h4>
+                    {% if class_info.files %}
+                    <div style="display: grid; gap: 12px;">
+                    {% for file in class_info.files %}
+                    <div class="study-item" style="border-radius: 8px; padding: 16px; background: var(--bg-primary); border: 1px solid var(--border);">
+                        <div class="study-item-body">
+                            <div class="study-item-title" style="display: flex; align-items: center; gap: 8px;">
+                                <span class="material-symbols-outlined" style="font-size: 18px; color: var(--accent-primary);">description</span>
+                                {{ file.file_name }}
+                            </div>
+                            <div class="study-item-meta" style="color: var(--text-muted); font-size: 12px;">Uploaded {{ file.upload_date[:10] }} · {{ file.file_size }} bytes</div>
+                        </div>
+                        <div class="study-item-actions">
+                            <a href="{{ url_for('download_class_file', file_id=file.id) }}" class="btn btn-small btn-primary" target="_blank" style="display: flex; align-items: center; gap: 8px;">
+                                <span class="material-symbols-outlined" style="font-size: 16px;">download</span>
+                                Download
+                            </a>
+                        </div>
+                    </div>
+                    {% endfor %}
+                    </div>
+                    {% else %}
+                    <div class="empty-state" style="text-align: center; padding: 40px;">
+                        <span class="material-symbols-outlined" style="font-size: 48px; color: var(--text-muted); display: block; margin-bottom: 16px;">folder_off</span>
+                        <p style="color: var(--text-muted); margin: 0;">No files available in this class yet.</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            {% endfor %}
+
+        </main>
+    </div>
+
+</body>
+
+</html>

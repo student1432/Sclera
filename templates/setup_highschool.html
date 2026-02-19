@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>High School Setup - Student Platform</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+<body>
+    <div class="container">
+        <div class="form-card">
+            <h1>High School Setup</h1>
+            <p class="subtitle">Tell us about your high school education</p>
+            
+            <form method="POST" action="{{ url_for('setup_highschool') }}">
+                <div class="form-group">
+                    <label for="board">Education Board</label>
+                    <select id="board" name="board" required>
+                        <option value="">Select your board</option>
+                        <option value="CBSE">CBSE</option>
+                        <option value="ICSE">ICSE</option>
+                        <option value="State Board">State Board</option>
+                        <option value="IB">International Baccalaureate (IB)</option>
+                        <option value="Other">Other</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label for="grade">Current Grade</label>
+                    <select id="grade" name="grade" required>
+                        <option value="">Select your grade</option>
+                        <option value="9">Grade 9</option>
+                        <option value="10">Grade 10</option>
+                        <option value="11">Grade 11</option>
+                        <option value="12">Grade 12</option>
+                    </select>
+                </div>
+                
+                <button type="submit" class="btn btn-primary">Complete Setup</button>
+            </form>
+        </div>
+    </div>
+</body>
+</html>

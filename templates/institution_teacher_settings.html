@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Teacher Settings | StudyOS</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+
+<body>
+    <div class="dashboard-layout">
+    {% include '_teacher_topnav.html' %}
+
+        <main class="main-content">
+            <h1>Teacher Settings</h1>
+            <p class="text-muted">Manage your teaching preferences and notifications</p>
+
+            <div class="inst-grid">
+                <div class="island">
+                    <h3>Profile Information</h3>
+                    <p><strong>Name:</strong> {{ profile.get('name', 'N/A') }}</p>
+                    <p><strong>Email:</strong> {{ profile.get('email', 'N/A') }}</p>
+                    <p><strong>Status:</strong> {{ profile.get('status', 'active').title() }}</p>
+                    <p><strong>Institution:</strong> {{ institution.get('name', 'N/A') }}</p>
+                </div>
+
+                <div class="island">
+                    <h3>Class Management</h3>
+                    <p>Total Classes: {{ classes|length }}</p>
+                    {% for cls in classes %}
+                    <div class="class-row">
+                        <span>{{ cls.get('name', cls.id) }}</span>
+                        <span class="text-muted">{{ cls.get('students', [])|length }} students</span>
+                    </div>
+                    {% endfor %}
+                    <br>
+                    <a href="{{ url_for('institution_teacher_create_class') }}" class="btn btn-primary">Create New Class</a>
+                </div>
+
+                <!-- NOTIFICATIONS ISLAND -->
+                <div class="island">
+                    <h3>Notifications</h3>
+                    <form method="POST" action="{{ url_for('settings') }}">
+                        <input type="hidden" name="action" value="general">
+
+                        <div class="form-group checkbox-group" style="display:flex;align-items:center;gap:12px;">
+                            <input type="checkbox" name="email_notifications" id="email_notifications"
+                                {% if settings.get('email_notifications') %}checked{% endif %}
+                                style="width:18px;height:18px;cursor:pointer;">
+                            <label for="email_notifications" style="cursor:pointer;">
+                                Email Notifications
+                            </label>
+                        </div>
+                        <p class="form-hint" style="color:var(--text-muted);font-size:13px;margin-top:8px;">
+                            Receive email updates about student progress and assignments
+                        </p>
+                        <button type="submit" class="btn btn-primary" style="margin-top:16px;">Save Notifications</button>
+                    </form>
+                </div>
+            </div>
+        </main>
+    </div>
+</body>
+
+</html>

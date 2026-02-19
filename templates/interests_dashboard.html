@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Careers — Sclera</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Serif+Display:ital,wght@0,300;0,400;0,600;0,700;1,400&family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    
+    <script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#ffffff",
+                        "background-light": "#f6f6f8",
+                        "background-dark": "#0a0c10",
+                    },
+                    fontFamily: {
+                        "display": ["Inter", "sans-serif"],
+                        "serif": ["Noto Serif Display", "serif"]
+                    },
+                    borderRadius: {
+                        "DEFAULT": "1rem",
+                        "lg": "2rem",
+                        "xl": "3rem",
+                        "full": "9999px"
+                    },
+                },
+            },
+        }
+    </script>
+    
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
+        }
+        .serif-text {
+            font-family: 'Noto Serif Display', serif;
+        }
+        .glass-panel {
+            background: var(--bg-secondary);
+            backdrop-filter: blur(16px);
+            border: 1px solid var(--border);
+        }
+        .floating-notch {
+            background: var(--bg-elevated);
+            backdrop-filter: blur(24px);
+            border: 1px solid var(--border);
+        }
+        .hide-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .hide-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+        
+        /* Interests specific classes using root variables */
+        .interests-container {
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
+        }
+        .interests-text {
+            color: var(--text-primary);
+        }
+        .interests-text-secondary {
+            color: var(--text-secondary);
+        }
+        .interests-text-muted {
+            color: var(--text-muted);
+        }
+        .interests-border {
+            border-color: var(--border);
+        }
+        .interests-border-t {
+            border-top-color: var(--border);
+        }
+        .interests-border-subtle {
+            border-color: var(--border-subtle);
+        }
+        .interests-bg-secondary {
+            background-color: var(--bg-secondary);
+        }
+        .interests-bg-tertiary {
+            background-color: var(--bg-tertiary);
+        }
+        .interests-bg-hover {
+            background-color: var(--bg-hover);
+        }
+        .interests-bg-secondary-40 {
+            background-color: var(--bg-secondary);
+            opacity: 0.4;
+        }
+        .interests-accent {
+            background-color: var(--accent);
+            color: var(--bg-primary);
+        }
+        .interests-accent-hover {
+            background-color: var(--accent-hover);
+            color: var(--bg-primary);
+        }
+        .interests-success {
+            color: var(--success);
+        }
+        .interests-warning {
+            color: var(--warning);
+        }
+        .interests-error {
+            color: var(--error);
+        }
+        .interests-success-bg {
+            background-color: var(--success-bg);
+        }
+        .interests-warning-bg {
+            background-color: var(--warning-bg);
+        }
+        .interests-error-bg {
+            background-color: var(--error-bg);
+        }
+
+        /* Fix for form elements in dark mode */
+        .interests-bg-tertiary input,
+        .interests-bg-tertiary select,
+        .interests-bg-tertiary textarea {
+            background-color: var(--bg-tertiary) !important;
+            color: var(--text-primary) !important;
+        }
+        
+        .interests-bg-tertiary input::placeholder,
+        .interests-bg-tertiary textarea::placeholder {
+            color: var(--text-muted) !important;
+        }
+        
+        .interests-bg-tertiary select option {
+            background-color: var(--bg-tertiary) !important;
+            color: var(--text-primary) !important;
+        }
+
+        .explore-tab.active {
+            background-color: var(--accent);
+            color: var(--bg-primary);
+            border-color: var(--accent);
+        }
+        .explore-tab {
+            border: 1px solid var(--border);
+            color: var(--text-secondary);
+            background-color: var(--bg-tertiary);
+        }
+    </style>
+
+</head>
+
+<body class="interests-container interests-text min-h-screen">
+    
+    <!-- Use existing topnav -->
+    {% include '_topnav.html' %}
+
+    <!-- Main Content Area -->
+    <main class="flex mt-24 mb-8 px-6 gap-6 max-w-[1600px] mx-auto">
+        
+        <!-- Full width panel for interests -->
+        <div class="flex-1 glass-panel rounded-xl p-6 flex flex-col gap-6">
+
+            {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+            {% for category, message in messages %}
+            <div class="alert alert-{{ category }}">{{ message }}</div>
+            {% endfor %}
+            {% endif %}
+            {% endwith %}
+
+            <!-- Header -->
+            <div class="flex items-center justify-between mb-2">
+                <div>
+                    <h1 class="text-2xl font-bold interests-text">Careers</h1>
+                    <p class="interests-text-secondary text-sm">Explore paths, courses & internships</p>
+                </div>
+                <span class="material-symbols-outlined interests-text-secondary text-lg">explore</span>
+            </div>
+
+            <!-- Saved Careers -->
+            <div class="flex flex-col gap-4">
+                <h3 class="text-lg font-bold interests-text">Your Saved Careers</h3>
+                {% if saved_careers %}
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {% for career in saved_careers %}
+                    <a href="{{ url_for('career_detail', career_id=career.id) }}" class="interests-bg-tertiary rounded-xl p-6 hover:interests-bg-hover transition-all block">
+                        <div class="flex items-start gap-3">
+                            <div class="flex-1">
+                                <div class="interests-text-secondary text-xs font-bold uppercase tracking-widest mb-2">{{ career.domain }}</div>
+                                <h4 class="interests-text font-semibold text-base mb-3">{{ career.name }}</h4>
+                                <p class="interests-text-muted text-sm">{{ career.skills|join(', ') }}</p>
+                            </div>
+                            <span class="material-symbols-outlined interests-text-muted">arrow_forward</span>
+                        </div>
+                    </a>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="text-center py-8 interests-text-muted">
+                    <span class="material-symbols-outlined text-4xl mb-4 block">explore</span>
+                    <p>No careers saved yet. Browse below and add careers you are interested in.</p>
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Explore Section -->
+            <div class="flex flex-col gap-4">
+                <h3 class="text-lg font-bold interests-text">Explore</h3>
+                
+                <!-- Tabs -->
+                <div class="flex gap-6 justify-center">
+                    <button class="explore-tab active interests-border interests-text font-bold text-sm px-6 py-3 rounded-full interests-accent-hover transition-all" data-tab="careers">Careers</button>
+                    <button class="explore-tab interests-border interests-text font-bold text-sm px-6 py-3 rounded-full interests-accent-hover transition-all" data-tab="courses">Courses</button>
+                    <button class="explore-tab interests-border interests-text font-bold text-sm px-6 py-3 rounded-full interests-accent-hover transition-all" data-tab="internships">Internships</button>
+                </div>
+
+                <!-- Careers Tab -->
+                <div class="explore-section active" id="tab-careers">
+                    {% for domain, career_list in all_careers.items() %}
+                    <div class="mb-6">
+                        <h4 class="interests-text-muted text-xs font-bold uppercase tracking-widest mb-4">{{ domain }}</h4>
+                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                            {% for career in career_list %}
+                            <a href="{{ url_for('career_detail', career_id=career.id) }}" class="interests-bg-tertiary rounded-xl p-6 hover:interests-bg-hover transition-all block">
+                                <h4 class="interests-text font-semibold text-base mb-3">{{ career.name }}</h4>
+                                <p class="interests-text-muted text-sm">{{ career.skills[:3]|join(', ') }}</p>
+                            </a>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+
+                <!-- Courses Tab -->
+                <div class="explore-section" id="tab-courses">
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        {% for course in all_courses %}
+                        <a href="{{ url_for('course_detail', course_id=course.id) }}" class="interests-bg-tertiary rounded-xl p-6 hover:interests-bg-hover transition-all block">
+                            <div class="interests-text-secondary text-xs font-bold uppercase tracking-widest mb-2">{{ course.provider }} · {{ course.level }}</div>
+                            <h4 class="interests-text font-semibold text-base mb-3">{{ course.name }}</h4>
+                            <p class="interests-text-muted text-sm">{{ course.duration }} · {{ course.price }}</p>
+                        </a>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <!-- Internships Tab -->
+                <div class="explore-section" id="tab-internships">
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        {% for intern in all_internships %}
+                        <a href="{{ url_for('internship_detail', internship_id=intern.id) }}" class="interests-bg-tertiary rounded-xl p-6 hover:interests-bg-hover transition-all block">
+                            <div class="interests-text-secondary text-xs font-bold uppercase tracking-widest mb-2">{{ intern.domain }} · {{ intern.company }}</div>
+                            <h4 class="interests-text font-semibold text-base mb-3">{{ intern.name }}</h4>
+                            <p class="interests-text-muted text-sm">{{ intern.duration }} · {{ intern.location }}</p>
+                        </a>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </main>
+
+    {% include 'notifications_snippet.html' %}
+</body>
+
+<script>
+    (function () {
+        var tabs = document.querySelectorAll('.explore-tab');
+        tabs.forEach(function (tab) {
+            tab.addEventListener('click', function () {
+                tabs.forEach(function (t) { t.classList.remove('active'); });
+                document.querySelectorAll('.explore-section').forEach(function (s) { s.classList.remove('active'); });
+                tab.classList.add('active');
+                document.getElementById('tab-' + tab.dataset.tab).classList.add('active');
+            });
+        });
+    })();
+</script>
+
+<script>
+    (function () {
+        const root = document.documentElement;
+
+        const savedTheme = localStorage.getItem("sclera-theme");
+        if (savedTheme) {
+            root.classList.toggle('dark', savedTheme === 'dark');
+            root.classList.toggle('light', savedTheme === 'light');
+        }
+    })();
+</script>
+
+</html>

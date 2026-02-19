@@ -1,0 +1,243 @@
+<div class="notch-container">
+    <div class="notch-pill">
+        {% set p = request.path %}
+        {% set account_type = session.get('account_type', 'student') %}
+
+        {% if account_type == 'student' %}
+        <!-- Student Navigation -->
+        <a href="{{ url_for('profile_dashboard') }}"
+            class="notch-item {% if p == '/dashboard' or p == '/profile' or p == '/' %}active{% endif %}">
+            <span class="material-symbols-outlined">dashboard</span>
+            <span class="notch-label">Home</span>
+        </a>
+        <a href="{{ url_for('calendar_dashboard') }}"
+            class="notch-item {% if p.startswith('/calendar') %}active{% endif %}">
+            <span class="material-symbols-outlined">calendar_today</span>
+            <span class="notch-label">Calendar</span>
+        </a>
+        <a href="{{ url_for('academic_dashboard') }}"
+            class="notch-item {% if p.startswith('/academic') %}active{% endif %}">
+            <span class="material-symbols-outlined">school</span>
+            <span class="notch-label">Academic</span>
+        </a>
+        <a href="{{ url_for('study_mode') }}" class="notch-item {% if p.startswith('/study-mode') %}active{% endif %}">
+            <span class="material-symbols-outlined">timer</span>
+            <span class="notch-label">Study</span>
+        </a>
+        <a href="{{ url_for('interests_dashboard') }}"
+            class="notch-item {% if p.startswith('/interests') or p.startswith('/career') or p.startswith('/course') or p.startswith('/internship') or p.startswith('/careers') or p.startswith('/courses') or p.startswith('/internships') %}active{% endif %}">
+            <span class="material-symbols-outlined">explore</span>
+            <span class="notch-label">Careers</span>
+        </a>
+        <a href="{{ url_for('community_dashboard') }}"
+            class="notch-item {% if p.startswith('/community') %}active{% endif %}">
+            <span class="material-symbols-outlined">people</span>
+            <span class="notch-label">Community</span>
+        </a>
+        <a href="{{ url_for('master_library') }}"
+            class="notch-item {% if p.startswith('/master-library') %}active{% endif %}">
+            <span class="material-symbols-outlined">local_library</span>
+            <span class="notch-label">Library</span>
+        </a>
+        <a href="{{ url_for('ai_assistant') }}"
+            class="notch-item {% if p.startswith('/ai-assistant') %}active{% endif %}">
+            <span class="material-symbols-outlined">chat</span>
+            <span class="notch-label">AI Assistant</span>
+        </a>
+        <a href="{{ url_for('docs_dashboard') }}"
+            class="notch-item {% if p.startswith('/docs') %}active{% endif %}">
+            <span class="material-symbols-outlined">description</span>
+            <span class="notch-label">Docs</span>
+        </a>
+        <a href="{{ url_for('statistics_dashboard') }}"
+            class="notch-item {% if p.startswith('/statistics') %}active{% endif %}">
+            <span class="material-symbols-outlined">query_stats</span>
+            <span class="notch-label">Statistics</span>
+        </a>
+        {% if in_institution and has_class %}
+        <a href="{{ url_for('class_management') }}"
+            class="notch-item {% if p.startswith('/student/class/management') %}active{% endif %}">
+            <span class="material-symbols-outlined">class</span>
+            <span class="notch-label">Class</span>
+        </a>
+        {% endif %}
+
+        {% elif account_type == 'teacher' %}
+        <!-- Teacher Navigation -->
+        <a href="{{ url_for('institution_teacher_dashboard') }}"
+            class="notch-item {% if p == '/institution/teacher/dashboard' or p == '/' %}active{% endif %}">
+            <span class="material-symbols-outlined">dashboard</span>
+            <span class="notch-label">Teacher Dashboard</span>
+        </a>
+        <a href="{{ url_for('institution_teacher_classes') }}"
+            class="notch-item {% if p.startswith('/institution/teacher/classes') %}active{% endif %}">
+            <span class="material-symbols-outlined">class</span>
+            <span class="notch-label">My Classes</span>
+        </a>
+        <a href="{{ url_for('institution_teacher_create_class') }}"
+            class="notch-item {% if p.startswith('/institution/teacher/classes/create') %}active{% endif %}">
+            <span class="material-symbols-outlined">add_circle</span>
+            <span class="notch-label">Create Class</span>
+        </a>
+        <a href="{{ url_for('student_files') }}"
+            class="notch-item {% if p.startswith('/student/class/files') %}active{% endif %}">
+            <span class="material-symbols-outlined">folder</span>
+            <span class="notch-label">Class Files</span>
+        </a>
+        <a href="{{ url_for('master_library') }}"
+            class="notch-item {% if p.startswith('/master-library') %}active{% endif %}">
+            <span class="material-symbols-outlined">local_library</span>
+            <span class="notch-label">Library</span>
+        </a>
+        <a href="{{ url_for('ai_assistant') }}"
+            class="notch-item {% if p.startswith('/ai-assistant') %}active{% endif %}">
+            <span class="material-symbols-outlined">chat</span>
+            <span class="notch-label">AI Assistant</span>
+        </a>
+        <a href="{{ url_for('institution_teacher_settings') }}"
+            class="notch-item {% if p.startswith('/institution/teacher/settings') %}active{% endif %}">
+            <span class="material-symbols-outlined">settings</span>
+            <span class="notch-label">Settings</span>
+        </a>
+
+        {% elif account_type == 'admin' %}
+        <!-- Admin Navigation -->
+        <a href="{{ url_for('institution_admin_dashboard') }}"
+            class="notch-item {% if p == '/institution/admin/dashboard' or p == '/' %}active{% endif %}">
+            <span class="material-symbols-outlined">admin_panel_settings</span>
+            <span class="notch-label">Admin Dashboard</span>
+        </a>
+        <a href="{{ url_for('institution_teacher_classes') }}"
+            class="notch-item {% if p.startswith('/institution/teacher/classes') %}active{% endif %}">
+            <span class="material-symbols-outlined">class</span>
+            <span class="notch-label">Classes</span>
+        </a>
+        <a href="{{ url_for('institution_teacher_create_class') }}"
+            class="notch-item {% if p.startswith('/institution/teacher/classes/create') %}active{% endif %}">
+            <span class="material-symbols-outlined">add_circle</span>
+            <span class="notch-label">Create Class</span>
+        </a>
+        <a href="{{ url_for('student_files') }}"
+            class="notch-item {% if p.startswith('/student/class/files') %}active{% endif %}">
+            <span class="material-symbols-outlined">folder</span>
+            <span class="notch-label">Class Files</span>
+        </a>
+        <a href="{{ url_for('master_library') }}"
+            class="notch-item {% if p.startswith('/master-library') %}active{% endif %}">
+            <span class="material-symbols-outlined">local_library</span>
+            <span class="notch-label">Library</span>
+        </a>
+        <a href="{{ url_for('ai_assistant') }}"
+            class="notch-item {% if p.startswith('/ai-assistant') %}active{% endif %}">
+            <span class="material-symbols-outlined">chat</span>
+            <span class="notch-label">AI Assistant</span>
+        </a>
+        <a href="{{ url_for('institution_admin_settings') }}"
+            class="notch-item {% if p.startswith('/institution/admin/settings') %}active{% endif %}">
+            <span class="material-symbols-outlined">settings</span>
+            <span class="notch-label">Admin Settings</span>
+        </a>
+        {% endif %}
+    </div>
+
+    <div class="action-buttons">
+        <!-- THEME TOGGLE -->
+        <button id="themeToggle" class="action-btn" title="Toggle Theme">
+            <span class="material-symbols-outlined">dark_mode</span>
+        </button>
+
+        <!-- PROFILE DROPDOWN -->
+        <div class="profile-dropdown">
+            <button class="action-btn profile-btn {% if p.startswith('/profile') %}active{% endif %}"
+                title="Profile Menu">
+                {% if profile_picture %}
+                <img src="{{ url_for('serve_profile_picture', filename=profile_picture.split('/')[1]) }}" alt="Profile"
+                    class="profile-avatar">
+                {% else %}
+                <span class="material-symbols-outlined">person</span>
+                {% endif %}
+            </button>
+            <div class="dropdown-menu">
+                <a href="{{ url_for('logout') }}" class="dropdown-item logout-item">
+                    <span class="material-symbols-outlined">logout</span>
+                    Logout
+                </a>
+                <a href="{{ url_for('contact') }}" class="dropdown-item">
+                    <span class="material-symbols-outlined">contact_support</span>
+                    Contact
+                </a>
+                <a href="{{ url_for('settings') }}" class="dropdown-item">
+                    <span class="material-symbols-outlined">settings</span>
+                    Settings
+                </a>
+                <a href="{{ url_for('profile_resume') }}" class="dropdown-item">
+                    <span class="material-symbols-outlined">description</span>
+                    Profile Resume
+                </a>
+                <a href="{{ url_for('profile_edit') }}" class="dropdown-item">
+                    <span class="material-symbols-outlined">edit</span>
+                    Edit Profile
+                </a>
+                <a href="{{ url_for('student_join_class') }}" class="dropdown-item">
+                    <span class="material-symbols-outlined">group_add</span>
+                    Join Class
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    (function () {
+        const root = document.documentElement;
+        const toggle = document.getElementById("themeToggle");
+        const icon = toggle ? toggle.querySelector('.material-symbols-outlined') : null;
+
+        // Load saved theme
+        const savedTheme = localStorage.getItem("sclera-theme");
+        if (savedTheme) {
+            root.setAttribute("data-theme", savedTheme);
+            if (icon) {
+                icon.textContent = savedTheme === 'dark' ? 'light_mode' : 'dark_mode';
+            }
+        }
+
+        // Theme toggle
+        if (toggle) {
+            toggle.addEventListener("click", () => {
+                const current = root.getAttribute("data-theme") || 'dark';
+                const next = current === "dark" ? "light" : "dark";
+
+                root.setAttribute("data-theme", next);
+                localStorage.setItem("sclera-theme", next);
+
+                if (icon) {
+                    icon.textContent = next === 'dark' ? 'light_mode' : 'dark_mode';
+                }
+            });
+        }
+
+        // Profile dropdown
+        const profileBtn = document.querySelector('.profile-btn');
+        const dropdownMenu = document.querySelector('.dropdown-menu');
+
+        if (profileBtn && dropdownMenu) {
+            profileBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                dropdownMenu.classList.toggle('show');
+            });
+
+            // Close dropdown when clicking outside
+            document.addEventListener('click', () => {
+                dropdownMenu.classList.remove('show');
+            });
+
+            // Close dropdown on menu item click
+            dropdownMenu.addEventListener('click', (e) => {
+                if (e.target.closest('.dropdown-item')) {
+                    dropdownMenu.classList.remove('show');
+                }
+            });
+        }
+    })();
+</script>

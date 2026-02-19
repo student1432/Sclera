@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Edit Profile — Sclera</title>
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+
+<body>
+    <div class="dashboard-layout">
+
+        {% include '_topnav.html' %}
+
+        <main class="main-content">
+            <div class="content-header">
+                <h1>Edit Profile</h1>
+            </div>
+
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    <div class="messages-container">
+                        {% for category, message in messages %}
+                            <div class="alert alert-{{ category }}">{{ message }}</div>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            {% endwith %}
+
+            <div class="profile-edit-form">
+                <!-- Profile Picture Section -->
+                <div class="form-section">
+                    <div class="section-header">
+                        <h2 class="section-title">Profile Picture</h2>
+                        <p class="section-description">Upload a profile picture to personalize your account</p>
+                    </div>
+                    <div class="form-group profile-picture-group">
+                        {% if profile_picture %}
+                        <div class="current-picture-container">
+                            <img src="{{ url_for('serve_profile_picture', filename=profile_picture.split('/')[1]) }}" alt="Current profile picture" class="current-picture">
+                            <div class="picture-actions">
+                                <button type="submit" name="action" value="remove_pfp" class="btn btn-small btn-danger remove-btn">Remove Picture</button>
+                            </div>
+                        </div>
+                        {% endif %}
+                        <div class="upload-section">
+                            <input type="file" id="profile_picture" name="profile_picture" accept="image/*" onchange="previewImage(this)" class="file-input">
+                            <label for="profile_picture" class="file-input-label">
+                                <span class="material-symbols-outlined">cloud_upload</span>
+                                <span>Choose Image</span>
+                            </label>
+                            <small class="form-hint">Maximum file size: 5MB. Supported formats: JPG, PNG, WebP</small>
+                            <div id="image-preview" class="image-preview"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Profile Banner Section -->
+                <div class="form-section">
+                    <div class="section-header">
+                        <h2 class="section-title">Profile Banner</h2>
+                        <p class="section-description">Add a banner image that appears on your profile page</p>
+                    </div>
+                    <div class="form-group profile-picture-group">
+                        {% if profile_banner %}
+                        <div class="current-picture-container">
+                            <img src="{{ url_for('serve_profile_banner', filename=profile_banner.split('/')[1]) }}" alt="Current profile banner" class="current-banner-preview">
+                            <div class="picture-actions">
+                                <button type="submit" name="action" value="remove_banner" class="btn btn-small btn-danger remove-btn">Remove Banner</button>
+                            </div>
+                        </div>
+                        {% endif %}
+                        <div class="upload-section">
+                            <input type="file" id="profile_banner" name="profile_banner" accept="image/*" onchange="previewBanner(this)" class="file-input">
+                            <label for="profile_banner" class="file-input-label">
+                                <span class="material-symbols-outlined">image</span>
+                                <span>Choose Banner</span>
+                            </label>
+                            <small class="form-hint">Maximum file size: 10MB. Supported formats: JPG, PNG, WebP</small>
+                            <div id="banner-preview" class="image-preview"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Personal Information Section -->
+                <div class="form-section">
+                    <div class="section-header">
+                        <h2 class="section-title">Personal Information</h2>
+                        <p class="section-description">Update your basic profile information</p>
+                    </div>
+                    <div class="form-group">
+                        <label for="name" class="form-label">Full Name</label>
+                        <input type="text" id="name" name="name" value="{{ name }}" required class="form-input">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="about" class="form-label">About / Bio</label>
+                        <textarea id="about" name="about" rows="4" placeholder="Tell us about yourself..." class="form-textarea">{{ about }}</textarea>
+                    </div>
+                </div>
+
+                <!-- Skills & Interests Section -->
+                <div class="form-section">
+                    <div class="section-header">
+                        <h2 class="section-title">Skills & Interests</h2>
+                        <p class="section-description">Add your skills, hobbies, and achievements</p>
+                    </div>
+                    <div class="form-group">
+                        <label for="skills" class="form-label">Skills</label>
+                        <input type="text" id="skills" name="skills" value="{{ skills }}" placeholder="Python, Mathematics, Problem Solving (comma-separated)" class="form-input">
+                        <small class="form-hint">Enter skills separated by commas</small>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="hobbies" class="form-label">Hobbies & Interests</label>
+                        <input type="text" id="hobbies" name="hobbies" value="{{ hobbies }}" placeholder="Reading, Coding, Sports (comma-separated)" class="form-input">
+                        <small class="form-hint">Enter hobbies separated by commas</small>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="certificates" class="form-label">Certificates & Achievements</label>
+                        <input type="text" id="certificates" name="certificates" value="{{ certificates }}" placeholder="Certificate 1, Certificate 2 (comma-separated)" class="form-input">
+                        <small class="form-hint">Enter certificates and achievements separated by commas</small>
+                    </div>
+                </div>
+
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary save-btn">Save Changes</button>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        function previewImage(input) {
+            const preview = document.getElementById('image-preview');
+            const file = input.files[0];
+            
+            if (file) {
+                // Validate file type
+                const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+                if (!validTypes.includes(file.type)) {
+                    alert('Please select a valid image file (JPG, PNG, or WebP).');
+                    input.value = '';
+                    preview.innerHTML = '';
+                    return;
+                }
+                
+                // Validate file size (5MB max)
+                if (file.size > 5 * 1024 * 1024) {
+                    alert('File size must be less than 5MB.');
+                    input.value = '';
+                    preview.innerHTML = '';
+                    return;
+                }
+                
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    preview.innerHTML = `
+                        <div class="preview-container">
+                            <img src="${e.target.result}" alt="Preview" class="image-preview-img">
+                            <div class="preview-info">New profile picture preview</div>
+                        </div>
+                    `;
+                };
+                reader.readAsDataURL(file);
+            } else {
+                preview.innerHTML = '';
+            }
+        }
+        function previewBanner(input) {
+            const preview = document.getElementById('banner-preview');
+            const file = input.files[0];
+            
+            if (file) {
+                // Validate file type
+                const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+                if (!validTypes.includes(file.type)) {
+                    alert('Please select a valid image file (JPG, PNG, or WebP).');
+                    input.value = '';
+                    preview.innerHTML = '';
+                    return;
+                }
+                
+                // Validate file size (10MB max for banners)
+                if (file.size > 10 * 1024 * 1024) {
+                    alert('Banner file size must be less than 10MB.');
+                    input.value = '';
+                    preview.innerHTML = '';
+                    return;
+                }
+                
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    preview.innerHTML = '<div class="preview-container"><img src="' + e.target.result + '" alt="Banner Preview" class="banner-preview-img"><div class="preview-info">New profile banner preview</div></div>';
+                };
+                reader.readAsDataURL(file);
+            } else {
+                preview.innerHTML = '';
+            }
+        }
+    </script>
+</body>
+</html>

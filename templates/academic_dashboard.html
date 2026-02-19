@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html class="dark" lang="en">
+<head>
+    <meta charset="utf-8"/>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <title>Academic - Sclera</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Serif+Display:ital,wght@0,300;0,400;0,600;0,700;1,400&family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    
+    <script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#ffffff",
+                        "background-light": "#f6f6f8",
+                        "background-dark": "#0a0c10",
+                    },
+                    fontFamily: {
+                        "display": ["Inter", "sans-serif"],
+                        "serif": ["Noto Serif Display", "serif"]
+                    },
+                    borderRadius: {
+                        "DEFAULT": "1rem",
+                        "lg": "2rem",
+                        "xl": "3rem",
+                        "full": "9999px"
+                    },
+                },
+            },
+        }
+    </script>
+    
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
+        }
+        .serif-text {
+            font-family: 'Noto Serif Display', serif;
+        }
+        .glass-panel {
+            background: var(--bg-secondary);
+            backdrop-filter: blur(16px);
+            border: 1px solid var(--border);
+        }
+        .floating-notch {
+            background: var(--bg-elevated);
+            backdrop-filter: blur(24px);
+            border: 1px solid var(--border);
+        }
+        .hide-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .hide-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+        
+        /* Academic specific classes using root variables */
+        .academic-container {
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
+        }
+        .academic-text {
+            color: var(--text-primary);
+        }
+        .academic-text-secondary {
+            color: var(--text-secondary);
+        }
+        .academic-text-muted {
+            color: var(--text-muted);
+        }
+        .academic-border {
+            border-color: var(--border);
+        }
+        .academic-border-t {
+            border-top-color: var(--border);
+        }
+        .academic-border-subtle {
+            border-color: var(--border-subtle);
+        }
+        .academic-bg-secondary {
+            background-color: var(--bg-secondary);
+        }
+        .academic-bg-tertiary {
+            background-color: var(--bg-tertiary);
+        }
+        .academic-bg-hover {
+            background-color: var(--bg-hover);
+        }
+        .academic-bg-secondary-40 {
+            background-color: var(--bg-secondary);
+            opacity: 0.4;
+        }
+        .academic-accent {
+            background-color: var(--accent);
+            color: var(--bg-primary);
+        }
+        .academic-accent-hover {
+            background-color: var(--accent-hover);
+            color: var(--bg-primary);
+        }
+        .academic-success {
+            color: var(--success);
+        }
+        .academic-warning {
+            color: var(--warning);
+        }
+        .academic-error {
+            color: var(--error);
+        }
+        .academic-success-bg {
+            background-color: var(--success-bg);
+        }
+        .academic-warning-bg {
+            background-color: var(--warning-bg);
+        }
+        .academic-error-bg {
+            background-color: var(--error-bg);
+        }
+
+        /* Rotating arrow for dropdowns */
+        details[open] .details-arrow {
+            transform: rotate(180deg);
+        }
+
+        /* Fix for form elements in dark mode */
+        .academic-bg-tertiary input,
+        .academic-bg-tertiary select,
+        .academic-bg-tertiary textarea {
+            background-color: var(--bg-tertiary) !important;
+            color: var(--text-primary) !important;
+        }
+        
+        .academic-bg-tertiary input::placeholder,
+        .academic-bg-tertiary textarea::placeholder {
+            color: var(--text-muted) !important;
+        }
+        
+        .academic-bg-tertiary select option {
+            background-color: var(--bg-tertiary) !important;
+            color: var(--text-primary) !important;
+        }
+    </style>
+</head>
+
+<body class="academic-container academic-text min-h-screen">
+    
+    <!-- Use existing topnav -->
+    {% include '_topnav.html' %}
+
+    <!-- Main Content Area -->
+    <main class="flex mt-24 mb-8 px-6 gap-6 max-w-[1600px] mx-auto">
+        
+        <!-- Left Panel: Syllabus -->
+        <aside class="flex-1 flex flex-col gap-4">
+            <div class="glass-panel rounded-xl flex-1 p-6 flex flex-col gap-6 overflow-y-auto hide-scrollbar">
+                
+                <div class="flex items-center justify-between mb-2">
+                    <h2 class="text-lg font-bold academic-text">Syllabus</h2>
+                    <span class="material-symbols-outlined academic-text-secondary text-lg">menu_book</span>
+                </div>
+
+                    {% for subject_name, chapters in syllabus_flat.items() %}
+                <details class="academic-border-subtle" open>
+                    <summary class="flex items-center justify-between p-3 academic-bg-tertiary rounded-lg cursor-pointer hover:academic-bg-hover transition-all list-none">
+                        <h4 class="font-semibold academic-text">{{ subject_name }}</h4>
+                        <div class="flex items-center gap-2">
+                            <span class="text-xs font-bold academic-accent px-2 py-1 rounded-full">
+                                {{ progress_data.by_subject.get(subject_name, 0) }}%
+                            </span>
+                            <span class="material-symbols-outlined academic-text-secondary transition-transform duration-200 details-arrow">expand_more</span>
+                        </div>
+                    </summary>
+
+                    <div class="mt-3 space-y-2">
+                        {% for chapter_name, ch_data in chapters.items() %}
+                        <div class="flex items-center gap-3 p-3 academic-bg-secondary rounded-lg
+                            {% if ch_data.completed %}academic-success-bg{% endif %}
+                            {% if ch_data.excluded %}opacity-50{% endif %}
+                        ">
+                            {% if not ch_data.excluded %}
+                            <form method="POST" action="{{ url_for('toggle_chapter_completion') }}" class="contents">
+                            {% endif %}
+                                <input type="hidden" name="subject_name" value="{{ subject_name }}">
+                                <input type="hidden" name="chapter_name" value="{{ chapter_name }}">
+                                <button type="submit" class="w-5 h-5 rounded-full academic-border flex items-center justify-center
+                                    {% if ch_data.completed %}academic-success-bg academic-success{% else %}academic-bg-tertiary{% endif %}
+                                    hover:academic-accent transition-all">
+                                    {% if ch_data.completed %}
+                                    <span class="text-xs">✔</span>
+                                    {% endif %}
+                                </button>
+                            {% if not ch_data.excluded %}
+                            </form>
+                            {% endif %}
+                            
+                            <span class="flex-1 academic-text-secondary text-sm">{{ chapter_name }}</span>
+                            
+                            <form method="POST" action="{{ url_for('toggle_chapter_exclusion') }}" class="contents">
+                                <input type="hidden" name="subject_name" value="{{ subject_name }}">
+                                <input type="hidden" name="chapter_name" value="{{ chapter_name }}">
+                                <button class="w-6 h-6 rounded-full academic-border flex items-center justify-center academic-text-muted hover:academic-error transition-all text-xs" title="Remove / Restore chapter">
+                                    {% if ch_data.excluded %}↺{% else %}✕{% endif %}
+                                </button>
+                            </form>
+
+                            <a href="{{ url_for('chapter_detail',
+                                                    subject_name=subject_name,
+                                                    chapter_name=chapter_name) }}" 
+                               class="text-xs academic-accent hover:academic-accent-hover transition-all px-4 py-2 rounded-full min-w-[80px] text-center">
+                                View →
+                            </a>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </details>
+                {% endfor %}
+
+                    {% if not syllabus_flat %}
+                <div class="flex-1 flex flex-col items-center justify-center text-center py-12">
+                    <span class="material-symbols-outlined academic-text-muted text-4xl mb-4">menu_book</span>
+                    <h3 class="text-lg font-semibold academic-text mb-2">No Syllabus Available</h3>
+                    <p class="academic-text-secondary text-sm">Content is being prepared for your academic path.</p>
+                </div>
+                {% endif %}
+            </div>
+        </aside>
+
+                <!-- Right Panel: Study Tools -->
+<aside class="flex-1 flex flex-col gap-4">
+    
+    <!-- Goals Section -->
+    <div class="glass-panel rounded-xl p-6">
+        <div class="flex items-center justify-between mb-6">
+            <h3 class="text-lg font-bold academic-text">Goals</h3>
+            <span class="material-symbols-outlined academic-text-secondary text-lg">flag</span>
+        </div>
+
+        {% for goal in goals %}
+        <div class="flex items-center gap-3 p-3 academic-bg-secondary rounded-lg mb-3
+            {% if goal.completed %}academic-success-bg{% endif %}
+        ">
+            <form method="POST" action="{{ url_for('goals_dashboard') }}" class="contents">
+                <input type="hidden" name="action" value="toggle">
+                <input type="hidden" name="goal_id" value="{{ goal.id }}">
+                <button type="submit" class="w-5 h-5 rounded-full academic-border flex items-center justify-center
+                    {% if goal.completed %}academic-success-bg academic-success{% else %}academic-bg-tertiary{% endif %}
+                    hover:academic-accent transition-all">
+                    {% if goal.completed %}
+                    <span class="text-xs">✔</span>
+                    {% endif %}
+                </button>
+            </form>
+            
+            <div class="flex-1">
+                <div class="academic-text font-medium">{{ goal.title }}</div>
+                {% if goal.subject %}<div class="academic-text-muted text-xs">{{ goal.subject }}{% if
+                    goal.target_date %} · {{ goal.target_date }}{% endif %}</div>{% endif %}
+            </div>
+            
+            <form method="POST" action="{{ url_for('goals_dashboard') }}" class="contents">
+                <input type="hidden" name="action" value="delete">
+                <input type="hidden" name="goal_id" value="{{ goal.id }}">
+                <button type="submit" class="w-6 h-6 rounded-full academic-error-bg academic-error flex items-center justify-center hover:opacity-80 transition-all text-xs">×</button>
+            </form>
+        </div>
+        {% endfor %}
+
+        <form method="POST" action="{{ url_for('goals_dashboard') }}">
+            <input type="hidden" name="action" value="add">
+            <div class="flex gap-2">
+                <input type="text" name="title" placeholder="Add a goal…" required
+                       class="flex-1 academic-bg-tertiary academic-border rounded-lg px-4 py-2 text-sm academic-text placeholder:academic-text-muted focus:outline-none focus:ring-1 focus:ring-accent/50 transition-all">
+                <button type="submit" class="academic-accent font-bold text-sm px-4 py-2 rounded-full academic-accent-hover transition-all">
+                    <span class="material-symbols-outlined text-sm">add</span>
+                </button>
+            </div>
+        </form>
+    </div>
+
+                    <!-- Tasks Section -->
+    <div class="glass-panel rounded-xl p-6">
+        <div class="flex items-center justify-between mb-6">
+            <h3 class="text-lg font-bold academic-text">Tasks</h3>
+            <span class="material-symbols-outlined academic-text-secondary text-lg">task_alt</span>
+        </div>
+
+        {% for task in tasks %}
+        <div class="flex items-center gap-3 p-3 academic-bg-secondary rounded-lg mb-3
+            {% if task.completed %}academic-success-bg{% endif %}
+        ">
+            <form method="POST" action="{{ url_for('tasks_dashboard') }}" class="contents">
+                <input type="hidden" name="action" value="toggle">
+                <input type="hidden" name="task_id" value="{{ task.id }}">
+                <button type="submit" class="w-5 h-5 rounded-full academic-border flex items-center justify-center
+                    {% if task.completed %}academic-success-bg academic-success{% else %}academic-bg-tertiary{% endif %}
+                    hover:academic-accent transition-all">
+                    {% if task.completed %}
+                    <span class="text-xs">✔</span>
+                    {% endif %}
+                </button>
+            </form>
+            
+            <div class="flex-1">
+                <div class="academic-text font-medium">{{ task.title }}</div>
+                {% if task.due_date %}<div class="academic-text-muted text-xs">Due {{ task.due_date }}</div>{% endif %}
+            </div>
+            
+            <form method="POST" action="{{ url_for('tasks_dashboard') }}" class="contents">
+                <input type="hidden" name="action" value="delete">
+                <input type="hidden" name="task_id" value="{{ task.id }}">
+                <button type="submit" class="w-6 h-6 rounded-full academic-error-bg academic-error flex items-center justify-center hover:opacity-80 transition-all text-xs">×</button>
+            </form>
+        </div>
+        {% endfor %}
+
+        <form method="POST" action="{{ url_for('tasks_dashboard') }}">
+            <input type="hidden" name="action" value="add">
+            <div class="flex gap-2">
+                <input type="text" name="title" placeholder="Add a task…" required
+                       class="flex-1 academic-bg-tertiary academic-border rounded-lg px-4 py-2 text-sm academic-text placeholder:academic-text-muted focus:outline-none focus:ring-1 focus:ring-accent/50 transition-all">
+                <button type="submit" class="academic-accent font-bold text-sm px-4 py-2 rounded-full academic-accent-hover transition-all">
+                    <span class="material-symbols-outlined text-sm">add</span>
+                </button>
+            </div>
+        </form>
+    </div>
+
+                    <!-- Study Mode Section -->
+    <div class="glass-panel rounded-xl p-6">
+        <div class="flex items-center justify-center mb-6">
+            <h3 class="text-lg font-bold academic-text">Study Mode</h3>
+            <span class="material-symbols-outlined academic-text-secondary text-lg ml-2">timer</span>
+        </div>
+
+        <a href="{{ url_for('study_mode') }}" class="w-full academic-accent font-bold text-sm py-3 rounded-full academic-accent-hover transition-all flex items-center justify-center">
+            <span class="material-symbols-outlined text-sm mr-2">play_arrow</span>
+            Enter Study Mode →
+        </a>                        
+    </div>
+
+                    <!-- Results Section -->
+    <div class="glass-panel rounded-xl p-6">
+        <div class="flex items-center justify-between mb-6">
+            <h3 class="text-lg font-bold academic-text">Results</h3>
+            <div class="flex items-center gap-2">
+                <span class="text-xs font-bold academic-accent px-2 py-1 rounded-full">Avg: {{ avg_percentage }}%</span>
+                <span class="material-symbols-outlined academic-text-secondary text-lg">analytics</span>
+            </div>
+        </div>
+
+        {% if results %}
+        <div class="space-y-2 mb-4">
+            {% for r in results %}
+            <div class="flex items-center gap-3 p-3 academic-bg-secondary rounded-lg">
+                <div class="flex-1">
+                    <div class="academic-text font-medium text-sm">{{ r.test_types }}</div>
+                    <div class="academic-text-muted text-xs">{{ r.subject }}</div>
+                </div>
+                {% set pct = (r.score / r.max_score * 100)|round(1) if r.max_score else 0 %}
+                <span class="px-2 py-1 rounded-full text-xs font-bold
+                    {% if pct >= 75 %}academic-success-bg academic-success{% elif pct >= 50 %}academic-warning-bg academic-warning{% else %}academic-error-bg academic-error{% endif %}">
+                    {{ pct }}%
+                </span>
+                <form method="POST" action="{{ url_for('results_dashboard') }}" class="contents">
+                    <input type="hidden" name="action" value="delete">
+                    <input type="hidden" name="result_id" value="{{ r.id }}">
+                    <button type="submit" class="w-6 h-6 rounded-full academic-error-bg academic-error flex items-center justify-center hover:opacity-80 transition-all text-xs">×</button>
+                </form>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        <form method="POST" action="{{ url_for('results_dashboard') }}">
+            <input type="hidden" name="action" value="add">
+            <div class="space-y-3">
+                <select name="test_types" required class="w-full academic-bg-tertiary academic-border rounded-lg px-4 py-2 text-sm academic-text focus:outline-none focus:ring-1 focus:ring-accent/50 transition-all">
+                    <option value="" disabled selected>Select test</option>
+                    {% for t in test_types %}
+                    <option value="{{ t }}">{{ t }}</option>
+                    {% endfor %}
+                </select>
+
+                <div class="grid grid-cols-2 gap-3">
+                    <input type="date" name="exam_date" required class="academic-bg-tertiary academic-border rounded-lg px-4 py-2 text-sm academic-text focus:outline-none focus:ring-1 focus:ring-accent/50 transition-all">
+                    <select name="subject" required class="academic-bg-tertiary academic-border rounded-lg px-4 py-2 text-sm academic-text focus:outline-none focus:ring-1 focus:ring-accent/50 transition-all">
+                        <option value="" disabled selected>Select Subject</option>
+                        {% for subj in subjects %}
+                        <option value="{{ subj }}">{{ subj }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="grid grid-cols-3 gap-3">
+                    <input type="number" name="score" placeholder="Score" required class="academic-bg-tertiary academic-border rounded-lg px-4 py-2 text-sm academic-text placeholder:academic-text-muted focus:outline-none focus:ring-1 focus:ring-accent/50 transition-all" step="0.1">
+                    <input type="number" name="max_score" placeholder="/ Max" class="academic-bg-tertiary academic-border rounded-lg px-4 py-2 text-sm academic-text placeholder:academic-text-muted focus:outline-none focus:ring-1 focus:ring-accent/50 transition-all" step="0.1">
+                    <button type="submit" class="academic-accent font-bold text-sm rounded-full academic-accent-hover transition-all">
+                        <span class="material-symbols-outlined text-sm">add</span>
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+</aside>
+</main>
+
+    <!-- Notification System -->
+{% include 'notifications_snippet.html' %}
+
+</body>
+</html>

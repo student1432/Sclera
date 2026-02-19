@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Assistant Consent — StudyOS</title>
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+
+<body>
+    <div class="dashboard-layout">
+
+        <!-- SIDEBAR -->
+        {% include '_sidebar.html' %}
+
+        <!-- MAIN -->
+        <main class="main-content">
+
+            {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+            {% for category, message in messages %}
+            <div class="alert alert-{{ category }}">{{ message }}</div>
+            {% endfor %}
+            {% endif %}
+            {% endwith %}
+
+            <!-- AI Consent Card -->
+            <div class="ai-consent-container">
+                <div class="ai-consent-card">
+                    <div class="ai-consent-header">
+                        <div class="ai-consent-icon">
+                            <span class="material-symbols-outlined">smart_toy</span>
+                        </div>
+                        <h1 class="ai-consent-title">AI Academic Assistant</h1>
+                        <p class="ai-consent-subtitle">Unlock personalized learning support powered by AI</p>
+                    </div>
+
+                    <div class="ai-consent-content">
+                        <div class="ai-features">
+                            <div class="ai-feature">
+                                <div class="feature-icon">
+                                    <span class="material-symbols-outlined">school</span>
+                                </div>
+                                <div class="feature-text">
+                                    <h3>Study Planning</h3>
+                                    <p>Get personalized study plans, revision schedules, and practice test recommendations based on your academic progress.</p>
+                                </div>
+                            </div>
+
+                            <div class="ai-feature">
+                                <div class="feature-icon">
+                                    <span class="material-symbols-outlined">help</span>
+                                </div>
+                                <div class="feature-text">
+                                    <h3>Doubt Resolution</h3>
+                                    <p>Ask subject-specific questions and get clear, step-by-step explanations tailored to your grade and curriculum.</p>
+                                </div>
+                            </div>
+
+                            <div class="ai-feature">
+                                <div class="feature-icon">
+                                    <span class="material-symbols-outlined">psychology</span>
+                                </div>
+                                <div class="feature-text">
+                                    <h3>Personalized Context</h3>
+                                    <p>AI responses are customized using your academic data, including subjects, progress, exam history, and learning goals.</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="ai-privacy-notice">
+                            <h3>Data Usage & Privacy</h3>
+                            <ul>
+                                <li>Your academic data (subjects, progress, exam results) is used to provide personalized responses</li>
+                                <li>Conversations are processed by Google's Gemini AI service</li>
+                                <li>No personal data is stored outside StudyOS or shared with third parties</li>
+                                <li>You can revoke consent and delete your AI chat history at any time</li>
+                            </ul>
+                        </div>
+
+                        <form method="POST" action="{{ url_for('ai_assistant_consent') }}" class="ai-consent-form">
+                            <div class="consent-buttons">
+                                <button type="submit" name="consent" value="yes" class="btn btn-primary ai-consent-btn">
+                                    <span class="material-symbols-outlined">check</span>
+                                    Enable AI Assistant
+                                </button>
+                                <button type="submit" name="consent" value="no" class="btn btn-secondary ai-consent-btn">
+                                    <span class="material-symbols-outlined">close</span>
+                                    Not Now
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+        </main>
+    </div>
+
+    <script>
+        // Theme toggle functionality
+        const themeToggle = document.getElementById('themeToggle');
+        const html = document.documentElement;
+
+        // Load saved theme
+        const savedTheme = localStorage.getItem("sclera-theme") || 'light';
+        html.setAttribute('data-theme', savedTheme);
+
+        if (themeToggle) {
+            themeToggle.addEventListener('click', () => {
+                const currentTheme = html.getAttribute('data-theme');
+                const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+                html.setAttribute('data-theme', newTheme);
+                localStorage.setItem('sclera-theme', newTheme);
+
+                // Update icon
+                const icon = themeToggle.querySelector('.theme-icon');
+                icon.textContent = newTheme === 'light' ? 'dark_mode' : 'light_mode';
+            });
+        }
+    </script>
+</body>
+</html>

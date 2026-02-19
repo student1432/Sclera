@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Institution Settings | StudyOS</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+
+<body>
+    <div class="dashboard-layout">
+        {% include '_topnav.html' %}
+
+        <main class="main-content">
+            <h1>Institution Settings</h1>
+            <p class="text-muted">Manage institution-wide configurations</p>
+
+            <div class="inst-grid">
+                <div class="island">
+                    <h3>Institution Information</h3>
+                    <p><strong>Name:</strong> {{ institution.get('name', 'N/A') }}</p>
+                    <p><strong>ID:</strong> {{ institution_id }}</p>
+                    <p><strong>Plan:</strong> {{ institution.get('plan', 'Free') }}</p>
+                </div>
+
+                <div class="island">
+                    <h3>Invite Codes</h3>
+                    <p>Generate codes for students and teachers to join your institution.</p>
+                    <button id="genInviteBtn" class="btn-primary">Generate New Code</button>
+                </div>
+
+                <div class="island">
+                    <h3>Classes</h3>
+                    <p>Total Classes: {{ classes|length }}</p>
+                    {% for cls in classes %}
+                    <div class="class-row">
+                        <span>{{ cls.get('name', cls.id) }}</span>
+                        <span class="text-muted">{{ cls.get('students', [])|length }} students</span>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        document.getElementById('genInviteBtn').onclick = async () => {
+            const role = prompt("Role (student/teacher)?", "student");
+            if (!role) return;
+            const classId = prompt("Class ID (optional):", "");
+
+            const formData = new FormData();
+            formData.append('role', role);
+            if (classId) formData.append('class_id', classId);
+
+            const res = await fetch('/institution/generate_invite', {
+                method: 'POST',
+                body: formData
+            });
+            const data = await res.json();
+            alert("Invite Code: " + data.code);
+        };
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Profile Resume — Sclera</title>
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+
+<body>
+    <div class="dashboard-layout">
+
+        {% include '_topnav.html' %}
+
+        <main class="main-content">
+            {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+            {% for category, message in messages %}
+            <div class="alert alert-{{ category }}">{{ message }}</div>
+            {% endfor %}
+            {% endif %}
+            {% endwith %}
+
+            <div class="profile-container">
+                {% if profile_banner %}
+                <!-- Hero Banner Section -->
+                <div class="profile-hero-banner">
+                    <img src="{{ url_for('serve_profile_banner', filename=profile_banner.split('/')[1]) }}" alt="Profile banner" class="hero-banner-image">
+                    {% if profile_picture %}
+                    <div class="profile-picture-hero">
+                        <img src="{{ url_for('serve_profile_picture', filename=profile_picture.split('/')[1]) }}" alt="Profile picture" class="hero-profile-pic">
+                    </div>
+                    {% endif %}
+                    <div class="hero-banner-overlay">
+                        <h1 class="hero-name">{{ name }}</h1>
+                        <p class="hero-subtitle">{{ purpose_display }}{% if academic_summary %} · {{ academic_summary }}{% endif %}</p>
+                        <div class="hero-edit-button">
+                            <a href="{{ url_for('profile_edit') }}" class="btn btn-small">Edit Profile</a>
+                        </div>
+                    </div>
+                </div>
+                {% elif profile_picture %}
+                <!-- Fallback: Profile picture only -->
+                <div class="profile-hero-fallback">
+                    <div class="profile-picture-large">
+                        <img src="{{ url_for('serve_profile_picture', filename=profile_picture.split('/')[1]) }}" alt="Profile picture" class="profile-pic-banner">
+                    </div>
+                    <div class="hero-fallback-content">
+                        <h1 class="profile-name">{{ name }}</h1>
+                        <p class="profile-subtitle">{{ purpose_display }}</p>
+                        <p class="profile-academic">{{ academic_summary }}</p>
+                        <div class="fallback-edit-button">
+                            <a href="{{ url_for('profile_edit') }}" class="btn btn-small">Edit Profile</a>
+                        </div>
+                    </div>
+                </div>
+                {% else %}
+                <!-- No banner or picture -->
+                <div class="profile-header-section">
+                    <h1 class="profile-name">{{ name }}</h1>
+                    <p class="profile-subtitle">{{ purpose_display }}</p>
+                    <p class="profile-academic">{{ academic_summary }}</p>
+                    <div style="margin-top:14px;">
+                        <a href="{{ url_for('profile_edit') }}" class="btn">Edit Profile</a>
+                    </div>
+                </div>
+                {% endif %}
+
+                <div class="profile-section">
+                    <h3>About</h3>
+                    <p class="about-text">{{ about if about else 'No bio added yet.' }}</p>
+                </div>
+
+                <div class="profile-section">
+                    <h3>Skills</h3>
+                    {% if skills %}
+                    <div class="tag-list">
+                        {% for skill in skills %}<span class="tag">{{ skill }}</span>{% endfor %}
+                    </div>
+                    {% else %}
+                    <p>No skills added yet.</p>
+                    {% endif %}
+                </div>
+
+                <div class="profile-section">
+                    <h3>Hobbies</h3>
+                    {% if hobbies %}
+                    <div class="tag-list">
+                        {% for hobby in hobbies %}<span class="tag">{{ hobby }}</span>{% endfor %}
+                    </div>
+                    {% else %}
+                    <p>No hobbies added yet.</p>
+                    {% endif %}
+                </div>
+
+                <div class="profile-section">
+                    <h3>Certificates</h3>
+                    {% if certificates %}
+                    <ul class="certificates-list">
+                        {% for cert in certificates %}<li>{{ cert }}</li>{% endfor %}
+                    </ul>
+                    {% else %}
+                    <p>No certificates added yet.</p>
+                    {% endif %}
+                </div>
+
+                {% if achievements %}
+                <div class="profile-section">
+                    <h3>Achievements</h3>
+                    <ul class="certificates-list">
+                        {% for a in achievements %}<li>{{ a }}</li>{% endfor %}
+                    </ul>
+                </div>
+                {% endif %}
+
+                {% if goals %}
+                <div class="profile-section">
+                    <h3>Active Goals</h3>
+                    <ul class="certificates-list">
+                        {% for g in goals %}<li>{{ g.title }}</li>{% endfor %}
+                    </ul>
+                </div>
+                {% endif %}
+            </div>
+        </main>
+    </div>
+
+    {% include 'notifications_snippet.html' %}
+</body>
+
+</html>

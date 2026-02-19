@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Results — Sclera</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+<body>
+    <div class="dashboard-layout">
+
+        <main class="main-content">
+            <div class="detail-header">
+                <button onclick="history.back()" class="btn btn-secondary back-btn">← Back</button>
+                <div class="dashboard-header">
+                    <h1>Academic Results</h1>
+                    <a href="{{ url_for('dashboard') }}" class="btn btn-secondary">Back to Dashboard</a>
+                </div>
+            </div>
+            
+            <div class="results-content">
+                <h2>Your Performance Overview</h2>
+                <p>Track your academic achievements, test scores, and progress reports all in one place.</p>
+                
+                <div class="results-section">
+                    <h3>Recent Assessments</h3>
+                    <p class="empty-message">No assessments recorded yet. Results will appear here once you complete tests and assignments.</p>
+                    
+                    <div class="info-section">
+                        <h4>Coming Soon:</h4>
+                        <ul>
+                            <li>Test score tracking</li>
+                            <li>Subject-wise performance analytics</li>
+                            <li>Progress charts and graphs</li>
+                            <li>Comparative analysis</li>
+                            <li>Achievement badges</li>
+                            <li>Downloadable report cards</li>
+                        </ul>
+                    </div>
+                </div>
+                
+                <div class="results-section">
+                    <h3>Performance Metrics</h3>
+                    <p class="empty-message">Start taking assessments to see your performance metrics and trends.</p>
+                </div>
+                
+                <div class="results-section">
+                    <h3>Study Statistics</h3>
+                    <p class="empty-message">Your study time and activity statistics will be displayed here.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

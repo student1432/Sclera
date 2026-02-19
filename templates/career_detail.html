@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ career.name }} — Sclera</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Serif+Display:ital,wght@0,300;0,400;0,600;0,700;1,400&family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    
+    <script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#ffffff",
+                        "background-light": "#f6f6f8",
+                        "background-dark": "#0a0c10",
+                    },
+                    fontFamily: {
+                        "display": ["Inter", "sans-serif"],
+                        "serif": ["Noto Serif Display", "serif"]
+                    },
+                    borderRadius: {
+                        "DEFAULT": "1rem",
+                        "lg": "2rem",
+                        "xl": "3rem",
+                        "full": "9999px"
+                    },
+                },
+            },
+        }
+    </script>
+    
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
+        }
+        .serif-text {
+            font-family: 'Noto Serif Display', serif;
+        }
+        .glass-panel {
+            background: var(--bg-secondary);
+            backdrop-filter: blur(16px);
+            border: 1px solid var(--border);
+        }
+        .floating-notch {
+            background: var(--bg-elevated);
+            backdrop-filter: blur(24px);
+            border: 1px solid var(--border);
+        }
+        .hide-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .hide-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+        
+        /* Detail specific classes using root variables */
+        .detail-container {
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
+        }
+        .detail-text {
+            color: var(--text-primary);
+        }
+        .detail-text-secondary {
+            color: var(--text-secondary);
+        }
+        .detail-text-muted {
+            color: var(--text-muted);
+        }
+        .detail-border {
+            border-color: var(--border);
+        }
+        .detail-border-t {
+            border-top-color: var(--border);
+        }
+        .detail-border-subtle {
+            border-color: var(--border-subtle);
+        }
+        .detail-bg-secondary {
+            background-color: var(--bg-secondary);
+        }
+        .detail-bg-tertiary {
+            background-color: var(--bg-tertiary);
+        }
+        .detail-bg-hover {
+            background-color: var(--bg-hover);
+        }
+        .detail-bg-secondary-40 {
+            background-color: var(--bg-secondary);
+            opacity: 0.4;
+        }
+        .detail-accent {
+            background-color: var(--accent);
+            color: var(--bg-primary);
+        }
+        .detail-accent-hover {
+            background-color: var(--accent-hover);
+            color: var(--bg-primary);
+        }
+        .detail-success {
+            color: var(--success);
+        }
+        .detail-warning {
+            color: var(--warning);
+        }
+        .detail-error {
+            color: var(--error);
+        }
+        .detail-success-bg {
+            background-color: var(--success-bg);
+        }
+        .detail-warning-bg {
+            background-color: var(--warning-bg);
+        }
+        .detail-error-bg {
+            background-color: var(--error-bg);
+        }
+
+        /* Fix for form elements in dark mode */
+        .detail-bg-tertiary input,
+        .detail-bg-tertiary select,
+        .detail-bg-tertiary textarea {
+            background-color: var(--bg-tertiary) !important;
+            color: var(--text-primary) !important;
+        }
+        
+        .detail-bg-tertiary input::placeholder,
+        .detail-bg-tertiary textarea::placeholder {
+            color: var(--text-muted) !important;
+        }
+        
+        .detail-bg-tertiary select option {
+            background-color: var(--bg-tertiary) !important;
+            color: var(--text-primary) !important;
+        }
+
+        .detail-tag {
+            background-color: var(--bg-tertiary);
+            color: var(--text-secondary);
+            padding: 0.25rem 0.5rem;
+            border-radius: 0.5rem;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+    </style>
+
+</head>
+
+<body class="detail-container detail-text min-h-screen">
+    
+    <!-- Use existing topnav -->
+    {% include '_topnav.html' %}
+
+    <!-- Main Content Area -->
+    <main class="flex mt-24 mb-8 px-6 gap-6 max-w-[1600px] mx-auto">
+        
+        <!-- Detail Panel -->
+        <div class="flex-1 glass-panel rounded-xl p-6 flex flex-col gap-6">
+
+            <!-- Back and Breadcrumb -->
+            <div class="flex items-center gap-4">
+                <button onclick="history.back()" class="detail-accent font-bold text-sm px-4 py-2 rounded-full detail-accent-hover transition-all flex items-center gap-2">
+                    <span class="material-symbols-outlined text-sm">arrow_back</span>
+                    Back
+                </button>
+                <div class="detail-text-muted text-sm">
+                    <a href="{{ url_for('interests_dashboard') }}" class="detail-accent hover:detail-accent-hover">Interests</a>
+                    <span class="mx-2">/</span>
+                    <span>{{ career.name }}</span>
+                </div>
+            </div>
+
+            <!-- Header -->
+            <div class="flex items-start justify-between">
+                <div class="flex-1">
+                    <h1 class="text-3xl font-bold detail-text mb-2">{{ career.name }}</h1>
+                    <div class="detail-text-secondary text-sm font-medium">{{ career.domain }}</div>
+                </div>
+                <form method="POST" action="{{ url_for('toggle_career_interest', career_id=career.id) }}">
+                    <button type="submit" class="detail-accent font-bold text-sm px-6 py-3 rounded-full detail-accent-hover transition-all">
+                        {% if is_saved %}Remove from Interests{% else %}Add to Interests{% endif %}
+                    </button>
+                </form>
+            </div>
+
+            <!-- About Section -->
+            <div class="flex flex-col gap-4">
+                <h4 class="text-lg font-bold detail-text">About</h4>
+                <p class="detail-text-secondary leading-relaxed">{{ career.description }}</p>
+            </div>
+
+            <!-- Required Skills -->
+            <div class="flex flex-col gap-4">
+                <h4 class="text-lg font-bold detail-text">Required Skills</h4>
+                <div class="flex flex-wrap gap-2">
+                    {% for skill in career.skills %}
+                    <span class="detail-tag">{{ skill }}</span>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <!-- Recommended Subjects -->
+            <div class="flex flex-col gap-4">
+                <h4 class="text-lg font-bold detail-text">Recommended Subjects</h4>
+                <div class="flex flex-wrap gap-2">
+                    {% for subj in career.subjects %}
+                    <span class="detail-tag">{{ subj }}</span>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <!-- Related Courses -->
+            {% if related_courses %}
+            <div class="flex flex-col gap-4">
+                <h4 class="text-lg font-bold detail-text">Related Courses</h4>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {% for course in related_courses %}
+                    <a href="{{ url_for('course_detail', course_id=course.id) }}" class="detail-bg-tertiary rounded-xl p-4 hover:detail-bg-hover transition-all block">
+                        <div class="flex items-start gap-3">
+                            <div class="flex-1">
+                                <h5 class="detail-text font-semibold text-base mb-1">{{ course.name }}</h5>
+                                <p class="detail-text-muted text-sm">{{ course.provider }} · {{ course.level }} · {{ course.price }}</p>
+                            </div>
+                            <span class="material-symbols-outlined detail-text-muted">arrow_forward</span>
+                        </div>
+                    </a>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Related Internships -->
+            {% if related_internships %}
+            <div class="flex flex-col gap-4">
+                <h4 class="text-lg font-bold detail-text">Related Internships</h4>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {% for intern in related_internships %}
+                    <a href="{{ url_for('internship_detail', internship_id=intern.id) }}" class="detail-bg-tertiary rounded-xl p-4 hover:detail-bg-hover transition-all block">
+                        <div class="flex items-start gap-3">
+                            <div class="flex-1">
+                                <h5 class="detail-text font-semibold text-base mb-1">{{ intern.name }}</h5>
+                                <p class="detail-text-muted text-sm">{{ intern.company }} · {{ intern.duration }} · {{ intern.location }}</p>
+                            </div>
+                            <span class="material-symbols-outlined detail-text-muted">arrow_forward</span>
+                        </div>
+                    </a>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+
+        </div>
+    </main>
+
+    {% include 'notifications_snippet.html' %}
+</body>
+
+<script>
+    (function () {
+        const root = document.documentElement;
+
+        const savedTheme = localStorage.getItem("sclera-theme");
+        if (savedTheme) {
+            root.classList.toggle('dark', savedTheme === 'dark');
+            root.classList.toggle('light', savedTheme === 'light');
+        }
+    })();
+</script>
+
+</html>

@@ -1,0 +1,1047 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ bubble.name }} - {{ name }}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap"
+        rel="stylesheet" />
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+</head>
+
+<body>
+    {% include '_topnav.html' %}
+
+    <main class="dashboard-root">
+        <!-- Hero Header -->
+        <header class="bubble-hero">
+            <div class="hero-content">
+                <nav class="breadcrumb">
+                    <a href="{{ url_for('community_dashboard') }}">Communities</a>
+                    <span class="sep">/</span>
+                    <span class="current">{{ bubble.name }}</span>
+                </nav>
+                <div class="hero-main">
+                    <div class="hero-text">
+                        <h1>{{ bubble.name }}</h1>
+                        <p class="description">{{ bubble.description or 'A collaborative study space for high-impact
+                            group learning.' }}</p>
+                    </div>
+                    <div class="hero-stats">
+                        <div class="hero-stat">
+                            <span class="value">{{ bubble.member_count }}</span>
+                            <span class="label">Members</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {% if current_user_data %}
+            <div class="user-quick-rank">
+                <div class="rank-badge">#{{ current_user_rank }}</div>
+                <div class="rank-details">
+                    <span class="label">Your Rank</span>
+                    <div class="mini-progress">
+                        <div class="fill"
+                            style="--progress: {{ current_user_data.overall_score }}%; width: var(--progress);"></div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+        </header>
+
+        <div class="dashboard-grid">
+            <!-- Main Content Area -->
+            <div class="main-col">
+                <!-- Leaderboard -->
+                <section class="grid-card">
+                    <div class="card-header">
+                        <div class="title-wrap">
+                            <span class="material-symbols-outlined">analytics</span>
+                            <h2>Bubble Leaderboard</h2>
+                        </div>
+                        <div class="privacy-toggle">
+                            {% set current_consent = (user.privacy_settings and user.privacy_settings.allow_leaderboard)
+                            %}
+                            <label class="switch-label">
+                                <span>Show my progress</span>
+                                <input type="checkbox" id="leaderboardConsent" {% if current_consent %}checked{% endif
+                                    %} onchange="updateConsent(this)">
+                                <span class="slider"></span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="leaderboard-table">
+                        <div class="table-header">
+                            <span class="h-rank">Rank</span>
+                            <span class="h-user">Member</span>
+                            <span class="h-score">Score</span>
+                            <span class="h-progress">Progress</span>
+                        </div>
+                        <div class="table-body">
+                            {% if leaderboard %}
+                            {% for user in leaderboard %}
+                            <div class="member-row {% if user.is_current_user %}is-me{% endif %}">
+                                <div class="rank-cell">
+                                    {% if user.rank == 1 %}<span class="badge gold">1</span>
+                                    {% elif user.rank == 2 %}<span class="badge silver">2</span>
+                                    {% elif user.rank == 3 %}<span class="badge bronze">3</span>
+                                    {% else %}<span class="num">{{ user.rank }}</span>{% endif %}
+                                </div>
+                                <div class="user-cell">
+                                    <div class="avatar-init">{{ user.name[0] | upper }}</div>
+                                    <div class="user-info">
+                                        <span class="name">{{ user.name }}</span>
+                                        <span class="meta">{{ user.purpose_display or 'Learning' }}</span>
+                                    </div>
+                                </div>
+                                <div class="score-cell">{{ user.overall_score }}%</div>
+                                <div class="progress-cell">
+                                    <div class="progress-bar-wrap">
+                                        <div class="bar-fill"
+                                            style="--progress: {{ user.overall_score }}%; width: var(--progress);">
+                                        </div>
+                                    </div>
+                                    <span class="sub-text">{{ user.completed_chapters }}/{{ user.total_chapters }}
+                                        items</span>
+                                </div>
+                            </div>
+                            {% endfor %}
+                            {% else %}
+                            <div class="empty-state">
+                                <span class="material-symbols-outlined">group_off</span>
+                                <p>No active participants on leaderboard yet.</p>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Resources -->
+                <section class="grid-card">
+                    <div class="card-header">
+                        <div class="title-wrap">
+                            <span class="material-symbols-outlined">folder_shared</span>
+                            <h2>Shared Resources</h2>
+                        </div>
+                        <div class="header-actions">
+                            <button class="bubble-action-btn" onclick="document.getElementById('fileInput').click()">
+                                <span class="material-symbols-outlined">upload</span>
+                                Add File
+                            </button>
+                            <input type="file" id="fileInput" hidden onchange="uploadFile(this)">
+                        </div>
+                    </div>
+                    <div class="resources-list" id="fileList">
+                        <div class="loading-state">
+                            <span class="material-symbols-outlined spinning">sync</span>
+                        </div>
+                    </div>
+                </section>
+            </div>
+
+            <!-- Sidebar Content -->
+            <div class="side-col">
+                <!-- Chat Banner -->
+                <div class="chat-banner-card">
+                    <a href="{{ url_for('bubble_chat', bubble_id=bubble.id) }}" class="banner-link"></a>
+                    <div class="banner-content">
+                        <span class="material-symbols-outlined">forum</span>
+                        <h3>Group Chat</h3>
+                        <p>Join {{ bubble.member_count }} members</p>
+                        <button class="banner-btn">Open Chat</button>
+                    </div>
+                </div>
+
+                <!-- Goals/Todo -->
+                <section class="grid-card">
+                    <div class="card-header">
+                        <div class="title-wrap">
+                            <span class="material-symbols-outlined">task_alt</span>
+                            <h2>Group Goals</h2>
+                        </div>
+                    </div>
+                    <div class="todo-input-group">
+                        <input type="text" id="todoInput" placeholder="Add a goal...">
+                        <button onclick="addTodo()" class="add-btn">
+                            <span class="material-symbols-outlined">add</span>
+                        </button>
+                    </div>
+                    <div class="todo-list" id="todoList">
+                        <div class="loading-state">Loading goals...</div>
+                    </div>
+                </section>
+
+                <!-- Management -->
+                {% if bubble.creator_uid == user.uid %}
+                <section class="grid-card danger-zone">
+                    <div class="card-header">
+                        <div class="title-wrap">
+                            <span class="material-symbols-outlined">settings</span>
+                            <h2>Management</h2>
+                        </div>
+                    </div>
+                    <div class="action-list">
+                        <button class="bubble-action-btn outline"
+                            onclick="showInvitationModal('{{ bubble.id }}', '{{ bubble.name }}')">
+                            <span class="material-symbols-outlined">person_add</span>
+                            Invite Members
+                        </button>
+                        <button class="bubble-action-btn danger" onclick="confirmDeleteBubble()">
+                            <span class="material-symbols-outlined">delete_forever</span>
+                            Delete Bubble
+                        </button>
+                    </div>
+                </section>
+                {% endif %}
+            </div>
+        </div>
+    </main>
+
+    <style>
+        :root {
+            --card-radius: 1rem;
+            --transition: 0.25s ease;
+        }
+
+        body {
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            margin: 0;
+            font-family: 'Inter', system-ui, sans-serif;
+        }
+
+        .dashboard-root {
+            min-height: 100vh;
+            padding-top: 64px;
+        }
+
+        .bubble-hero {
+            background: linear-gradient(135deg, var(--bg-secondary) 0%, var(--bg-primary) 100%);
+            padding: 2.5rem 4rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            border-bottom: 1px solid var(--border-subtle);
+            position: relative;
+        }
+
+        .breadcrumb {
+            position: absolute;
+            top: 1.5rem;
+            left: 4rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.8rem;
+            color: var(--text-muted);
+        }
+
+        .breadcrumb a {
+            color: inherit;
+            text-decoration: none;
+        }
+
+        .breadcrumb a:hover {
+            color: var(--accent);
+        }
+
+        .hero-main h1 {
+            font-size: 2.75rem;
+            margin: 0 0 0.5rem 0;
+            font-weight: 800;
+            background: linear-gradient(to right, var(--text-primary), var(--accent));
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .hero-main .description {
+            font-size: 1.1rem;
+            color: var(--text-secondary);
+            max-width: 600px;
+            margin: 0;
+            opacity: 0.8;
+        }
+
+        .hero-stats {
+            display: flex;
+            gap: 3rem;
+            margin-top: 1.5rem;
+        }
+
+        .hero-stat {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .hero-stat .value {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--accent);
+        }
+
+        .hero-stat .label {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .user-quick-rank {
+            background: var(--surface);
+            padding: 1rem 1.5rem;
+            border-radius: 1.25rem;
+            border: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            gap: 1.25rem;
+            box-shadow: var(--shadow-md);
+        }
+
+        .rank-badge {
+            width: 44px;
+            height: 44px;
+            background: var(--accent);
+            color: var(--btn-text);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 800;
+            font-size: 1.1rem;
+        }
+
+        .mini-progress {
+            width: 100px;
+            height: 6px;
+            background: var(--bg-tertiary);
+            border-radius: 3px;
+            margin-top: 0.4rem;
+            overflow: hidden;
+        }
+
+        .mini-progress .fill {
+            height: 100%;
+            background: var(--success);
+            border-radius: 3px;
+        }
+
+        .dashboard-grid {
+            padding: 2.5rem 4rem;
+            display: grid;
+            grid-template-columns: 1fr 360px;
+            gap: 2.5rem;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .main-col,
+        .side-col {
+            display: flex;
+            flex-direction: column;
+            gap: 2.5rem;
+        }
+
+        .grid-card {
+            background: var(--bg-secondary);
+            border-radius: var(--card-radius);
+            border: 1px solid var(--border-subtle);
+            padding: 1.75rem;
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+        }
+
+        .title-wrap {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .title-wrap .material-symbols-outlined {
+            color: var(--accent);
+        }
+
+        .title-wrap h2 {
+            margin: 0;
+            font-size: 1.25rem;
+            font-weight: 700;
+        }
+
+        .leaderboard-table {
+            width: 100%;
+        }
+
+        .table-header {
+            display: grid;
+            grid-template-columns: 80px 1fr 80px 180px;
+            padding: 0 1rem 1rem;
+            color: var(--text-muted);
+            font-size: 0.75rem;
+            font-weight: 700;
+            text-transform: uppercase;
+        }
+
+        .member-row {
+            display: grid;
+            grid-template-columns: 80px 1fr 80px 180px;
+            padding: 1.25rem 1rem;
+            align-items: center;
+            border-radius: 0.75rem;
+            transition: var(--transition);
+        }
+
+        .member-row:hover {
+            background: var(--bg-tertiary);
+        }
+
+        .member-row.is-me {
+            background: var(--bg-hover);
+            border-left: 3px solid var(--accent);
+        }
+
+        .badge {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 800;
+        }
+
+        .gold {
+            background: #FFD700;
+            color: #000;
+        }
+
+        .silver {
+            background: #C0C0C0;
+            color: #000;
+        }
+
+        .bronze {
+            background: #CD7F32;
+            color: #fff;
+        }
+
+        .avatar-init {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: var(--bg-tertiary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            margin-right: 1rem;
+        }
+
+        .user-cell {
+            display: flex;
+            align-items: center;
+        }
+
+        .user-info .name {
+            font-weight: 600;
+            font-size: 1rem;
+        }
+
+        .user-info .meta {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+        }
+
+        .progress-bar-wrap {
+            height: 8px;
+            background: var(--bg-tertiary);
+            border-radius: 4px;
+            overflow: hidden;
+            margin-bottom: 0.25rem;
+        }
+
+        .bar-fill {
+            height: 100%;
+            background: var(--success);
+        }
+
+        .sub-text {
+            font-size: 0.7rem;
+            color: var(--text-muted);
+        }
+
+        .chat-banner-card {
+            background: var(--bg-tertiary);
+            height: 180px;
+            border-radius: var(--card-radius);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            color: var(--text-primary);
+            transition: var(--transition);
+            position: relative;
+            overflow: hidden;
+            border: 1px solid var(--border-subtle);
+        }
+
+        .chat-banner-card:hover {
+            transform: translateY(-4px);
+            box-shadow: var(--shadow-lg);
+        }
+
+        .banner-link {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+        }
+
+        .banner-content {
+            text-align: center;
+            position: relative;
+            z-index: 2;
+            pointer-events: none;
+        }
+
+        .banner-content .material-symbols-outlined {
+            font-size: 2.5rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .banner-btn {
+            background: var(--accent);
+            color: var(--btn-text);
+            border: none;
+            padding: 0.5rem 1.25rem;
+            border-radius: 2rem;
+            font-weight: 700;
+            cursor: pointer;
+            margin-top: 0.75rem;
+            width: 100%;
+        }
+
+        [data-theme="light"] .chat-banner-card {
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+            border-color: var(--border);
+        }
+
+        [data-theme="light"] .chat-banner-card .banner-btn {
+            background: var(--accent);
+            color: var(--btn-text);
+        }
+
+        .todo-input-group {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .todo-input-group input {
+            flex: 1;
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border);
+            padding: 0.75rem 1rem;
+            border-radius: 0.75rem;
+            color: var(--text-primary);
+            outline: none;
+        }
+
+        .add-btn {
+            width: 44px;
+            height: 44px;
+            background: var(--accent);
+            color: var(--btn-text);
+            border: none;
+            border-radius: 0.75rem;
+            cursor: pointer;
+        }
+
+        .todo-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 0.75rem;
+            padding: 1rem;
+            background: var(--bg-tertiary);
+            border-radius: 0.75rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .todo-item.completed {
+            opacity: 0.6;
+        }
+
+        .todo-item.completed .task-text {
+            text-decoration: line-through;
+        }
+
+        .todo-checkbox {
+            cursor: pointer;
+            color: var(--text-muted);
+        }
+
+        .todo-checkbox.done {
+            color: var(--success);
+        }
+
+        .task-text {
+            flex: 1;
+            font-size: 0.9rem;
+        }
+
+        .delete-btn {
+            opacity: 0.4;
+            border: none;
+            background: none;
+            cursor: pointer;
+            color: var(--error);
+            transition: 0.2s;
+        }
+
+        .delete-btn:hover {
+            opacity: 1;
+        }
+
+        .resources-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+
+        .file-item {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 1rem;
+            background: var(--bg-tertiary);
+            border-radius: 0.75rem;
+            transition: var(--transition);
+        }
+
+        .file-item:hover {
+            background: var(--bg-hover);
+        }
+
+        .file-icon {
+            width: 40px;
+            height: 40px;
+            background: var(--bg-primary);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--accent);
+        }
+
+        .file-info {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .file-name {
+            font-weight: 600;
+            font-size: 0.9rem;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .file-meta {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+        }
+
+        .action-list {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .bubble-action-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            padding: 0.6rem 1.2rem;
+            border-radius: 0.75rem;
+            font-weight: 600;
+            cursor: pointer;
+            border: none;
+            transition: var(--transition);
+            background: var(--accent);
+            color: var(--btn-text);
+            font-size: 0.9rem;
+        }
+
+        .bubble-action-btn.outline {
+            background: transparent;
+            border: 1px solid var(--accent);
+            color: var(--accent);
+        }
+
+        .bubble-action-btn.danger {
+            background: var(--error-bg);
+            color: var(--error);
+        }
+
+        .bubble-action-btn:hover {
+            filter: brightness(1.1);
+        }
+
+        .switch-label {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            font-size: 0.8rem;
+            cursor: pointer;
+            color: var(--text-muted);
+        }
+
+        .slider {
+            width: 34px;
+            height: 18px;
+            background: var(--bg-tertiary);
+            border-radius: 20px;
+            position: relative;
+            transition: .3s;
+        }
+
+        .slider:before {
+            content: "";
+            position: absolute;
+            width: 12px;
+            height: 12px;
+            left: 3px;
+            bottom: 3px;
+            background: #fff;
+            border-radius: 50%;
+            transition: .3s;
+        }
+
+        input:checked+.slider {
+            background: var(--success);
+        }
+
+        input:checked+.slider:before {
+            transform: translateX(16px);
+        }
+
+        input[type="checkbox"] {
+            display: none;
+        }
+
+        .loading-state {
+            text-align: center;
+            padding: 2rem;
+            color: var(--text-muted);
+        }
+
+        .spinning {
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            from {
+                transform: rotate(0deg);
+            }
+
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        @media (max-width: 1100px) {
+            .dashboard-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .bubble-hero {
+                padding: 4rem 2rem 2rem;
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 2rem;
+            }
+
+            .hero-main h1 {
+                font-size: 2rem;
+            }
+        }
+    </style>
+
+    <script>
+        const bubbleId = '{{ bubble.id }}';
+        let socket = io();
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            initSocket();
+            loadTodos();
+            loadFiles();
+
+            const todoInput = document.getElementById('todoInput');
+            if (todoInput) {
+                todoInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') addTodo(); });
+            }
+        });
+
+        function initSocket() {
+            socket.on('connect', () => {
+                socket.emit('join_bubble', { bubble_id: bubbleId });
+            });
+
+            socket.on('todo_update', (data) => {
+                if (data.bubble_id === bubbleId) renderTodo(data.todo);
+            });
+
+            socket.on('todo_delete', (data) => {
+                if (data.bubble_id === bubbleId) {
+                    const el = document.querySelector(`[data-todo-id="${data.todo_id}"]`);
+                    if (el) el.remove();
+                }
+            });
+
+            socket.on('file_update', (data) => {
+                if (data.bubble_id === bubbleId) renderFile(data.file);
+            });
+
+            socket.on('file_delete', (data) => {
+                if (data.bubble_id === bubbleId) {
+                    const el = document.querySelector(`[data-file-id="${data.file_id}"]`);
+                    if (el) el.remove();
+                }
+            });
+        }
+
+        async function updateConsent(checkbox) {
+            const consent = checkbox.checked;
+            try {
+                const res = await fetch('/api/user/privacy/leaderboard', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ allow_leaderboard: consent })
+                });
+                const data = await res.json();
+                if (data.success) { showToast('Updated!', 'success'); setTimeout(() => location.reload(), 500); }
+                else { showToast(data.error, 'error'); checkbox.checked = !consent; }
+            } catch (e) { checkbox.checked = !consent; }
+        }
+
+        async function loadTodos() {
+            const list = document.getElementById('todoList');
+            try {
+                const res = await fetch(`/api/bubbles/${bubbleId}/todos`);
+                const data = await res.json();
+                list.innerHTML = '';
+                if (data.success && data.todos.length > 0) data.todos.forEach(renderTodo);
+                else list.innerHTML = '<div class="loading-state">No active goals.</div>';
+            } catch (e) { list.innerHTML = 'Error loading goals'; }
+        }
+
+        async function addTodo() {
+            const input = document.getElementById('todoInput');
+            const task = input.value.trim();
+            if (!task) return;
+            input.disabled = true;
+            try {
+                await fetch(`/api/bubbles/${bubbleId}/todos`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ task })
+                });
+                input.value = '';
+            } finally { input.disabled = false; input.focus(); }
+        }
+
+        async function toggleTodo(id, current) {
+            await fetch(`/api/bubbles/${bubbleId}/todos/${id}`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ completed: !current })
+            });
+        }
+
+        async function deleteTodo(id) {
+            if (!confirm('Delete goal?')) return;
+            await fetch(`/api/bubbles/${bubbleId}/todos/${id}`, { method: 'DELETE' });
+        }
+
+        function renderTodo(todo) {
+            const list = document.getElementById('todoList');
+            let existing = document.querySelector(`[data-todo-id="${todo.id}"]`);
+
+            const html = `
+                <div class="todo-item ${todo.completed ? 'completed' : ''}" data-todo-id="${todo.id}">
+                    <span class="material-symbols-outlined todo-checkbox ${todo.completed ? 'done' : ''}" 
+                          onclick="toggleTodo('${todo.id}', ${todo.completed})">
+                        ${todo.completed ? 'check_circle' : 'radio_button_unchecked'}
+                    </span>
+                    <div class="task-text">${escapeHtml(todo.task)}</div>
+                    <button class="delete-btn" onclick="deleteTodo('${todo.id}')">
+                        <span class="material-symbols-outlined">delete</span>
+                    </button>
+                </div>
+            `;
+
+            if (existing) existing.outerHTML = html;
+            else {
+                const empty = list.querySelector('.loading-state');
+                if (empty) empty.remove();
+                list.insertAdjacentHTML('afterbegin', html);
+            }
+        }
+
+        async function loadFiles() {
+            const list = document.getElementById('fileList');
+            try {
+                const res = await fetch(`/api/bubbles/${bubbleId}/files`);
+                const data = await res.json();
+                list.innerHTML = '';
+                if (data.success && data.files.length > 0) data.files.forEach(renderFile);
+                else list.innerHTML = '<div class="loading-state">No shared resources.</div>';
+            } catch (e) { list.innerHTML = 'Error loading files'; }
+        }
+
+        async function uploadFile(input) {
+            const file = input.files[0];
+            if (!file) return;
+            const fd = new FormData();
+            fd.append('file', file);
+            showToast('Uploading...', 'info');
+            const res = await fetch(`/api/bubbles/${bubbleId}/files`, { method: 'POST', body: fd });
+            const data = await res.json();
+            if (data.success) { showToast('Uploaded!', 'success'); input.value = ''; }
+            else showToast(data.error, 'error');
+        }
+
+        async function deleteFile(id) {
+            if (!confirm('Delete resource?')) return;
+            await fetch(`/api/bubbles/${bubbleId}/files/${id}`, { method: 'DELETE' });
+        }
+
+        function renderFile(file) {
+            const list = document.getElementById('fileList');
+            let existing = document.querySelector(`[data-file-id="${file.id}"]`);
+            const icon = getFileIcon(file.mime_type);
+            const size = formatBytes(file.file_size);
+
+            const html = `
+                <div class="file-item" data-file-id="${file.id}">
+                    <div class="file-icon"><span class="material-symbols-outlined">${icon}</span></div>
+                    <div class="file-info">
+                        <div class="file-name">${file.filename}</div>
+                        <div class="file-meta">${size} • By ${file.uploader_name}</div>
+                    </div>
+                    <div style="display: flex; gap: 0.5rem;">
+                        <a href="/api/bubbles/${bubbleId}/files/${file.id}/download" class="delete-btn" style="color: var(--primary); opacity: 0.7;">
+                            <span class="material-symbols-outlined">download</span>
+                        </a>
+                        <button class="delete-btn" onclick="deleteFile('${file.id}')">
+                            <span class="material-symbols-outlined">delete</span>
+                        </button>
+                    </div>
+                </div>
+            `;
+
+            if (existing) existing.outerHTML = html;
+            else {
+                const empty = list.querySelector('.loading-state');
+                if (empty) empty.remove();
+                list.insertAdjacentHTML('afterbegin', html);
+            }
+        }
+
+        function getFileIcon(mime) {
+            if (mime.startsWith('image/')) return 'image';
+            if (mime.includes('pdf')) return 'picture_as_pdf';
+            if (mime.includes('word') || mime.includes('text/')) return 'description';
+            return 'insert_drive_file';
+        }
+
+        function formatBytes(b) {
+            if (b === 0) return '0 B';
+            const k = 1024, i = Math.floor(Math.log(b) / Math.log(k));
+            return parseFloat((b / Math.pow(k, i)).toFixed(1)) + ' ' + ['B', 'KB', 'MB', 'GB'][i];
+        }
+
+        function showToast(msg, type) {
+            const t = document.createElement('div');
+            t.style.cssText = `position: fixed; top: 80px; right: 20px; background: ${type === 'success' ? 'var(--success)' : 'var(--error)'}; color: #fff; padding: 0.75rem 1.5rem; border-radius: 0.5rem; z-index: 9999; box-shadow: var(--shadow-md);`;
+            t.textContent = msg;
+            document.body.appendChild(t);
+            setTimeout(() => t.remove(), 3000);
+        }
+
+        function escapeHtml(t) {
+            const d = document.createElement('div');
+            d.textContent = t;
+            return d.innerHTML;
+        }
+
+        function showInvitationModal(bid, bname) {
+            const m = document.createElement('div');
+            m.className = 'modal-backdrop';
+            m.style.cssText = `position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); display: flex; align-items: center; justify-content: center; z-index: 10000; backdrop-filter: blur(4px);`;
+            m.innerHTML = `
+                <div style="background: var(--bg-secondary); padding: 2rem; border-radius: 1.5rem; width: 90%; max-width: 500px; box-shadow: var(--shadow-xl);">
+                    <h3 style="margin-top: 0;">Invite to ${bname}</h3>
+                    <div id="connList" style="max-height: 300px; overflow-y: auto; margin: 1.5rem 0;">Loading...</div>
+                    <div style="display: flex; justify-content: flex-end; gap: 1rem;">
+                        <button onclick="this.closest('.modal-backdrop').remove()" class="bubble-action-btn outline">Cancel</button>
+                        <button id="sendInvBtn" class="bubble-action-btn">Send Invites</button>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(m);
+            loadConns(bid, m);
+        }
+
+        async function loadConns(bid, m) {
+            const res = await fetch('/api/connections');
+            const data = await res.json();
+            const list = m.querySelector('#connList');
+            if (data.accepted && data.accepted.length > 0) {
+                list.innerHTML = data.accepted.map(c => `
+                    <label style="display: flex; align-items: center; gap: 1rem; padding: 0.75rem; border-radius: 0.75rem; background: var(--bg-tertiary); margin-bottom: 0.5rem; cursor: pointer;">
+                        <input type="checkbox" value="${c.uid}" style="display: block;">
+                        <span>${c.name}</span>
+                    </label>
+                `).join('');
+            } else list.innerHTML = 'No connections found.';
+
+            m.querySelector('#sendInvBtn').onclick = async () => {
+                const uids = Array.from(m.querySelectorAll('input:checked')).map(i => i.value);
+                if (!uids.length) return showToast('Select someone!', 'error');
+                for (let uid of uids) {
+                    await fetch(`/api/bubbles/${bid}/invite`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ target_uid: uid })
+                    });
+                }
+                m.remove();
+                showToast('Invitations sent!', 'success');
+            };
+        }
+
+        async function confirmDeleteBubble() {
+            if (!confirm('Delete this bubble forever?')) return;
+            const res = await fetch(`/api/bubbles/${bubbleId}/delete`, { method: 'DELETE' });
+            const data = await res.json();
+            if (data.success) location.href = '/community';
+            else showToast(data.error, 'error');
+        }
+    </script>
+</body>
+
+</html>

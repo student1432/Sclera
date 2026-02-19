@@ -1,0 +1,1805 @@
+<!DOCTYPE html>
+<html class="dark" lang="en">
+<head>
+    <meta charset="utf-8"/>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <title>Docs Dashboard - Sclera</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Serif+Display:ital,wght@0,300;0,400;0,600;0,700;1,400&family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    
+    <script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#ffffff",
+                        "background-light": "#f6f6f8",
+                        "background-dark": "#0a0c10",
+                    },
+                    fontFamily: {
+                        "display": ["Inter", "sans-serif"],
+                        "serif": ["Noto Serif Display", "serif"]
+                    },
+                    borderRadius: {
+                        "DEFAULT": "1rem",
+                        "lg": "2rem",
+                        "xl": "3rem",
+                        "full": "9999px"
+                    },
+                },
+            },
+        }
+    </script>
+    
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
+        }
+        .serif-text {
+            font-family: 'Noto Serif Display', serif;
+        }
+        .glass-panel {
+            background: var(--bg-secondary);
+            backdrop-filter: blur(16px);
+            border: 1px solid var(--border);
+        }
+        .floating-notch {
+            background: var(--bg-elevated);
+            backdrop-filter: blur(24px);
+            border: 1px solid var(--border);
+        }
+        .hide-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .hide-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+        .editor-content {
+            min-height: 400px;
+            outline: none;
+            color: var(--text-primary);
+        }
+        .editor-content:focus {
+            outline: none;
+        }
+        .editor-content h1 { font-size: 3rem; font-weight: bold; margin: 2rem 0 1rem; color: var(--text-primary); }
+        .editor-content h2 { font-size: 2.5rem; font-weight: 600; margin: 1.5rem 0 0.75rem; color: var(--text-primary); }
+        .editor-content h3 { font-size: 2rem; font-weight: 600; margin: 1.25rem 0 0.5rem; color: var(--text-primary); }
+        .editor-content h4 { font-size: 1.5rem; font-weight: 600; margin: 1rem 0 0.5rem; color: var(--text-primary); }
+        .editor-content h5 { font-size: 1.25rem; font-weight: 600; margin: 0.75rem 0 0.25rem; color: var(--text-primary); }
+        .editor-content h6 { font-size: 1rem; font-weight: 600; margin: 0.5rem 0 0.25rem; color: var(--text-primary); }
+        .editor-content p { margin: 1rem 0; line-height: 1.6; color: var(--text-primary); }
+        .editor-content ul, .editor-content ol { margin: 1rem 0; padding-left: 2rem; color: var(--text-primary); }
+        .editor-content li { margin: 0.5rem 0; color: var(--text-primary); }
+        .editor-content blockquote { 
+            border-left: 4px solid var(--accent); 
+            padding-left: 1rem; 
+            margin: 1rem 0; 
+            font-style: italic;
+            background: var(--bg-tertiary);
+            padding: 1rem;
+            border-radius: 0.5rem;
+            color: var(--text-secondary);
+        }
+        .editor-content a { 
+            color: var(--accent); 
+            text-decoration: underline;
+            text-decoration-color: var(--accent-subtle);
+            text-underline-offset: 2px;
+        }
+        .editor-content a:hover {
+            text-decoration-color: var(--accent);
+        }
+        
+        /* Docs specific classes using root variables */
+        .docs-container {
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
+        }
+        .docs-text {
+            color: var(--text-primary);
+        }
+        .docs-text-secondary {
+            color: var(--text-secondary);
+        }
+        .docs-text-muted {
+            color: var(--text-muted);
+        }
+        .docs-border {
+            border-color: var(--border);
+        }
+        .docs-border-t {
+            border-top-color: var(--border);
+        }
+        .docs-border-subtle {
+            border-color: var(--border-subtle);
+        }
+        .docs-bg-secondary {
+            background-color: var(--bg-secondary);
+        }
+        .docs-bg-tertiary {
+            background-color: var(--bg-tertiary);
+        }
+        .docs-bg-hover {
+            background-color: var(--bg-hover);
+        }
+        .docs-bg-secondary-40 {
+            background-color: var(--bg-secondary);
+            opacity: 0.4;
+        }
+        .docs-accent {
+            background-color: var(--accent);
+            color: var(--bg-primary);
+        }
+        .docs-accent-hover {
+            background-color: var(--accent-hover);
+            color: var(--bg-primary);
+        }
+        .docs-success {
+            color: var(--success);
+        }
+        .docs-warning {
+            color: var(--warning);
+        }
+        .docs-error {
+            color: var(--error);
+        }
+        .docs-success-bg {
+            background-color: var(--success-bg);
+        }
+        .docs-warning-bg {
+            background-color: var(--warning-bg);
+        }
+        .docs-error-bg {
+            background-color: var(--error-bg);
+        }
+        .docs-progress-track {
+            background-color: var(--progress-track);
+        }
+        .docs-progress-fill {
+            background-color: var(--progress-fill);
+        }
+
+        /* Fix for form elements in dark mode */
+        .docs-bg-tertiary input,
+        .docs-bg-tertiary select,
+        .docs-bg-tertiary textarea {
+            background-color: var(--bg-tertiary) !important;
+            color: var(--text-primary) !important;
+        }
+        
+        .docs-bg-tertiary input::placeholder,
+        .docs-bg-tertiary textarea::placeholder {
+            color: var(--text-muted) !important;
+        }
+        
+        .docs-bg-tertiary select option {
+            background-color: var(--bg-tertiary) !important;
+            color: var(--text-primary) !important;
+        }
+    </style>
+</head>
+
+<body class="docs-container docs-text min-h-screen overflow-hidden">
+    
+    <!-- Use existing topnav -->
+    {% include '_topnav.html' %}
+
+    <!-- Main Content Area -->
+    <main class="flex h-screen pt-24 pb-6 px-6 gap-6 max-w-[1600px] mx-auto">
+        
+        <!-- Left Sidebar: Folder Tree -->
+        <aside class="w-72 flex flex-col gap-4">
+            <div class="glass-panel rounded-xl flex-1 p-6 flex flex-col gap-6 overflow-y-auto hide-scrollbar">
+                
+                <button id="newDocBtn" class="w-full flex items-center justify-center gap-2 docs-accent font-bold text-sm py-3 rounded-full docs-accent-hover transition-all">
+                    <span class="material-symbols-outlined text-lg">add</span>
+                    New Document
+                </button>
+                
+                <button id="newFolderBtn" class="w-full flex items-center justify-center gap-2 docs-border docs-text font-bold text-sm py-3 rounded-full hover:docs-bg-hover transition-all mt-2">
+                    <span class="material-symbols-outlined text-lg">create_new_folder</span>
+                    New Folder
+                </button>
+                
+                <!-- Subject Filter -->
+                <div class="mt-4">
+                    <select id="subjectFilter" class="w-full docs-bg-tertiary docs-border rounded-full py-2.5 px-4 text-xs font-medium docs-text focus:outline-none focus:ring-1 focus:ring-accent/50 transition-all">
+                        <option value="all">All Subjects</option>
+                    </select>
+                </div>
+                
+                <div class="flex flex-col gap-8">
+                    <!-- Collections -->
+                    <section>
+                        <h3 class="text-[10px] uppercase tracking-[0.2em] docs-text-muted font-bold mb-4 px-2">Collections</h3>
+                        <div id="folderTree" class="flex flex-col gap-1">
+                            <!-- Folders will be populated here -->
+                        </div>
+                    </section>
+                    
+                    <!-- Quick Access -->
+                    <section>
+                        <h3 class="text-[10px] uppercase tracking-[0.2em] docs-text-muted font-bold mb-4 px-2">Quick Access</h3>
+                        <div id="recentDocs" class="flex flex-col gap-1">
+                            <!-- Recent docs will be populated here -->
+                        </div>
+                    </section>
+                </div>
+                
+                <!-- Filtered Items Section - Moved to Bottom -->
+                <div class="mt-auto pt-6 docs-border-t">
+                    <h3 class="text-[10px] uppercase tracking-[0.2em] docs-text-muted font-bold mb-4 px-2">Filtered Items</h3>
+                    
+                    <!-- Filter and Search Row -->
+                    <div class="flex gap-2 mb-4">
+                        <select id="filteredSubjectFilter" class="flex-1 docs-bg-tertiary docs-border rounded-full py-2.5 px-4 text-xs font-medium docs-text focus:outline-none focus:ring-1 focus:ring-accent/50 transition-all">
+                            <option value="all">All Subjects</option>
+                        </select>
+                        
+                        <div class="relative flex-1">
+                            <span class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 docs-text-muted text-lg">search</span>
+                            <input id="filteredSearchInput" class="w-full docs-bg-tertiary docs-border rounded-full py-2.5 pl-11 pr-4 text-xs font-medium docs-text placeholder:docs-text-muted focus:outline-none focus:ring-1 focus:ring-accent/50 transition-all" placeholder="Search filtered items..." type="text"/>
+                        </div>
+                    </div>
+                    
+                    <div id="filteredItems" class="flex flex-col gap-2 max-h-48 overflow-y-auto hide-scrollbar">
+                        <div class="text-center docs-text-muted text-sm py-8">
+                            No items match current filter
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Central Editor Area -->
+        <div class="flex-1 glass-panel rounded-xl overflow-y-auto hide-scrollbar relative">
+            <div class="max-w-3xl mx-auto py-24 px-12 min-h-full flex flex-col">
+                
+                <!-- Get Started State (shown when no document is loaded) -->
+                <div id="getStartedState" class="flex-1 flex flex-col items-center justify-center text-center">
+                    <div class="docs-text-muted mb-8">
+                        <span class="material-symbols-outlined text-6xl mb-4">description</span>
+                    </div>
+                    <h1 class="text-3xl font-bold docs-text mb-4">Get Started</h1>
+                    <p class="docs-text-secondary mb-8 max-w-md">
+                        Create a new document or select an existing one to begin writing
+                    </p>
+                    <div class="flex gap-4 justify-center">
+                        <button onclick="showModal('document')" class="docs-accent font-bold text-sm py-3 px-6 rounded-full docs-accent-hover transition-all">
+                            <span class="material-symbols-outlined text-sm mr-2">add</span>
+                            New Document
+                        </button>
+                        <button onclick="showDocumentSelector()" class="docs-border docs-text font-bold text-sm py-3 px-6 rounded-full hover:docs-bg-hover transition-all">
+                            <span class="material-symbols-outlined text-sm mr-2">folder_open</span>
+                            Browse Documents
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Document Editor (shown when document is loaded) -->
+                <div id="editorState" class="hidden">
+                    <!-- Document Title -->
+                    <input id="documentTitle" class="serif-text text-6xl font-bold tracking-tight docs-text mb-12 bg-transparent border-none outline-none w-full" placeholder="Untitled Document" value="">
+                    
+                    <!-- Floating Toolbar -->
+                    <div id="floatingToolbar" class="floating-notch fixed top-24 left-1/2 -translate-x-1/2 z-10 px-4 py-2 rounded-full glass-panel docs-border flex items-center gap-1 opacity-0 pointer-events-none transition-opacity">
+                        <!-- Bold -->
+                        <button class="toolbar-button docs-text-muted hover:docs-text p-2 rounded-full transition-all" data-command="bold" title="Bold">
+                            <span class="material-symbols-outlined text-sm">format_bold</span>
+                        </button>
+                        
+                        <!-- Italic -->
+                        <button class="toolbar-button docs-text-muted hover:docs-text p-2 rounded-full transition-all" data-command="italic" title="Italic">
+                            <span class="material-symbols-outlined text-sm">format_italic</span>
+                        </button>
+                        
+                        <!-- Underline -->
+                        <button class="toolbar-button docs-text-muted hover:docs-text p-2 rounded-full transition-all" data-command="underline" title="Underline">
+                            <span class="material-symbols-outlined text-sm">format_underlined</span>
+                        </button>
+                        
+                        <!-- Strike -->
+                        <button class="toolbar-button docs-text-muted hover:docs-text p-2 rounded-full transition-all" data-command="strikeThrough" title="Strikethrough">
+                            <span class="material-symbols-outlined text-sm">format_strikethrough</span>
+                        </button>
+                        
+                        <!-- Divider -->
+                        <div class="w-px h-6 docs-border mx-1"></div>
+                        
+                        <!-- H1 -->
+                        <button class="toolbar-button docs-text-muted hover:docs-text p-2 rounded-full transition-all" data-command="formatBlock" data-value="h1" title="Heading 1">
+                            <span class="material-symbols-outlined text-sm">looks_one</span>
+                        </button>
+                        
+                        <!-- H2 -->
+                        <button class="toolbar-button docs-text-muted hover:docs-text p-2 rounded-full transition-all" data-command="formatBlock" data-value="h2" title="Heading 2">
+                            <span class="material-symbols-outlined text-sm">looks_two</span>
+                        </button>
+                        
+                        <!-- H3 -->
+                        <button class="toolbar-button docs-text-muted hover:docs-text p-2 rounded-full transition-all" data-command="formatBlock" data-value="h3" title="Heading 3">
+                            <span class="material-symbols-outlined text-sm">looks_3</span>
+                        </button>
+                        
+                        <!-- Divider -->
+                        <div class="w-px h-6 docs-border mx-1"></div>
+                        
+                        <!-- Bullet List -->
+                        <button class="toolbar-button docs-text-muted hover:docs-text p-2 rounded-full transition-all" data-command="insertUnorderedList" title="Bullet List">
+                            <span class="material-symbols-outlined text-sm">format_list_bulleted</span>
+                        </button>
+                        
+                        <!-- Numbered List -->
+                        <button class="toolbar-button docs-text-muted hover:docs-text p-2 rounded-full transition-all" data-command="insertOrderedList" title="Numbered List">
+                            <span class="material-symbols-outlined text-sm">format_list_numbered</span>
+                        </button>
+                        
+                        <!-- Blockquote -->
+                        <button class="toolbar-button docs-text-muted hover:docs-text p-2 rounded-full transition-all" data-command="formatBlockquote" title="Blockquote">
+                            <span class="material-symbols-outlined text-sm">format_quote</span>
+                        </button>
+                        
+                        <!-- Divider -->
+                        <div class="w-px h-6 docs-border mx-1"></div>
+                        
+                        <!-- Link -->
+                        <button class="toolbar-button docs-text-muted hover:docs-text p-2 rounded-full transition-all" data-command="createLink" title="Link">
+                            <span class="material-symbols-outlined text-sm">link</span>
+                        </button>
+                        
+                        <!-- Undo -->
+                        <button class="toolbar-button docs-text-muted hover:docs-text p-2 rounded-full transition-all" data-command="undo" title="Undo">
+                            <span class="material-symbols-outlined text-sm">undo</span>
+                        </button>
+                        
+                        <!-- Redo -->
+                        <button class="toolbar-button docs-text-muted hover:docs-text p-2 rounded-full transition-all" data-command="redo" title="Redo">
+                            <span class="material-symbols-outlined text-sm">redo</span>
+                        </button>
+                    </div>
+                    
+                    <!-- Editor Content -->
+                    <div id="editor" class="editor-content flex-1 outline-none" contenteditable="true">
+                        <p>Start writing...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Sidebar: Outline & Actions -->
+        <aside class="w-64 flex flex-col gap-4">
+            <div class="glass-panel rounded-xl flex-1 p-6 flex flex-col">
+                
+                <!-- Actions -->
+                <div class="mb-6">
+                    <button id="saveBtn" class="w-full docs-accent font-bold text-sm py-3 rounded-full docs-accent-hover transition-all mb-2">
+                        <span class="material-symbols-outlined text-sm">save</span>
+                        Save Document
+                    </button>
+                    
+                    <!-- Document Actions - Only shown when document is open -->
+                    <div id="documentActions" class="hidden space-y-2">
+                        <button id="shareBtn" class="w-full docs-border docs-text font-bold text-sm py-3 rounded-full hover:docs-bg-hover transition-all">
+                            <span class="material-symbols-outlined text-sm">share</span>
+                            Share
+                        </button>
+                        <button id="deleteBtn" class="w-full docs-error-bg docs-error font-bold text-sm py-3 rounded-full hover:opacity-80 transition-all" onclick="deleteDocument()">
+                            <span class="material-symbols-outlined text-sm">delete</span>
+                            Delete Document
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Outline -->
+                <h3 class="text-[10px] uppercase tracking-[0.2em] docs-text-muted font-bold mb-6">Outline</h3>
+                <nav id="outline" class="flex flex-col gap-4">
+                    <div class="text-center docs-text-muted text-sm py-8">
+                        No headings yet
+                    </div>
+                </nav>
+                
+                <!-- Reading Progress -->
+                <div class="mt-auto pt-6 docs-border-t">
+                    <div class="flex items-center justify-between mb-4">
+                        <span class="text-[10px] font-bold docs-text-muted uppercase tracking-widest">Reading Progress</span>
+                        <span id="progressPercent" class="text-[10px] font-bold">0%</span>
+                    </div>
+                    <div class="w-full h-1 docs-progress-track rounded-full overflow-hidden">
+                        <div id="progressFill" class="h-full w-0 rounded-full docs-progress-fill transition-all duration-300"></div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Metadata Card -->
+            <div class="glass-panel rounded-xl p-5 docs-border docs-bg-tertiary">
+                <div class="flex items-center gap-2 mb-3">
+                    <span class="material-symbols-outlined docs-text-secondary text-lg">info</span>
+                    <span class="text-xs font-bold uppercase tracking-widest docs-text-secondary">Document Info</span>
+                </div>
+                <div class="space-y-2">
+                    <div class="flex justify-between">
+                        <span class="text-xs docs-text-muted">Words</span>
+                        <span id="wordCount" class="text-xs font-bold docs-text">0</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-xs docs-text-muted">Reading time</span>
+                        <span id="readingTime" class="text-xs font-bold docs-text">0 min</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-xs docs-text-muted">Last edited</span>
+                        <span id="lastEdited" class="text-xs font-bold docs-text">Just now</span>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Save Status -->
+            <div id="saveStatus" class="glass-panel rounded-xl p-3 docs-border docs-bg-tertiary">
+                <div class="flex items-center justify-center gap-2">
+                    <div id="statusDot" class="w-2 h-2 rounded-full docs-success"></div>
+                    <span id="statusText" class="text-xs font-bold docs-success">Saved</span>
+                </div>
+            </div>
+        </aside>
+    </main>
+
+    <!-- Footer Meta -->
+    <footer id="footerMeta" class="fixed bottom-6 left-1/2 -translate-x-1/2 z-50">
+        <div class="docs-bg-secondary-40 backdrop-blur-md px-4 py-1.5 rounded-full docs-border flex items-center gap-4 text-[10px] uppercase tracking-[0.2em] docs-text-muted font-bold">
+            <span id="footerWordCount">Word Count: 0</span>
+            <span class="w-1 h-1 docs-border rounded-full"></span>
+            <span id="footerReadingTime">Est. Reading: 0 Min</span>
+            <span class="w-1 h-1 docs-border rounded-full"></span>
+            <span class="flex items-center gap-1">
+                <span id="liveStatus" class="w-1.5 rounded-full docs-success"></span> 
+                <span id="footerStatusText">Saved</span>
+            </span>
+        </div>
+    </footer>
+
+    <!-- Modal for Document/Folder Creation -->
+    <div id="createModal" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 hidden items-center justify-center">
+        <div class="glass-panel rounded-2xl p-6 w-full max-w-md mx-4">
+            <div class="flex justify-between items-center mb-6">
+                <h2 id="modalTitle" class="text-xl font-bold docs-text">Create New Document</h2>
+                <button id="closeModal" class="docs-text-muted hover:docs-text p-2 rounded-full transition-colors">
+                    <span class="material-symbols-outlined">close</span>
+                </button>
+            </div>
+            
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium docs-text mb-2">Title</label>
+                    <input type="text" id="modalTitleInput" class="w-full docs-bg-tertiary docs-border rounded-lg px-4 py-2 text-sm docs-text focus:outline-none focus:ring-1 focus:ring-accent/50 transition-all" placeholder="Enter title...">
+                </div>
+                
+                <div id="subjectField">
+                    <label class="block text-sm font-medium docs-text mb-2">Subject</label>
+                    <select id="modalSubjectSelect" class="w-full docs-bg-tertiary docs-border rounded-lg px-4 py-2 text-sm docs-text focus:outline-none focus:ring-1 focus:ring-accent/50 transition-all">
+                        <option value="">No Subject</option>
+                    </select>
+                </div>
+                
+                <div id="folderField" class="hidden">
+                    <label class="block text-sm font-medium docs-text mb-2">Folder</label>
+                    <select id="modalFolderSelect" class="w-full docs-bg-tertiary docs-border rounded-lg px-4 py-2 text-sm docs-text focus:outline-none focus:ring-1 focus:ring-accent/50 transition-all">
+                        <option value="">Root Level</option>
+                    </select>
+                </div>
+                
+                <div class="flex gap-3 mt-6">
+                    <button id="modalCancel" class="flex-1 docs-border docs-text font-bold text-sm py-2 rounded-full hover:docs-bg-hover transition-colors">
+                        Cancel
+                    </button>
+                    <button id="modalCreate" class="flex-1 docs-accent font-bold text-sm py-2 rounded-full docs-accent-hover transition-colors">
+                        Create
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Export Modal -->
+    <div id="exportModal" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 hidden items-center justify-center">
+        <div class="glass-panel rounded-2xl p-6 w-full max-w-md mx-4">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-xl font-bold docs-text">Export Document</h2>
+                <button id="closeExportModal" class="docs-text-muted hover:docs-text p-2 rounded-full transition-colors">
+                    <span class="material-symbols-outlined">close</span>
+                </button>
+            </div>
+            
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium docs-text mb-2">Export Format</label>
+                    <div class="grid grid-cols-2 gap-2">
+                        <button id="exportMarkdown" class="docs-border docs-text font-bold text-sm py-2 rounded-full hover:docs-bg-hover transition-colors">
+                            Markdown
+                        </button>
+                        <button id="exportHTML" class="docs-border docs-text font-bold text-sm py-2 rounded-full hover:docs-bg-hover transition-colors">
+                            HTML
+                        </button>
+                        <button id="exportPDF" class="docs-border docs-text font-bold text-sm py-2 rounded-full hover:docs-bg-hover transition-colors">
+                            PDF
+                        </button>
+                        <button id="exportTXT" class="docs-border docs-text font-bold text-sm py-2 rounded-full hover:docs-bg-hover transition-colors">
+                            Text
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="flex gap-3 mt-6">
+                    <button id="exportModalCancel" class="flex-1 docs-border docs-text font-bold text-sm py-2 rounded-full hover:docs-bg-hover transition-colors">
+                        Close
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Global state
+        let currentDocument = null;
+        let folders = [];
+        let documents = [];
+        let isEditing = false;
+        let saveTimeout = null;
+
+        // Initialize data from Flask template
+        window.foldersData = {{ folders|tojson|safe }};
+        window.documentsData = {{ documents|tojson|safe }};
+        window.subjectsData = {{ subjects|tojson|safe }};
+        
+        folders = window.foldersData || [];
+        documents = window.documentsData || [];
+        subjects = window.subjectsData || [];
+        let currentFilter = 'all';
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeEditor();
+            renderFolders();
+            renderRecentDocs();
+            setupEventListeners();
+            setupKeyboardShortcuts();
+        });
+
+        // Editor initialization
+        function initializeEditor() {
+            const editorEl = document.getElementById('editor');
+            const titleInput = document.getElementById('documentTitle');
+            
+            // Basic contenteditable setup with enhanced functionality
+            editorEl.addEventListener('input', handleEditorInput);
+            editorEl.addEventListener('paste', handlePaste);
+            editorEl.addEventListener('keydown', handleKeyDown);
+            editorEl.addEventListener('mouseup', handleSelectionChange);
+            editorEl.addEventListener('keyup', handleSelectionChange);
+            
+            // Make editor focusable and editable
+            editorEl.contentEditable = true;
+            editorEl.spellcheck = false;
+            
+            // Set initial content
+            if (currentDocument && currentDocument.content) {
+                editorEl.innerHTML = currentDocument.content;
+            } else {
+                editorEl.innerHTML = '<p>Start writing...</p>';
+            }
+        }
+
+        // Switch between get started and editor states
+        function switchEditorState(hasDocument) {
+            const getStartedState = document.getElementById('getStartedState');
+            const editorState = document.getElementById('editorState');
+            const floatingToolbar = document.getElementById('floatingToolbar');
+            const documentActions = document.getElementById('documentActions');
+            
+            if (hasDocument && currentDocument) {
+                // Show editor state
+                getStartedState.classList.add('hidden');
+                editorState.classList.remove('hidden');
+                documentActions.classList.remove('hidden');
+                // Keep toolbar hidden until text is selected
+                floatingToolbar.classList.add('opacity-0', 'pointer-events-none');
+                floatingToolbar.classList.remove('opacity-100');
+            } else {
+                // Show get started state
+                getStartedState.classList.remove('hidden');
+                editorState.classList.add('hidden');
+                documentActions.classList.add('hidden');
+                floatingToolbar.classList.add('opacity-0', 'pointer-events-none');
+                floatingToolbar.classList.remove('opacity-100');
+            }
+        }
+
+        // Handle editor input
+        function handleEditorInput() {
+            if (!currentDocument) return;
+            
+            console.log('Editor input detected, setting status to saving...');
+            isEditing = true;
+            updateSaveStatus('saving');
+            updateWordCount();
+            updateOutline();
+            
+            // Autosave
+            clearTimeout(saveTimeout);
+            saveTimeout = setTimeout(() => {
+                console.log('Autosave triggered...');
+                saveDocument();
+            }, 2000);
+        }
+
+        // Save document
+        async function saveDocument() {
+            if (!currentDocument) return;
+            
+            console.log('Saving document:', currentDocument.id);
+            const title = document.getElementById('documentTitle').value;
+            const editorEl = document.getElementById('editor');
+            const content = editorEl.innerHTML;
+            const wordCount = countWords(editorEl.innerText);
+            
+            try {
+                const response = await fetch(`/api/documents/${currentDocument.id}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        title: title,
+                        content: content,
+                        word_count: wordCount
+                    })
+                });
+                
+                console.log('Save response status:', response.status);
+                if (response.ok) {
+                    const data = await response.json();
+                    currentDocument = data.document;
+                    updateSaveStatus('saved');
+                    updateMetadata();
+                    console.log('Document saved successfully');
+                } else {
+                    throw new Error('Save failed');
+                }
+            } catch (error) {
+                console.error('Error saving document:', error);
+                updateSaveStatus('error');
+            }
+            
+            isEditing = false;
+        }
+
+        // Update save status
+        function updateSaveStatus(status) {
+            const statusDot = document.getElementById('statusDot');
+            const statusText = document.getElementById('statusText');
+            const liveStatus = document.getElementById('liveStatus');
+            const footerStatusText = document.getElementById('footerStatusText');
+            
+            if (status === 'saved') {
+                statusDot.className = 'w-2 h-2 rounded-full docs-success';
+                statusText.className = 'text-xs font-bold docs-success';
+                statusText.textContent = 'Saved';
+                liveStatus.className = 'w-1.5 rounded-full docs-success';
+                footerStatusText.textContent = 'Saved';
+            } else if (status === 'saving') {
+                statusDot.className = 'w-2 h-2 rounded-full docs-warning animate-pulse';
+                statusText.className = 'text-xs font-bold docs-warning';
+                statusText.textContent = 'Saving...';
+                liveStatus.className = 'w-1.5 rounded-full docs-warning animate-pulse';
+                footerStatusText.textContent = 'Auto-saving...';
+            } else {
+                statusDot.className = 'w-2 h-2 rounded-full docs-error';
+                statusText.className = 'text-xs font-bold docs-error';
+                statusText.textContent = 'Error';
+                liveStatus.className = 'w-1.5 rounded-full docs-error';
+                footerStatusText.textContent = 'Save Error';
+            }
+        }
+
+        // Render folders with tree structure
+        function renderFolders() {
+            const folderTree = document.getElementById('folderTree');
+            folderTree.innerHTML = '';
+            
+            // Add root level documents
+            const rootDocs = documents.filter(doc => !doc.folder_id);
+            if (rootDocs.length > 0) {
+                rootDocs.forEach(doc => {
+                    const docEl = createDocumentElement(doc);
+                    folderTree.appendChild(docEl);
+                });
+            }
+            
+            // Add folders and their documents
+            folders.forEach(folder => {
+                const folderEl = createFolderElement(folder);
+                folderTree.appendChild(folderEl);
+                
+                // Add documents in this folder
+                const folderDocs = documents.filter(doc => doc.folder_id === folder.id);
+                if (folderDocs.length > 0) {
+                    const docsContainer = document.createElement('div');
+                    docsContainer.className = 'pl-9 flex flex-col gap-1 mt-1 border-l border-white/10 ml-5';
+                    
+                    folderDocs.forEach(doc => {
+                        const docEl = createDocumentElement(doc);
+                        docsContainer.appendChild(docEl);
+                    });
+                    
+                    folderTree.appendChild(docsContainer);
+                }
+            });
+        }
+
+        // Create folder element
+        function createFolderElement(folder) {
+            const folderEl = document.createElement('div');
+            folderEl.className = 'flex items-center gap-3 px-3 py-2 docs-text-secondary hover:docs-text hover:docs-bg-hover rounded-full cursor-pointer transition-colors group';
+            folderEl.innerHTML = `
+                <span class="material-symbols-outlined text-xl transition-colors group-hover:docs-text">folder</span>
+                <span class="text-sm font-medium flex-1">${folder.name}</span>
+                <button class="folder-menu-btn opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:docs-bg-hover rounded-full">
+                    <span class="material-symbols-outlined text-lg">more_vert</span>
+                </button>
+            `;
+            folderEl.draggable = true;
+            folderEl.dataset.folderId = folder.id;
+            folderEl.dataset.type = 'folder';
+            
+            folderEl.addEventListener('click', (e) => {
+                if (!e.target.closest('.folder-menu-btn')) {
+                    selectFolder(folder.id);
+                }
+            });
+            
+            // Three dots menu
+            const menuBtn = folderEl.querySelector('.folder-menu-btn');
+            menuBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                showFolderMenu(e, folder);
+            });
+            
+            // Drag events
+            folderEl.addEventListener('dragstart', handleDragStart);
+            folderEl.addEventListener('dragover', handleDragOver);
+            folderEl.addEventListener('drop', handleDrop);
+            folderEl.addEventListener('dragend', handleDragEnd);
+            
+            return folderEl;
+        }
+
+        // Create document element
+        function createDocumentElement(doc) {
+            const docEl = document.createElement('div');
+            const isActive = currentDocument && currentDocument.id === doc.id;
+            docEl.className = `flex items-center gap-3 px-3 py-2 ${isActive ? 'docs-bg-hover docs-text' : 'docs-text-muted hover:docs-text-secondary'} rounded-full cursor-pointer transition-colors`;
+            docEl.innerHTML = `
+                <span class="material-symbols-outlined text-lg">description</span>
+                <span class="text-xs ${isActive ? 'font-bold' : 'font-medium'}">${doc.title}</span>
+            `;
+            docEl.draggable = true;
+            docEl.dataset.documentId = doc.id;
+            docEl.dataset.type = 'document';
+            
+            docEl.addEventListener('click', () => loadDocument(doc.id));
+            
+            // Drag events
+            docEl.addEventListener('dragstart', handleDragStart);
+            docEl.addEventListener('dragover', handleDragOver);
+            docEl.addEventListener('drop', handleDrop);
+            docEl.addEventListener('dragend', handleDragEnd);
+            
+            return docEl;
+        }
+
+        // Drag and drop handlers
+        let draggedElement = null;
+
+        function handleDragStart(e) {
+            draggedElement = e.target;
+            e.target.style.opacity = '0.5';
+            e.dataTransfer.effectAllowed = 'move';
+            e.dataTransfer.setData('text/html', e.target.innerHTML);
+        }
+
+        function handleDragOver(e) {
+            if (e.preventDefault) {
+                e.preventDefault();
+            }
+            e.dataTransfer.dropEffect = 'move';
+            
+            // Add visual feedback
+            const target = e.target.closest('[data-type]');
+            if (target && target !== draggedElement) {
+                target.style.backgroundColor = 'var(--accent-subtle)';
+            }
+            
+            return false;
+        }
+
+        function handleDrop(e) {
+            if (e.stopPropagation) {
+                e.stopPropagation();
+            }
+            e.preventDefault();
+            
+            const target = e.target.closest('[data-type]');
+            if (target && draggedElement && target !== draggedElement) {
+                const targetType = target.dataset.type;
+                const draggedType = draggedElement.dataset.type;
+                
+                if (targetType === 'folder' && draggedType === 'document') {
+                    // Move document to folder
+                    const documentId = draggedElement.dataset.documentId;
+                    const folderId = target.dataset.folderId;
+                    moveDocumentToFolder(documentId, folderId);
+                }
+            }
+            
+            // Remove visual feedback
+            document.querySelectorAll('[data-type]').forEach(el => {
+                el.style.backgroundColor = '';
+            });
+            
+            return false;
+        }
+
+        function handleDragEnd(e) {
+            e.target.style.opacity = '';
+            document.querySelectorAll('[data-type]').forEach(el => {
+                el.style.backgroundColor = '';
+            });
+        }
+
+        // Move document to folder
+        async function moveDocumentToFolder(documentId, folderId) {
+            try {
+                const response = await fetch(`/api/documents/${documentId}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        folder_id: folderId
+                    })
+                });
+                
+                if (response.ok) {
+                    // Update local data
+                    const doc = documents.find(d => d.id === documentId);
+                    if (doc) {
+                        doc.folder_id = folderId;
+                    }
+                    renderFolders();
+                    renderRecentDocs();
+                }
+            } catch (error) {
+                console.error('Error moving document:', error);
+            }
+        }
+
+        // Show folder menu
+        function showFolderMenu(event, folder) {
+            // Remove any existing menu
+            const existingMenu = document.querySelector('.folder-menu');
+            if (existingMenu) {
+                existingMenu.remove();
+            }
+            
+            // Create menu
+            const menu = document.createElement('div');
+            menu.className = 'folder-menu glass-panel rounded-lg p-2 shadow-xl z-50';
+            menu.style.position = 'absolute';
+            menu.style.left = `${event.pageX}px`;
+            menu.style.top = `${event.pageY}px`;
+            menu.innerHTML = `
+                <button class="rename-folder-btn w-full text-left px-3 py-2 docs-text hover:docs-bg-hover rounded transition-colors flex items-center gap-2 mb-1">
+                    <span class="material-symbols-outlined text-sm">edit</span>
+                    Rename Folder
+                </button>
+                <button class="delete-folder-btn w-full text-left px-3 py-2 docs-text hover:docs-bg-hover rounded transition-colors flex items-center gap-2">
+                    <span class="material-symbols-outlined text-sm">delete</span>
+                    Delete Folder
+                </button>
+            `;
+            
+            // Add rename functionality
+            const renameBtn = menu.querySelector('.rename-folder-btn');
+            renameBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                menu.remove();
+                renameFolder(folder);
+            });
+            
+            // Add delete functionality
+            const deleteBtn = menu.querySelector('.delete-folder-btn');
+            deleteBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                menu.remove();
+                deleteFolder(folder);
+            });
+            
+            document.body.appendChild(menu);
+            
+            // Close menu when clicking outside
+            setTimeout(() => {
+                document.addEventListener('click', function closeMenu() {
+                    menu.remove();
+                    document.removeEventListener('click', closeMenu);
+                });
+            }, 100);
+        }
+
+        // Rename folder
+        async function renameFolder(folder) {
+            const newName = prompt('Enter new folder name:', folder.name);
+            if (!newName || newName.trim() === '' || newName === folder.name) {
+                return;
+            }
+            
+            try {
+                const response = await fetch(`/api/folders/${folder.id}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        name: newName.trim()
+                    })
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    // Update local data
+                    const folderIndex = folders.findIndex(f => f.id === folder.id);
+                    if (folderIndex !== -1) {
+                        folders[folderIndex] = data.folder;
+                    }
+                    
+                    // Re-render
+                    renderFolders();
+                    renderRecentDocs();
+                } else {
+                    const error = await response.json();
+                    alert(`Error renaming folder: ${error.error}`);
+                }
+            } catch (error) {
+                console.error('Error renaming folder:', error);
+                alert('Error renaming folder. Please try again.');
+            }
+        }
+
+        // Delete folder
+        async function deleteFolder(folder) {
+            if (confirm(`Are you sure you want to delete the folder "${folder.name}" and all its contents? This action cannot be undone.`)) {
+                try {
+                    const response = await fetch(`/api/folders/${folder.id}`, {
+                        method: 'DELETE'
+                    });
+                    
+                    if (response.ok) {
+                        // Remove from local data
+                        folders = folders.filter(f => f.id !== folder.id);
+                        documents = documents.filter(doc => doc.folder_id !== folder.id);
+                        
+                        // If current document was in this folder, clear it
+                        if (currentDocument && currentDocument.folder_id === folder.id) {
+                            currentDocument = null;
+                            document.getElementById('documentTitle').value = '';
+                            document.getElementById('editor').innerHTML = '<p>Start writing...</p>';
+                            document.getElementById('deleteBtn').style.display = 'none';
+                        }
+                        
+                        // Re-render
+                        renderFolders();
+                        renderRecentDocs();
+                        updateWordCount();
+                        updateOutline();
+                    } else {
+                        const error = await response.json();
+                        alert(`Error deleting folder: ${error.error}`);
+                    }
+                } catch (error) {
+                    console.error('Error deleting folder:', error);
+                    alert('Error deleting folder. Please try again.');
+                }
+            }
+        }
+        async function deleteDocument() {
+            if (!currentDocument) return;
+            
+            if (confirm(`Are you sure you want to delete "${currentDocument.title}"? This action cannot be undone.`)) {
+                try {
+                    const response = await fetch(`/api/documents/${currentDocument.id}`, {
+                        method: 'DELETE'
+                    });
+                    
+                    if (response.ok) {
+                        // Remove from local data
+                        documents = documents.filter(d => d.id !== currentDocument.id);
+                        currentDocument = null;
+                        
+                        // Reset editor
+                        document.getElementById('documentTitle').value = '';
+                        const editorEl = document.getElementById('editor');
+                        editorEl.innerHTML = '<p>Start writing...</p>';
+                        
+                        // Switch to get started state
+                        switchEditorState(false);
+                        
+                        // Re-render
+                        renderFolders();
+                        renderRecentDocs();
+                        updateWordCount();
+                        updateOutline();
+                        updateMetadata();
+                        updateSaveStatus('saved');
+                        
+                        // Hide delete button
+                        document.getElementById('deleteBtn').style.display = 'none';
+                        
+                        showToast('Document deleted successfully', 'success');
+                    } else {
+                        const error = await response.json();
+                        showToast(`Error deleting document: ${error.error}`, 'error');
+                    }
+                } catch (error) {
+                    console.error('Error deleting document:', error);
+                    showToast('Error deleting document. Please try again.', 'error');
+                }
+            }
+        }
+
+        // Render recent documents
+        function renderRecentDocs() {
+            const recentDocs = document.getElementById('recentDocs');
+            recentDocs.innerHTML = '';
+            
+            // Filter documents by subject
+            const filteredDocs = currentFilter === 'all' ? 
+                documents : 
+                documents.filter(doc => doc.subject === currentFilter);
+            
+            // Add starred documents
+            const starredDocs = filteredDocs.filter(doc => doc.starred);
+            if (starredDocs.length > 0) {
+                starredDocs.slice(0, 3).forEach(doc => {
+                    const docEl = document.createElement('div');
+                    docEl.className = 'flex items-center gap-3 px-3 py-2 docs-text-muted hover:docs-text-secondary rounded-full cursor-pointer transition-colors';
+                    docEl.innerHTML = `
+                        <span class="material-symbols-outlined text-xl">star</span>
+                        <span class="text-sm font-medium">${doc.title}</span>
+                        ${doc.subject ? `<span class="text-xs docs-text-muted ml-auto">${doc.subject}</span>` : ''}
+                    `;
+                    docEl.addEventListener('click', () => loadDocument(doc.id));
+                    recentDocs.appendChild(docEl);
+                });
+            }
+            
+            // Add recent documents
+            const recent = filteredDocs.slice(0, 3);
+            recent.forEach(doc => {
+                const docEl = document.createElement('div');
+                docEl.className = 'flex items-center gap-3 px-3 py-2 docs-text-muted hover:docs-text-secondary rounded-full cursor-pointer transition-colors';
+                docEl.innerHTML = `
+                    <span class="material-symbols-outlined text-xl">schedule</span>
+                    <span class="text-sm font-medium">${doc.title}</span>
+                    ${doc.subject ? `<span class="text-xs docs-text-muted ml-auto">${doc.subject}</span>` : ''}
+                `;
+                docEl.addEventListener('click', () => loadDocument(doc.id));
+                recentDocs.appendChild(docEl);
+            });
+        }
+
+        // Load document
+        async function loadDocument(docId) {
+            try {
+                const response = await fetch(`/api/documents/${docId}`);
+                if (response.ok) {
+                    const data = await response.json();
+                    currentDocument = data.document;
+                    
+                    // Update UI
+                    document.getElementById('documentTitle').value = currentDocument.title;
+                    
+                    const editorEl = document.getElementById('editor');
+                    editorEl.innerHTML = currentDocument.content || '<p>Start writing...</p>';
+                    
+                    // Switch to editor state
+                    switchEditorState(true);
+                    
+                    updateWordCount();
+                    updateOutline();
+                    updateMetadata();
+                    updateSaveStatus('saved');
+                    
+                    // Show delete button
+                    document.getElementById('deleteBtn').style.display = 'block';
+                    
+                    // Re-render to update active states
+                    renderFolders();
+                    renderRecentDocs();
+                }
+            } catch (error) {
+                console.error('Error loading document:', error);
+            }
+        }
+
+        // Show modal for creating document or folder
+        function showModal(type) {
+            const modal = document.getElementById('createModal');
+            const modalTitle = document.getElementById('modalTitle');
+            const titleInput = document.getElementById('modalTitleInput');
+            const subjectField = document.getElementById('subjectField');
+            const subjectSelect = document.getElementById('modalSubjectSelect');
+            const folderField = document.getElementById('folderField');
+            const folderSelect = document.getElementById('modalFolderSelect');
+            const createBtn = document.getElementById('modalCreate');
+            
+            // Clear previous values
+            titleInput.value = '';
+            subjectSelect.innerHTML = '<option value="">No Subject</option>';
+            folderSelect.innerHTML = '<option value="">Root Level</option>';
+            
+            // Populate subjects
+            subjects.forEach(subject => {
+                const option = document.createElement('option');
+                option.value = subject;
+                option.textContent = subject;
+                subjectSelect.appendChild(option);
+            });
+            
+            // Populate folders
+            folders.forEach(folder => {
+                const option = document.createElement('option');
+                option.value = folder.id;
+                option.textContent = folder.name;
+                folderSelect.appendChild(option);
+            });
+            
+            // Configure modal based on type
+            if (type === 'document') {
+                modalTitle.textContent = 'Create New Document';
+                subjectField.classList.remove('hidden');
+                folderField.classList.add('hidden');
+                createBtn.textContent = 'Create Document';
+            } else if (type === 'folder') {
+                modalTitle.textContent = 'Create New Folder';
+                subjectField.classList.add('hidden');
+                folderField.classList.remove('hidden');
+                createBtn.textContent = 'Create Folder';
+            }
+            
+            // Show modal
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+            
+            // Focus title input
+            setTimeout(() => titleInput.focus(), 100);
+        }
+
+        // Hide modal
+        function hideModal() {
+            const modal = document.getElementById('createModal');
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+        }
+
+        // Handle modal creation
+        async function handleModalCreate(type) {
+            const titleInput = document.getElementById('modalTitleInput');
+            const subjectSelect = document.getElementById('modalSubjectSelect');
+            const folderSelect = document.getElementById('modalFolderSelect');
+            
+            const title = titleInput.value.trim();
+            if (!title) {
+                showToast('Please enter a title', 'error');
+                return;
+            }
+            
+            // Get values safely - elements might be hidden
+            const subjectValue = subjectSelect ? subjectSelect.value : null;
+            const folderValue = folderSelect ? folderSelect.value : null;
+            
+            try {
+                if (type === 'document') {
+                    const response = await fetch('/api/documents', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            title: title,
+                            content: '',
+                            subject: subjectValue,
+                            folder_id: folderValue
+                        })
+                    });
+                    
+                    if (response.ok) {
+                        const data = await response.json();
+                        documents.unshift(data.document);
+                        currentDocument = data.document;
+                        
+                        // Update UI
+                        document.getElementById('documentTitle').value = currentDocument.title;
+                        const editorEl = document.getElementById('editor');
+                        editorEl.innerHTML = '';
+                        
+                        // Switch to editor state
+                        switchEditorState(true);
+                        
+                        hideModal();
+                        showToast(`Document "${title}" created successfully!`, 'success');
+                        
+                        renderFolders();
+                        renderRecentDocs();
+                        updateFilteredItems();
+                        updateSaveStatus('saved');
+                    } else {
+                        const errorData = await response.json();
+                        showToast(`Failed to create document: ${errorData.error || 'Unknown error'}`, 'error');
+                    }
+                } else if (type === 'folder') {
+                    const response = await fetch('/api/folders', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            name: title
+                        })
+                    });
+                    
+                    if (response.ok) {
+                        const data = await response.json();
+                        folders.unshift(data.folder);
+                        
+                        hideModal();
+                        showToast(`Folder "${title}" created successfully!`, 'success');
+                        
+                        renderFolders();
+                        renderRecentDocs();
+                    } else {
+                        const errorData = await response.json();
+                        showToast(`Failed to create folder: ${errorData.error || 'Unknown error'}`, 'error');
+                    }
+                }
+            } catch (error) {
+                console.error('Error creating item:', error);
+                showToast('Error creating item. Please try again.', 'error');
+            }
+        }
+
+        // Update filtered items section
+        function updateFilteredItems() {
+            const filteredItems = document.getElementById('filteredItems');
+            const searchInput = document.getElementById('filteredSearchInput');
+            const filteredDocs = currentFilter === 'all' ? 
+                documents : 
+                documents.filter(doc => doc.subject === currentFilter);
+            
+            // Apply search filter if search input exists
+            const searchTerm = searchInput ? searchInput.value.toLowerCase() : '';
+            const searchFilteredDocs = searchTerm ? 
+                filteredDocs.filter(doc => 
+                    doc.title.toLowerCase().includes(searchTerm) || 
+                    (doc.subject && doc.subject.toLowerCase().includes(searchTerm))
+                ) : filteredDocs;
+            
+            if (searchFilteredDocs.length === 0) {
+                filteredItems.innerHTML = `
+                    <div class="text-center docs-text-muted text-sm py-8">
+                        No items match current filter${searchTerm ? ` or search "${searchTerm}"` : ''}
+                    </div>
+                `;
+            } else {
+                filteredItems.innerHTML = '';
+                searchFilteredDocs.forEach(doc => {
+                    const docEl = document.createElement('div');
+                    docEl.className = 'flex items-center gap-3 px-3 py-2 docs-text-secondary hover:docs-text hover:docs-bg-hover rounded-full cursor-pointer transition-colors';
+                    docEl.innerHTML = `
+                        <span class="material-symbols-outlined text-lg">description</span>
+                        <span class="text-sm font-medium flex-1">${doc.title}</span>
+                        ${doc.subject ? `<span class="text-xs docs-text-muted ml-auto">${doc.subject}</span>` : ''}
+                        <span class="text-xs docs-text-muted">${formatDate(doc.updated_at)}</span>
+                    `;
+                    docEl.addEventListener('click', () => loadDocument(doc.id));
+                    filteredItems.appendChild(docEl);
+                });
+            }
+        }
+
+        // Show toast notification
+        function showToast(message, type) {
+            // Simple toast notification
+            const toast = document.createElement('div');
+            toast.style.cssText = `
+                position: fixed;
+                top: 80px;
+                right: 20px;
+                padding: 12px 20px;
+                border-radius: 8px;
+                background: ${type === 'success' ? 'var(--success)' : type === 'error' ? 'var(--error)' : 'var(--info)'};
+                color: white;
+                z-index: 1000;
+                font-weight: 500;
+                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+                transition: all 0.3s ease;
+                transform: translateX(100%);
+            `;
+            toast.textContent = message;
+            document.body.appendChild(toast);
+
+            // Animate in
+            setTimeout(() => {
+                toast.style.transform = 'translateX(0)';
+            }, 10);
+
+            // Remove after 3 seconds
+            setTimeout(() => {
+                toast.style.transform = 'translateX(100%)';
+                setTimeout(() => {
+                    toast.remove();
+                }, 300);
+            }, 3000);
+        }
+
+        // Show export modal
+        function showExportModal() {
+            if (!currentDocument) {
+                showToast('Please select a document to export', 'error');
+                return;
+            }
+            
+            const modal = document.getElementById('exportModal');
+            
+            // Show modal
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+        }
+
+        // Hide export modal
+        function hideExportModal() {
+            const modal = document.getElementById('exportModal');
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+        }
+
+        // Export document
+        async function exportDocument(format) {
+            if (!currentDocument) {
+                showToast('Please select a document to export', 'error');
+                return;
+            }
+            
+            try {
+                const response = await fetch(`/api/documents/${currentDocument.id}/export/${format}`);
+                
+                if (response.ok) {
+                    const blob = await response.blob();
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `${currentDocument.title}.${format}`;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    window.URL.revokeObjectURL(url);
+                    
+                    showToast(`Document exported as ${format.toUpperCase()}!`, 'success');
+                    hideExportModal();
+                } else {
+                    showToast('Failed to export document', 'error');
+                }
+            } catch (error) {
+                console.error('Error exporting document:', error);
+                showToast('Error exporting document', 'error');
+            }
+        }
+
+        // Show document selector modal
+        function showDocumentSelector() {
+            // Create a simple document selector modal
+            const modal = document.createElement('div');
+            modal.className = 'fixed inset-0 bg-black/50 backdrop-blur-sm z-50 hidden items-center justify-center';
+            modal.innerHTML = `
+                <div class="glass-panel rounded-2xl p-6 w-full max-w-2xl mx-4">
+                    <div class="flex justify-between items-center mb-6">
+                        <h2 class="text-xl font-bold docs-text">Select Document</h2>
+                        <button onclick="this.parentElement.parentElement.parentElement.remove()" class="docs-text-muted hover:docs-text p-2 rounded-full transition-colors">
+                            <span class="material-symbols-outlined">close</span>
+                        </button>
+                    </div>
+                    <div class="space-y-2 max-h-64 overflow-y-auto">
+                        ${documents.length === 0 ? 
+                            '<div class="text-center docs-text-muted text-sm py-8">No documents found</div>' :
+                            documents.map(doc => `
+                                <div class="flex items-center gap-3 px-4 py-3 docs-text-secondary hover:docs-text hover:docs-bg-hover rounded-full cursor-pointer transition-colors" onclick="selectDocument('${doc.id}')">
+                                    <span class="material-symbols-outlined text-lg">description</span>
+                                    <span class="text-sm font-medium">${doc.title}</span>
+                                </div>
+                            `).join('')
+                        }
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(modal);
+            
+            // Close modal when clicking outside
+            setTimeout(() => {
+                document.addEventListener('click', function closeDocSelector() {
+                    modal.remove();
+                    document.removeEventListener('click', closeDocSelector);
+                });
+            }, 100);
+        }
+
+        // Select document from selector
+        function selectDocument(docId) {
+            const modal = document.querySelector('.fixed.inset-0');
+            if (modal) {
+                modal.remove();
+            }
+            
+            loadDocument(docId);
+        }
+
+        // Close document selector
+        function closeDocSelector() {
+            const modal = document.querySelector('.fixed.inset-0');
+            if (modal) {
+                modal.remove();
+            }
+        }
+
+        // Create new folder
+        async function createNewFolder() {
+            showModal('folder');
+        }
+
+        // Update word count
+        function updateWordCount() {
+            const editorEl = document.getElementById('editor');
+            const wordCount = countWords(editorEl.innerText);
+            document.getElementById('wordCount').textContent = wordCount;
+            document.getElementById('footerWordCount').textContent = `Word Count: ${wordCount}`;
+            document.getElementById('readingTime').textContent = Math.ceil(wordCount / 200) + ' min';
+            document.getElementById('footerReadingTime').textContent = `Est. Reading: ${Math.ceil(wordCount / 200)} Min`;
+        }
+
+        // Count words
+        function countWords(text) {
+            return text.trim().split(/\s+/).filter(word => word.length > 0).length;
+        }
+
+        // Update outline
+        function updateOutline() {
+            const editorEl = document.getElementById('editor');
+            const headings = editorEl.querySelectorAll('h1, h2, h3, h4, h5, h6');
+            const outline = document.getElementById('outline');
+            
+            if (headings.length === 0) {
+                outline.innerHTML = '<div class="text-center text-white/40 text-sm py-8">No headings yet</div>';
+                return;
+            }
+            
+            outline.innerHTML = '';
+            headings.forEach((heading, index) => {
+                const outlineItem = document.createElement('a');
+                outlineItem.className = 'group flex items-start gap-3 cursor-pointer';
+                outlineItem.href = '#';
+                
+                const isActive = false; // You can implement active tracking
+                outlineItem.innerHTML = `
+                    <div class="w-0.5 h-4 ${isActive ? 'docs-accent' : 'docs-border group-hover:docs-text-secondary'} transition-colors mt-1 rounded-full"></div>
+                    <span class="text-sm ${isActive ? 'font-semibold docs-text' : 'docs-text-muted group-hover:docs-text-secondary'} transition-colors">${heading.textContent}</span>
+                `;
+                
+                outlineItem.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    heading.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                });
+                
+                outline.appendChild(outlineItem);
+            });
+        }
+
+        // Update metadata
+        function updateMetadata() {
+            if (currentDocument) {
+                document.getElementById('lastEdited').textContent = formatDate(currentDocument.updated_at);
+            }
+        }
+
+        // Format date
+        function formatDate(dateString) {
+            if (!dateString) return 'Just now';
+            
+            const date = new Date(dateString);
+            const now = new Date();
+            const diff = now - date;
+            
+            if (diff < 60000) return 'Just now';
+            if (diff < 3600000) return Math.floor(diff / 60000) + ' min ago';
+            if (diff < 86400000) return Math.floor(diff / 3600000) + ' hours ago';
+            if (diff < 604800000) return Math.floor(diff / 86400000) + ' days ago';
+            
+            return date.toLocaleDateString();
+        }
+
+        // Handle selection change
+        function handleSelectionChange() {
+            const selection = window.getSelection();
+            const toolbar = document.getElementById('floatingToolbar');
+            
+            if (selection.toString().trim() !== '') {
+                // Text is selected - show toolbar
+                toolbar.classList.remove('opacity-0', 'pointer-events-none');
+                toolbar.classList.add('opacity-100');
+                
+                // Position toolbar near selection
+                const range = selection.getRangeAt(0);
+                const rect = range.getBoundingClientRect();
+                
+                // Position toolbar above the selection
+                toolbar.style.position = 'fixed';
+                toolbar.style.top = `${rect.top - 60}px`;
+                toolbar.style.left = `${rect.left + rect.width / 2}px`;
+                toolbar.style.transform = 'translateX(-50%)';
+            } else {
+                // No text selected - hide toolbar
+                toolbar.classList.add('opacity-0', 'pointer-events-none');
+                toolbar.classList.remove('opacity-100');
+            }
+            
+            // Update toolbar button states
+            updateToolbarStates();
+        }
+
+        // Update toolbar states
+        function updateToolbarStates() {
+            const selection = window.getSelection();
+            console.log('Updating toolbar states, selection:', selection.toString());
+            
+            document.querySelectorAll('.toolbar-button').forEach(btn => {
+                btn.classList.remove('bg-white/20');
+                
+                const command = btn.dataset.command;
+                if (command && selection.queryCommandState) {
+                    try {
+                        const state = selection.queryCommandState(command);
+                        console.log(`Command ${command} state:`, state);
+                        if (state) {
+                            btn.classList.add('bg-white/20');
+                        }
+                    } catch (e) {
+                        console.log(`Command ${command} not supported:`, e);
+                    }
+                }
+            });
+        }
+
+        // Handle paste
+        function handlePaste(e) {
+            e.preventDefault();
+            const text = e.clipboardData.getData('text/plain');
+            document.execCommand('insertText', false, text);
+        }
+
+        // Handle keyboard shortcuts
+        function handleKeyDown(e) {
+            if (e.ctrlKey || e.metaKey) {
+                switch(e.key) {
+                    case 'b':
+                        e.preventDefault();
+                        document.execCommand('bold');
+                        break;
+                    case 'i':
+                        e.preventDefault();
+                        document.execCommand('italic');
+                        break;
+                    case 'u':
+                        e.preventDefault();
+                        document.execCommand('underline');
+                        break;
+                    case 's':
+                        e.preventDefault();
+                        saveDocument();
+                        break;
+                    case 'f':
+                        e.preventDefault();
+                        document.getElementById('searchInput').focus();
+                        break;
+                    case 'z':
+                        e.preventDefault();
+                        if (e.shiftKey) {
+                            document.execCommand('redo');
+                        } else {
+                            document.execCommand('undo');
+                        }
+                        break;
+                }
+            }
+        }
+
+        // Setup event listeners
+        function setupEventListeners() {
+            // New document button
+            document.getElementById('newDocBtn').addEventListener('click', () => showModal('document'));
+            
+            // New folder button
+            document.getElementById('newFolderBtn').addEventListener('click', () => showModal('folder'));
+            
+            // Modal event listeners
+            document.getElementById('closeModal').addEventListener('click', hideModal);
+            document.getElementById('modalCancel').addEventListener('click', hideModal);
+            document.getElementById('modalCreate').addEventListener('click', () => {
+                const modalTitle = document.getElementById('modalTitle').textContent;
+                const type = modalTitle.includes('Document') ? 'document' : 'folder';
+                handleModalCreate(type);
+            });
+            
+            // Subject filter
+            const subjectFilter = document.getElementById('subjectFilter');
+            const filteredSubjectFilter = document.getElementById('filteredSubjectFilter');
+            const filteredSearchInput = document.getElementById('filteredSearchInput');
+            
+            if (subjectFilter) {
+                // Populate subject options
+                subjects.forEach(subject => {
+                    const option = document.createElement('option');
+                    option.value = subject;
+                    option.textContent = subject;
+                    subjectFilter.appendChild(option);
+                });
+                
+                // Handle filter change
+                subjectFilter.addEventListener('change', (e) => {
+                    currentFilter = e.target.value;
+                });
+            }
+            
+            // Save button
+            document.getElementById('saveBtn').addEventListener('click', () => saveDocument());
+            
+            // Share button - now opens export modal
+            document.getElementById('shareBtn').addEventListener('click', showExportModal);
+            
+            // Export modal event listeners
+            document.getElementById('closeExportModal').addEventListener('click', hideExportModal);
+            document.getElementById('exportModalCancel').addEventListener('click', hideExportModal);
+            
+            // Export buttons
+            document.getElementById('exportMarkdown').addEventListener('click', () => exportDocument('markdown'));
+            document.getElementById('exportHTML').addEventListener('click', () => exportDocument('html'));
+            document.getElementById('exportPDF').addEventListener('click', () => exportDocument('pdf'));
+            document.getElementById('exportTXT').addEventListener('click', () => exportDocument('txt'));
+            
+            // Delete button
+            document.getElementById('deleteBtn').addEventListener('click', deleteDocument);
+            
+            // Document title change
+            document.getElementById('documentTitle').addEventListener('input', () => {
+                if (currentDocument) {
+                    isEditing = true;
+                    updateSaveStatus('saving');
+                    clearTimeout(saveTimeout);
+                    saveTimeout = setTimeout(saveDocument, 2000);
+                }
+            });
+            
+            // Scroll for reading progress
+            document.getElementById('editor').addEventListener('scroll', updateReadingProgress);
+            
+            // Toolbar buttons - ADD DEBUGGING
+            console.log('Looking for toolbar buttons...');
+            const toolbarButtons = document.querySelectorAll('.toolbar-button');
+            console.log('Found toolbar buttons:', toolbarButtons.length);
+            
+            toolbarButtons.forEach((btn, index) => {
+                console.log(`Setting up button ${index}:`, btn.dataset.command, btn.dataset.value);
+                btn.addEventListener('click', (e) => {
+                    console.log(`Button ${index} clicked!`, btn.dataset.command);
+                    e.preventDefault();
+                    const command = btn.dataset.command;
+                    const value = btn.dataset.value;
+                    
+                    if (command) {
+                        // Focus the editor first
+                        const editor = document.getElementById('editor');
+                        editor.focus();
+                        
+                        // Debug: Check editor state
+                        console.log('Editor contentEditable:', editor.contentEditable);
+                        console.log('Editor isEditable:', editor.isContentEditable);
+                        
+                        // Don't set document design mode - it makes whole page editable
+                        // Just ensure the editor is contentEditable
+                        editor.contentEditable = true;
+                        
+                        try {
+                            // Use document.execCommand for all formatting
+                            if (command === 'formatBlock') {
+                                console.log('Applying formatBlock:', value);
+                                const success = document.execCommand('formatBlock', false, value);
+                                console.log('formatBlock success:', success);
+                            } else if (command === 'createLink') {
+                                const url = prompt('Enter URL:');
+                                if (url) {
+                                    console.log('Creating link with URL:', url);
+                                    const success = document.execCommand('createLink', false, url);
+                                    console.log('createLink success:', success);
+                                }
+                            } else if (command === 'formatBlockquote') {
+                                console.log('Creating blockquote');
+                                const success = document.execCommand('formatBlock', false, 'blockquote');
+                                console.log('formatBlockquote success:', success);
+                            } else {
+                                console.log('Executing command:', command);
+                                const success = document.execCommand(command, false, null);
+                                console.log('Command success:', success);
+                            }
+                            
+                            console.log('Command executed successfully');
+                            
+                            // Trigger save and update
+                            handleEditorInput();
+                            
+                            // Update toolbar states after command
+                            setTimeout(() => updateToolbarStates(), 10);
+                        } catch (error) {
+                            console.error('Error executing command:', error);
+                            alert('Formatting command failed: ' + error.message);
+                        }
+                    }
+                });
+            });
+            
+            console.log('Toolbar event listeners set up!');
+            
+            // Close modal on escape key
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape') {
+                    const modal = document.getElementById('createModal');
+                    if (!modal.classList.contains('hidden')) {
+                        hideModal();
+                    }
+                }
+            });
+        }
+
+        // Update reading progress
+        function updateReadingProgress() {
+            const editorEl = document.getElementById('editor');
+            const scrollHeight = editorEl.scrollHeight - editorEl.clientHeight;
+            const scrollTop = editorEl.scrollTop;
+            const progress = Math.min(100, Math.max(0, (scrollTop / scrollHeight) * 100));
+            
+            document.getElementById('progressPercent').textContent = Math.round(progress) + '%';
+            document.getElementById('progressFill').style.width = progress + '%';
+        }
+
+        // Select folder
+        function selectFolder(folderId) {
+            // Update active state
+            document.querySelectorAll('.folder-item').forEach(el => el.classList.remove('bg-white/10'));
+            event.target.closest('.folder-item').classList.add('bg-white/10');
+        }
+
+        // Setup keyboard shortcuts
+        function setupKeyboardShortcuts() {
+            // Additional shortcuts can be added here
+        }
+    </script>
+</body>
+</html>

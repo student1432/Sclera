@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="{{ settings.get('theme', 'dark') }}">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Settings — Sclera</title>
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap"
+        rel="stylesheet" />
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/onboarding.css') }}">
+</head>
+
+<body>
+    <div class="dashboard-layout">
+        {% include '_topnav.html' %}
+
+        <main class="main-content">
+            <div class="content-header">
+                <h1>Settings</h1>
+                <p>Customize your StudyOS experience</p>
+            </div>
+
+            {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+            {% for category, message in messages %}
+            <div class="alert alert-{{ category }}">{{ message }}</div>
+            {% endfor %}
+            {% endif %}
+            {% endwith %}
+
+            <div class="academic-split">
+                <!-- LEFT PANEL - Main Settings -->
+                <div class="syllabus-panel">
+
+                    <!-- APPEARANCE ISLAND -->
+                    <div class="study-island">
+                        <div class="study-island-header">
+                            <h3>Appearance</h3>
+                        </div>
+                        <form method="POST" action="{{ url_for('settings') }}">
+                            <input type="hidden" name="action" value="general">
+
+                            <div class="form-group">
+                                <label>Theme</label>
+                                <div class="radio-group" style="display:flex;gap:16px;margin-top:8px;">
+                                    <label class="radio-label"
+                                        style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+                                        <input type="radio" name="theme" value="dark" {% if settings.get('theme', 'dark'
+                                            )=='dark' %}checked{% endif %} style="cursor:pointer;">
+                                        <span>Dark Mode</span>
+                                    </label>
+                                    <label class="radio-label"
+                                        style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+                                        <input type="radio" name="theme" value="light" {% if
+                                            settings.get('theme')=='light' %}checked{% endif %} style="cursor:pointer;">
+                                        <span>Light Mode</span>
+                                    </label>
+                                </div>
+                            </div>
+                            <button type="submit" class="btn btn-primary" style="margin-top:16px;">Save
+                                Appearance</button>
+                        </form>
+                    </div>
+
+                    <!-- NOTIFICATIONS ISLAND -->
+                    <div class="study-island">
+                        <div class="study-island-header">
+                            <h3>Notifications</h3>
+                        </div>
+                        <form method="POST" action="{{ url_for('settings') }}">
+                            <input type="hidden" name="action" value="general">
+
+                            <div class="form-group checkbox-group" style="display:flex;align-items:center;gap:12px;">
+                                <input type="checkbox" name="email_notifications" id="email_notifications" {% if
+                                    settings.get('email_notifications') %}checked{% endif %}
+                                    style="width:18px;height:18px;cursor:pointer;">
+                                <label for="email_notifications" style="cursor:pointer;">
+                                    Email Notifications
+                                </label>
+                            </div>
+                            <p class="form-hint" style="color:var(--text-muted);font-size:13px;margin-top:8px;">
+                                Receive email updates about your progress and goals
+                            </p>
+                            <button type="submit" class="btn btn-primary" style="margin-top:16px;">Save
+                                Notifications</button>
+                        </form>
+                    </div>
+
+                    <!-- PROFILE ISLAND -->
+                    <div class="study-island">
+                        <div class="study-island-header">
+                            <h3>Profile Information</h3>
+                        </div>
+                        <form method="POST" action="{{ url_for('settings') }}">
+                            <input type="hidden" name="action" value="account">
+
+                            <div class="form-group" style="margin-bottom:16px;">
+                                <label for="name">Display Name</label>
+                                <input type="text" name="name" id="name" value="{{ user.get('name', '') }}"
+                                    placeholder="Your name" style="width:100%;margin-top:8px;">
+                            </div>
+
+                            <div class="info-group" style="margin-bottom:16px;">
+                                <label>Email</label>
+                                <p style="color:var(--text-muted);margin-top:4px;">{{ user.get('email', 'Not set') }}
+                                </p>
+                            </div>
+
+                            <div class="info-group" style="margin-bottom:16px;">
+                                <label>Current Purpose</label>
+                                <p style="color:var(--text-muted);margin-top:4px;text-transform:capitalize;">
+                                    {{ user.get('purpose', 'Not set').replace('_', ' ') }}
+                                </p>
+                            </div>
+
+                            <button type="submit" class="btn btn-primary">Update Profile</button>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- RIGHT PANEL - Academic Configuration -->
+                <div class="study-tools-panel">
+
+                    <!-- ACADEMIC CONFIG ISLAND -->
+                    <div class="study-island" style="border:2px solid var(--accent);">
+                        <div class="study-island-header">
+                            <h3>Academic Configuration</h3>
+                            <span style="font-size:12px;color:var(--accent);">⚠️ Destructive</span>
+                        </div>
+
+                        <div class="warning-box"
+                            style="background:rgba(var(--accent-rgb),0.1);border-left:4px solid var(--accent);padding:16px;margin-bottom:20px;border-radius:8px;">
+                            <p style="margin:0;font-size:14px;">
+                                <strong>Warning:</strong> Changing your academic configuration will permanently delete
+                                all your current progress, including:
+                            </p>
+                            <ul style="margin:8px 0 0 20px;font-size:13px;color:var(--text-muted);">
+                                <li>All chapter completion data</li>
+                                <li>Exam results and statistics</li>
+                                <li>Study time tracking</li>
+                                <li>Syllabus exclusions</li>
+                            </ul>
+                            <p style="margin:8px 0 0;font-size:13px;color:var(--text-muted);">
+                                This action cannot be undone.
+                            </p>
+                        </div>
+
+                        <form method="POST" action="{{ url_for('settings') }}" id="academic-form">
+                            <input type="hidden" name="action" value="academic">
+
+                            <div class="form-group" style="margin-bottom:16px;">
+                                <label for="purpose">Study Purpose</label>
+                                <select name="purpose" id="purpose" required style="width:100%;margin-top:8px;"
+                                    onchange="updateAcademicFields()">
+                                    <option value="">Select purpose...</option>
+                                    <option value="high_school" {% if user.get('purpose')=='high_school' %}selected{%
+                                        endif %}>
+                                        High School
+                                    </option>
+                                    <option value="exam_prep" {% if user.get('purpose')=='exam_prep' %}selected{% endif
+                                        %}>
+                                        Competitive Exam
+                                    </option>
+                                    <option value="after_tenth" {% if user.get('purpose')=='after_tenth' %}selected{%
+                                        endif %}>
+                                        After 10th Grade
+                                    </option>
+                                </select>
+                            </div>
+
+                            <!-- Fields for High School -->
+                            <div id="highschool-fields" class="academic-fields" style="display:none;">
+                                <div class="form-group" style="margin-bottom:16px;">
+                                    <label for="board">Board</label>
+                                    <select name="board" id="board" style="width:100%;margin-top:8px;">
+                                        {% for board in available_boards %}
+                                        <option value="{{ board }}" {% if (user.get('highschool') or
+                                            {}).get('board')==board %}selected{% endif %}>
+                                            {{ board }}
+                                        </option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                                <div class="form-group" style="margin-bottom:16px;">
+                                    <label for="grade">Grade</label>
+                                    <select name="grade" id="grade" style="width:100%;margin-top:8px;">
+                                        {% for grade in available_grades %}
+                                        <option value="{{ grade }}" {% if (user.get('highschool') or
+                                            {}).get('grade')==grade %}selected{% endif %}>
+                                            Grade {{ grade }}
+                                        </option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                            </div>
+
+                            <!-- Fields for Exam -->
+                            <div id="exam-fields" class="academic-fields" style="display:none;">
+                                <div class="form-group" style="margin-bottom:16px;">
+                                    <label for="exam_type">Exam Type</label>
+                                    <select name="exam_type" id="exam_type" style="width:100%;margin-top:8px;">
+                                        {% for exam in available_exams %}
+                                        <option value="{{ exam }}" {% if (user.get('exam') or {}).get('type')==exam
+                                            %}selected{% endif %}>
+                                            {{ exam }}
+                                        </option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                            </div>
+
+                            <!-- Fields for After 10th -->
+                            <div id="after_tenth-fields" class="academic-fields" style="display:none;">
+                                <div class="form-group" style="margin-bottom:16px;">
+                                    <label for="stream">Stream</label>
+                                    <select name="stream" id="stream" style="width:100%;margin-top:8px;">
+                                        {% for stream in available_streams %}
+                                        <option value="{{ stream }}" {% if (user.get('after_tenth') or
+                                            {}).get('stream')==stream %}selected{% endif %}>
+                                            {{ stream }}
+                                        </option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                                <div class="form-group" style="margin-bottom:16px;">
+                                    <label for="grade_after">Grade</label>
+                                    <select name="grade" id="grade_after" style="width:100%;margin-top:8px;">
+                                        {% for grade in ['11', '12'] %}
+                                        <option value="{{ grade }}" {% if (user.get('after_tenth') or
+                                            {}).get('grade')==grade %}selected{% endif %}>
+                                            Grade {{ grade }}
+                                        </option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="form-group checkbox-group"
+                                style="display:flex;align-items:center;gap:12px;margin-top:24px;padding:16px;background:var(--bg-tertiary);border-radius:8px;">
+                                <input type="checkbox" name="confirm_delete" id="confirm_delete" required
+                                    style="width:18px;height:18px;cursor:pointer;">
+                                <label for="confirm_delete" style="cursor:pointer;font-size:14px;">
+                                    I understand that changing these settings will <strong>delete all my
+                                        progress</strong> and cannot be undone.
+                                </label>
+                            </div>
+
+                            <button type="submit" class="btn btn-primary"
+                                style="margin-top:16px;width:100%;background:var(--accent);">
+                                Update Academic Configuration
+                            </button>
+                        </form>
+                    </div>
+
+                    <!-- QUICK LINKS ISLAND -->
+                    <div class="study-island">
+                        <div class="study-island-header">
+                            <h3>Quick Links</h3>
+                        </div>
+                        <div style="display:flex;flex-direction:column;gap:12px;">
+                            <a href="{{ url_for('profile_resume') }}" class="btn btn-secondary"
+                                style="text-align:center;">
+                                View Profile
+                            </a>
+                            <a href="{{ url_for('profile_edit') }}" class="btn btn-secondary"
+                                style="text-align:center;">
+                                Edit Full Profile
+                            </a>
+                            <a href="{{ url_for('contact') }}" class="btn btn-secondary" style="text-align:center;">
+                                Contact Support
+                            </a>
+                        </div>
+                    </div>
+
+                    <!-- TUTORIAL SECTION -->
+                    <div class="study-island">
+                        <div class="study-island-header">
+                            <h3>Tutorial & Help</h3>
+                        </div>
+
+                        <div class="tutorial-section">
+                            <!-- Video Tutorial Placeholder -->
+                            <div class="tutorial-video-placeholder">
+                                <span class="material-symbols-outlined">play_circle</span>
+                                <p>Video tutorial coming soon</p>
+                            </div>
+
+                            <!-- Tutorial Actions -->
+                            <div class="tutorial-actions">
+                                <button class="tutorial-btn" onclick="restartTutorial()">
+                                    <span class="material-symbols-outlined">replay</span>
+                                    Restart Dashboard Tutorial
+                                </button>
+                                <a href="{{ url_for('docs_dashboard') }}" class="tutorial-btn">
+                                    <span class="material-symbols-outlined">help</span>
+                                    View Documentation
+                                </a>
+                                <a href="{{ url_for('contact') }}" class="tutorial-btn">
+                                    <span class="material-symbols-outlined">contact_support</span>
+                                    Contact Support
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        function updateAcademicFields() {
+            const purpose = document.getElementById('purpose').value;
+
+            // Hide all field groups
+            document.querySelectorAll('.academic-fields').forEach(el => {
+                el.style.display = 'none';
+            });
+
+            // Show relevant fields
+            if (purpose === 'high_school') {
+                document.getElementById('highschool-fields').style.display = 'block';
+            } else if (purpose === 'exam_prep') {
+                document.getElementById('exam-fields').style.display = 'block';
+            } else if (purpose === 'after_tenth') {
+                document.getElementById('after_tenth-fields').style.display = 'block';
+            }
+        }
+
+        // Initialize on page load
+        document.addEventListener('DOMContentLoaded', updateAcademicFields);
+
+        // Theme (keep consistent with other dashboards)
+        (function () {
+            const root = document.documentElement;
+            const toggle = document.getElementById("themeToggle");
+
+            const serverTheme = "{{ settings.get('theme', '') }}";
+            if (serverTheme) {
+                root.setAttribute("data-theme", serverTheme);
+                localStorage.setItem("sclera-theme", serverTheme);
+            }
+
+            const savedTheme = localStorage.getItem("sclera-theme");
+            if (savedTheme) {
+                root.setAttribute("data-theme", savedTheme);
+            }
+
+            if (toggle) {
+                toggle.addEventListener("click", () => {
+                    const next =
+                        root.getAttribute("data-theme") === "dark"
+                            ? "light"
+                            : "dark";
+
+                    root.setAttribute("data-theme", next);
+                    localStorage.setItem("sclera-theme", next);
+                });
+            }
+        })();
+
+        // Restart Tutorial Function
+        function restartTutorial() {
+            // Clear tutorial completion status
+            localStorage.removeItem('sclera_tutorial_completed');
+            localStorage.removeItem('sclera_tutorial_skipped');
+
+            // Redirect to dashboard with tutorial trigger
+            window.location.href = '{{ url_for("profile_dashboard") }}?tutorial=start';
+        }
+    </script>
+</body>
+
+</html>

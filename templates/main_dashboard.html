@@ -1,0 +1,831 @@
+<!DOCTYPE html>
+
+<html lang="en" data-theme="{{ settings.get('theme', 'dark') }}">
+
+
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Dashboard — Sclera</title>
+
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/onboarding.css') }}">
+
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
+
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap"
+        rel="stylesheet" />
+
+    <style>
+        [data-theme="dark"] .text-inverse {
+
+            color: white !important;
+
+        }
+
+
+
+        [data-theme="light"] .text-inverse {
+
+            color: black !important;
+
+        }
+
+
+
+        .task-input-group {
+
+            display: flex;
+
+            gap: 0.5rem;
+
+            margin-bottom: 1.25rem;
+
+        }
+
+
+
+        .task-input {
+
+            flex: 1;
+
+            background: var(--bg-tertiary);
+
+            border: 1px solid var(--border);
+
+            border-radius: 10px;
+
+            padding: 0.5rem 0.75rem;
+
+            font-size: 0.8rem;
+
+            color: var(--text-primary);
+
+            outline: none;
+
+        }
+
+
+
+        .task-input:focus {
+
+            border-color: var(--accent);
+
+        }
+
+
+
+        .island-clickable {
+
+            cursor: pointer;
+
+            transition: transform 0.2s;
+
+        }
+
+
+
+        .island-clickable:hover {
+
+            transform: translateY(-2px);
+
+        }
+
+
+
+        .island-clickable:active {
+
+            transform: scale(0.98);
+
+        }
+
+
+
+        .quick-task-checkbox {
+
+            width: 18px;
+
+            height: 18px;
+
+            border: 2px solid var(--border);
+
+            border-radius: 5px;
+
+            cursor: pointer;
+
+            display: flex;
+
+            align-items: center;
+
+            justify-content: center;
+
+            transition: all 0.2s;
+
+        }
+
+
+
+        .quick-task-checkbox.checked {
+
+            background: var(--accent);
+
+            border-color: var(--accent);
+
+        }
+
+
+
+        .subject-scroll::-webkit-scrollbar {
+
+            height: 6px;
+
+        }
+
+
+
+        .subject-scroll::-webkit-scrollbar-track {
+
+            background: transparent;
+
+        }
+
+
+
+        .subject-scroll::-webkit-scrollbar-thumb {
+
+            background: var(--border);
+
+            border-radius: 10px;
+
+        }
+
+
+
+        [data-theme="dark"] .mini-calendar-day {
+
+            color: rgba(255, 255, 255, 0.7);
+
+        }
+
+
+
+        [data-theme="dark"] .mini-calendar-day.header {
+
+            color: rgba(255, 255, 255, 0.4);
+
+        }
+    </style>
+
+</head>
+
+
+
+<body>
+
+    <div class="dashboard-layout">
+
+        {% include '_topnav.html' %}
+
+
+
+        <main class="main-content" style="margin-left: 0;">
+
+            <div class="dashboard-grid">
+
+                <!-- ROW 1 -->
+
+                <div class="island bento-profile island-clickable" onclick="window.location.href='/settings'">
+
+                    <div style="display:flex; align-items:center; gap:1.25rem; height:100%;">
+
+                        <div class="profile-avatar-large"
+                            style="width:55px; height:55px; border-radius:15px; background:var(--accent); display:flex; align-items:center; justify-content:center; color: var(--bg-secondary); font-weight:bold; font-size:1.3rem;">
+
+                            {{ name[0] if name else 'S' }}
+
+                        </div>
+
+                        <div style="overflow: hidden;">
+
+                            <h2
+                                style="font-size:1.1rem; margin:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; font-weight: 700;">
+
+                                {{ name }}</h2>
+
+                            <p
+                                style="font-size:0.8rem; opacity:0.6; margin:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
+
+                                {{ email }}</p>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+
+
+                <div class="island bento-streak island-clickable" onclick="window.location.href='/statistics'">
+
+                    <h3><span class="material-symbols-outlined"
+                            style="color:var(--text-secondary)">local_fire_department</span> STREAK</h3>
+
+                    <div class="streak-display" style="display:flex; align-items: baseline; gap: 0.5rem;">
+
+                        <span class="streak-number" style="font-size: 2.5rem; font-weight: 800;">{{ streak }}</span>
+
+                        <span style="font-size:0.75rem; font-weight:700; opacity:0.6;">DAYS</span>
+
+                    </div>
+
+                </div>
+
+
+
+                <div class="island bento-explore island-clickable" onclick="window.location.href='/interests'">
+
+                    <h3><span class="material-symbols-outlined" style="color:var(--text-secondary)">explore</span>
+
+                        EXPLORE</h3>
+
+                    <div class="career-tag-list">
+
+                        {% if saved_careers %}
+
+                        {% for career in saved_careers[:2] %}
+
+                        <span class="career-tag">{{ career.name }}</span>
+
+                        {% endfor %}
+
+                        {% else %}
+
+                        <p style="font-size:0.75rem; opacity:0.5;">Finding paths...</p>
+
+                        {% endif %}
+
+                    </div>
+
+                </div>
+
+
+
+                <div class="island bento-perf island-clickable" onclick="window.location.href='/statistics'">
+
+                    <h3><span class="material-symbols-outlined" style="color:var(--accent)">trending_up</span> ANALYTICS
+
+                    </h3>
+
+                    <div style="height:100px; width:100%; padding-top: 0.5rem;">
+
+                        <canvas id="studyTimeChart"></canvas>
+
+                    </div>
+
+                </div>
+
+
+
+                <!-- ROW 2-3 -->
+
+                <div class="island bento-academic island-clickable" onclick="window.location.href='/academic'">
+
+                    <h3><span class="material-symbols-outlined" style="color:var(--accent)">school</span> ACADEMIC
+
+                        PROGRESS</h3>
+
+                    <div class="academic-content" style="flex:1; display: flex; align-items: center; gap: 2rem;">
+
+                        <div class="island-chart"
+                            style="position:relative; width: 160px; height: 160px; flex-shrink: 0;">
+
+                            <canvas id="academicDonut"></canvas>
+
+                            <div class="chart-overlay"
+                                style="position:absolute; top:50%; left:50%; transform:translate(-50%, -50%); text-align:center;">
+
+                                <span style="font-size:1.8rem; font-weight:800; display:block;"
+                                    class="donut-text text-inverse">{{ overall_progress }}%</span>
+
+                                <span
+                                    style="font-size:0.65rem; opacity:0.6; text-transform:uppercase; font-weight: 700;">Complete</span>
+
+                            </div>
+
+                        </div>
+
+                        <div style="flex:1;">
+
+                            <h4 style="font-size:0.9rem; margin-bottom:1.25rem; opacity:0.8; font-weight: 700;">Status
+
+                                Overview</h4>
+
+                            <div style="display:grid; grid-template-columns:1fr 1fr; gap:1.5rem;">
+
+                                <div>
+
+                                    <p
+                                        style="margin:0; font-size:0.7rem; opacity:0.5; font-weight: 700; text-transform: uppercase;">
+
+                                        Total Chapters</p>
+
+                                    <strong style="font-size:1.4rem; font-weight: 800;">{{ total_chapters }}</strong>
+
+                                </div>
+
+                                <div>
+
+                                    <p
+                                        style="margin:0; font-size:0.7rem; opacity:0.5; font-weight: 700; text-transform: uppercase;">
+
+                                        Completed</p>
+
+                                    <strong style="font-size:1.4rem; font-weight: 800; color:var(--success);">{{
+
+                                        completed_chapters }}</strong>
+
+                                </div>
+
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+
+
+                <div class="island bento-schedule island-clickable" onclick="window.location.href='/calendar'">
+
+                    <h3><span class="material-symbols-outlined" style="color:var(--accent)">calendar_today</span>
+
+                        CALENDAR</h3>
+
+                    <div class="schedule-widget-content" style="justify-content: center; height: 100%;">
+
+                        <div id="miniCalendar" class="mini-calendar" style="max-width: 200px; width: 100%;"></div>
+
+                    </div>
+
+                </div>
+
+
+
+                <div class="island bento-tasks">
+
+                    <h3><span class="material-symbols-outlined" style="color:var(--accent)">check_circle</span> TASKS
+
+                    </h3>
+
+                    <form action="/tasks" method="POST" class="task-input-group">
+
+                        <input type="hidden" name="action" value="add">
+
+                        <input type="text" name="title" class="task-input" placeholder="Quick add task..." required>
+
+                        <button type="submit" class="primary-btn" style="padding: 0.4rem; border-radius: 10px;">
+
+                            <span class="material-symbols-outlined" style="font-size: 1.2rem;">add</span>
+
+                        </button>
+
+                    </form>
+
+                    <div style="flex:1; overflow-y:auto; padding-right: 4px;">
+
+                        {% if recent_tasks %}
+
+                        {% for task in recent_tasks %}
+
+                        <div class="quick-task-item"
+                            style="display:flex; align-items:center; justify-content:space-between; gap:0.5rem; padding: 0.5rem 0.75rem; background: var(--bg-secondary); border-radius: 10px; margin-bottom: 0.4rem;">
+
+                            <div style="display:flex; align-items:center; gap:0.75rem; overflow:hidden; flex: 1;">
+
+                                <form action="/tasks" method="POST" style="display:flex;">
+
+                                    <input type="hidden" name="action" value="toggle">
+
+                                    <input type="hidden" name="task_id" value="{{ task.id }}">
+
+                                    <div class="quick-task-checkbox {% if task.completed %}checked{% endif %}"
+                                        onclick="this.parentElement.submit()">
+
+                                        {% if task.completed %}<span class="material-symbols-outlined"
+                                            style="font-size: 0.8rem; color: white;">done</span>{% endif %}
+
+                                    </div>
+
+                                </form>
+
+                                <span
+                                    style="font-size:0.8rem; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; color: var(--text-primary); {% if task.completed %}text-decoration:line-through; opacity:0.5;{% endif %}">{{
+
+                                    task.title }}</span>
+
+                            </div>
+
+                            <form action="/tasks" method="POST" style="display: flex;">
+
+                                <input type="hidden" name="action" value="delete">
+
+                                <input type="hidden" name="task_id" value="{{ task.id }}">
+
+                                <button type="submit"
+                                    style="background:none; border:none; color:var(--error); cursor:pointer; opacity:0.4;">
+
+                                    <span class="material-symbols-outlined" style="font-size: 1.1rem;">delete</span>
+
+                                </button>
+
+                            </form>
+
+                        </div>
+
+                        {% endfor %}
+
+                        {% else %}
+
+                        <p style="font-size:0.75rem; opacity:0.4; text-align:center; margin-top: 1.5rem;">All tasks
+
+                            completed</p>
+
+                        {% endif %}
+
+                    </div>
+
+                </div>
+
+
+
+                <!-- ROW 4 -->
+
+                <div class="island bento-subjects island-clickable" onclick="window.location.href='/academic'">
+
+                    <h3><span class="material-symbols-outlined" style="color:var(--accent)">auto_stories</span> SUBJECT
+
+                        MASTERY</h3>
+
+                    <div class="subject-scroll"
+                        style="display:flex; gap:2.5rem; overflow-x:auto; padding: 1.5rem 0.5rem; flex:1; align-items:center;">
+
+                        {% for subject, progress in subject_progress.items() %}
+
+                        <div style="flex: 0 0 140px; text-align:center;">
+
+                            <div style="width:120px; height:120px; margin:0 auto; position:relative;">
+
+                                <canvas class="subject-donut" data-progress="{{ progress }}" width="120"
+                                    height="120"></canvas>
+
+                                <span
+                                    style="position:absolute; top:50%; left:50%; transform:translate(-50%, -50%); font-size:1.1rem; font-weight:800;"
+                                    class="donut-text text-inverse">{{ progress }}%</span>
+
+                            </div>
+
+                            <p style="font-size:0.85rem; font-weight:700; margin-top:1rem;">{{ subject }}</p>
+
+                        </div>
+
+                        {% endfor %}
+
+                    </div>
+
+                </div>
+
+
+
+                <!-- End of Row 1 Items moved up -->
+
+            </div>
+
+        </main>
+
+    </div>
+
+
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <script>
+
+        const studyTimeData = {{ study_time_data | tojson | safe }};
+
+        const overallProgress = {{ overall_progress | tojson | safe }};
+
+        let charts = {};
+
+
+
+        document.addEventListener('DOMContentLoaded', () => {
+
+            initAllCharts();
+
+            createMiniCalendar();
+
+
+
+            // Watch for theme changes on <html> tag
+
+            const observer = new MutationObserver((mutations) => {
+
+                mutations.forEach((mutation) => {
+
+                    if (mutation.type === 'attributes' && mutation.attributeName === 'data-theme') {
+
+                        refreshAllCharts();
+
+                    }
+
+                });
+
+            });
+
+            observer.observe(document.documentElement, { attributes: true });
+
+        });
+
+
+
+        function initAllCharts() {
+
+            charts.academic = initAcademicChart();
+
+            charts.studyTime = initStudyTimeChart();
+
+            initSubjectCharts();
+
+        }
+
+
+
+        function refreshAllCharts() {
+
+            // Destroy existing instances to prevent overlap/memory leaks
+
+            if (charts.academic) charts.academic.destroy();
+
+            if (charts.studyTime) charts.studyTime.destroy();
+
+            Object.keys(charts).forEach(key => {
+
+                if (key.startsWith('subject_') && charts[key]) {
+
+                    charts[key].destroy();
+
+                }
+
+            });
+
+            initAllCharts();
+
+        }
+
+
+
+        function getThemeColors() {
+
+            const isLight = document.documentElement.getAttribute('data-theme') === 'light';
+
+            const styles = getComputedStyle(document.documentElement);
+
+            const accent = styles.getPropertyValue('--accent').trim() || (isLight ? '#000000' : '#ffffff');
+
+            const secondary = styles.getPropertyValue('--text-secondary').trim() || (isLight ? '#475569' : '#a1a1aa');
+
+
+
+            return {
+
+                isLight: isLight,
+
+                bar: accent,
+
+                track: isLight ? 'rgba(0,0,0,0.06)' : 'rgba(255,255,255,0.08)',
+
+                grid: isLight ? 'rgba(0,0,0,0.04)' : 'rgba(255,255,255,0.04)',
+
+                secondary: secondary
+
+            };
+
+        }
+
+
+
+        function initAcademicChart() {
+
+            const el = document.getElementById('academicDonut');
+
+            if (!el) return null;
+
+            const colors = getThemeColors();
+
+
+
+            return new Chart(el, {
+
+                type: 'doughnut',
+
+                data: {
+
+                    datasets: [{
+
+                        data: [overallProgress, 100 - overallProgress],
+
+                        backgroundColor: [colors.bar, colors.track],
+
+                        borderWidth: 0
+
+                    }]
+
+                },
+
+                options: {
+
+                    cutout: '85%',
+
+                    plugins: { legend: { display: false }, tooltip: { enabled: false } },
+
+                    animation: { duration: 1500, easing: 'easeOutQuart' }
+
+                }
+
+            });
+
+        }
+
+
+
+        function initStudyTimeChart() {
+
+            const el = document.getElementById('studyTimeChart');
+
+            if (!el) return null;
+
+            const colors = getThemeColors();
+
+
+
+            return new Chart(el, {
+
+                type: 'bar',
+
+                data: {
+
+                    labels: studyTimeData.map(d => new Date(d.date).toLocaleDateString('en-US', { weekday: 'short' })),
+
+                    datasets: [{
+
+                        data: studyTimeData.map(d => d.minutes / 60),
+
+                        backgroundColor: colors.bar,
+
+                        borderRadius: 12
+
+                    }]
+
+                },
+
+                options: {
+
+                    maintainAspectRatio: false,
+
+                    scales: {
+
+                        y: {
+
+                            display: true,
+
+                            border: { display: false },
+
+                            grid: { color: colors.grid, drawBorder: false },
+
+                            ticks: {
+
+                                font: { size: 11, weight: '600', family: 'Outfit' },
+
+                                color: colors.secondary
+
+                            }
+
+                        },
+
+                        x: {
+
+                            grid: { display: false },
+
+                            ticks: { font: { size: 11, weight: '600', family: 'Outfit' }, color: colors.secondary }
+
+                        }
+
+                    },
+
+                    plugins: { legend: { display: false } }
+
+                }
+
+            });
+
+        }
+
+
+
+        function initSubjectCharts() {
+
+            const colors = getThemeColors();
+
+            document.querySelectorAll('.subject-donut').forEach((canvas, idx) => {
+
+                const progress = parseInt(canvas.dataset.progress);
+
+                const chartId = `subject_${idx}`;
+
+                if (charts[chartId]) charts[chartId].destroy();
+
+
+
+                charts[chartId] = new Chart(canvas, {
+
+                    type: 'doughnut',
+
+                    data: {
+
+                        datasets: [{
+
+                            data: [progress, 100 - progress],
+
+                            backgroundColor: [colors.bar, colors.track],
+
+                            borderWidth: 0
+
+                        }]
+
+                    },
+
+                    options: { cutout: '82%', plugins: { legend: { display: false }, tooltip: { enabled: false } } }
+
+                });
+
+            });
+
+        }
+
+
+
+        function createMiniCalendar() {
+
+            const el = document.getElementById('miniCalendar');
+
+            if (!el) return;
+
+            const now = new Date();
+
+            const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+
+            const firstDay = new Date(now.getFullYear(), now.getMonth(), 1).getDay();
+
+
+
+            const weekdays = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
+
+            let html = weekdays.map(w => `<div class="mini-calendar-day header" style="opacity:0.4; font-size:0.65rem;"><span>${w}</span></div>`).join('');
+
+
+
+            for (let i = 0; i < firstDay; i++) {
+
+                html += '<div class="mini-calendar-day empty"></div>';
+
+            }
+
+
+
+            for (let d = 1; d <= daysInMonth; d++) {
+
+                const isToday = d === now.getDate();
+
+                html += `<div class="mini-calendar-day ${isToday ? 'today' : ''}"><span style="${isToday ? 'color:#fff;' : ''}">${d}</span></div>`;
+
+            }
+
+            el.innerHTML = html;
+
+        }
+
+    </script>
+
+    <!-- Onboarding System -->
+    <script src="{{ url_for('static', filename='js/onboarding.js') }}"></script>
+
+</body>
+
+
+
+</html>

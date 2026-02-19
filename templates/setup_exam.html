@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Exam Setup - Student Platform</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+<body>
+    <div class="container">
+        <div class="form-card">
+            <h1>Exam Preparation Setup</h1>
+            <p class="subtitle">Which exam are you preparing for?</p>
+            
+            <form method="POST" action="{{ url_for('setup_exam') }}">
+                <div class="form-group">
+                    <label for="exam_type">Exam Type</label>
+                    <select id="exam_type" name="exam_type" required>
+                        <option value="">Select exam</option>
+                        <option value="JEE">JEE (Joint Entrance Examination)</option>
+                        <option value="NEET">NEET (Medical Entrance)</option>
+                        <option value="SAT">SAT (Scholastic Assessment Test)</option>
+                        <option value="CLAT">CLAT (Law Entrance)</option>
+                        <option value="NDA">NDA (National Defence Academy)</option>
+                        <option value="Other">Other</option>
+                    </select>
+                </div>
+                
+                <button type="submit" class="btn btn-primary">Complete Setup</button>
+            </form>
+        </div>
+    </div>
+</body>
+</html>

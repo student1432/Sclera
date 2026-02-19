@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+
+<head>
+    <meta charset="UTF-8">
+    <title>All Students | StudyOS</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+
+<body>
+    {% if profile.get('account_type') == 'admin' %}
+        {% include '_admin_topnav.html' %}
+    {% else %}
+        {% include '_teacher_topnav.html' %}
+    {% endif %}
+
+    <div class="dashboard-layout">
+        <main class="main-content">
+            <span class="header-row">
+                <h1>All Students ({{ total_students }})
+                <a href="{{ url_for('institution_join') }}" class="btn-secondary" style="margin-left: 35em; font-size: 18px;">+ Add Student</a>
+                </h1>
+            </span>
+
+            <div class="students-table-container">
+                <table class="students-table">
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Email</th>
+                            <th>Classes</th>
+                            <th>Progress</th>
+                            <th>Last Active</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for student in students %}
+                        <tr>
+                            <td><strong>{{ student.get('name', 'Unknown') }}</strong></td>
+                            <td>{{ student.get('email', 'N/A') }}</td>
+                            <td>{{ student.get('class_names', 'No class') }}</td>
+                            <td>
+                                <div class="progress-bar-mini">
+                                    <div class="progress-fill-mini"
+                                        style="width: {{ student.get('progress_overall', 0) }}%"></div>
+                                    <span class="progress-text-mini">{{ student.get('progress_overall', 0) }}%</span>
+                                </div>
+                            </td>
+                            <td>
+                                {% set days = student.get('days_inactive', 999) %}
+                                {% if days == 999 %}
+                                <span class="text-muted">Never</span>
+                                {% elif days == 0 %}
+                                <span class="text-success">Today</span>
+                                {% elif days == 1 %}
+                                <span>Yesterday</span>
+                                {% elif days <= 7 %} <span>{{ days }} days ago</span>
+                                    {% else %}
+                                    <span class="text-warning">{{ days }} days ago</span>
+                                    {% endif %}
+                            </td>
+                            <td>
+                                <a href="{{ url_for('student_detail', student_uid=student.uid) }}"
+                                    class="btn-small">View</a>
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="6" class="text-center text-muted">No students found.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </main>
+    </div>
+</body>
+
+</html>

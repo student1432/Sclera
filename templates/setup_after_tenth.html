@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>After Tenth Setup - Student Platform</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+<body>
+    <div class="container">
+        <div class="form-card">
+            <h1>After 10th Grade Setup</h1>
+            <p class="subtitle">Tell us about your chosen stream</p>
+            
+            <form method="POST" action="{{ url_for('setup_after_tenth') }}">
+                <div class="form-group">
+                    <label for="stream">Stream</label>
+                    <select id="stream" name="stream" required>
+                        <option value="">Select your stream</option>
+                        <option value="Science">Science</option>
+                        <option value="Commerce">Commerce</option>
+                        <option value="Arts">Arts/Humanities</option>
+                        <option value="Vocational">Vocational</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label for="grade">Current Grade</label>
+                    <select id="grade" name="grade" required>
+                        <option value="">Select your grade</option>
+                        <option value="11">Grade 11</option>
+                        <option value="12">Grade 12</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label>Subjects (Select all that apply)</label>
+                    <div class="checkbox-group">
+                        <label><input type="checkbox" name="subjects" value="Physics"> Physics</label>
+                        <label><input type="checkbox" name="subjects" value="Chemistry"> Chemistry</label>
+                        <label><input type="checkbox" name="subjects" value="Mathematics"> Mathematics</label>
+                        <label><input type="checkbox" name="subjects" value="Biology"> Biology</label>
+                        <label><input type="checkbox" name="subjects" value="Computer Science"> Computer Science</label>
+                        <label><input type="checkbox" name="subjects" value="Economics"> Economics</label>
+                        <label><input type="checkbox" name="subjects" value="Accountancy"> Accountancy</label>
+                        <label><input type="checkbox" name="subjects" value="Business Studies"> Business Studies</label>
+                        <label><input type="checkbox" name="subjects" value="History"> History</label>
+                        <label><input type="checkbox" name="subjects" value="Geography"> Geography</label>
+                        <label><input type="checkbox" name="subjects" value="Political Science"> Political Science</label>
+                        <label><input type="checkbox" name="subjects" value="English"> English</label>
+                    </div>
+                </div>
+                
+                <button type="submit" class="btn btn-primary">Complete Setup</button>
+            </form>
+        </div>
+    </div>
+</body>
+</html>
