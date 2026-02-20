@@ -3,7 +3,7 @@ from firebase_config import auth, db
 from firebase_admin import auth as admin_auth, storage
 from datetime import datetime, date, timedelta
 from templates.academic_data import get_syllabus, get_available_subjects, ACADEMIC_SYLLABI
-from careers_data import CAREERS_DATA, COURSES_DATA, INTERNSHIPS_DATA, get_career_by_id, get_course_by_id, get_internship_by_id
+from careers_data import CAREERS_DATA, COURSES_DATA, INTERNSHIPS_DATA, get_career_by_id, get_course_by_id, get_internship_by_id, search_careers, search_courses, search_internships, get_all_domains, get_all_course_levels, get_all_providers, get_all_internship_domains, get_all_locations
 from utils import (
     PasswordManager, login_rate_limiter, logger, validate_schema,
     user_registration_schema, user_login_schema, CacheManager
@@ -248,7 +248,7 @@ def get_user_data(uid):
     user_doc = db.collection('users').document(uid).get()
     if user_doc.exists:
         return user_doc.to_dict()
-    return None
+    return {}
 def calculate_academic_progress(user_data, uid=None):
     """
     Calculate academic progress with 3-tier exclusion system:
@@ -288,13 +288,14 @@ def calculate_academic_progress(user_data, uid=None):
     all_exclusions.update(personal_exclusions)
     syllabus = {}
     syllabus_purpose = {
-        'high_school': 'highschool',
+        'school': 'school',
         'exam_prep': 'exam',
         'after_tenth': 'after_tenth'
     }.get(purpose, purpose)
-    if purpose == 'high_school' and user_data.get('highschool'):
-        hs = user_data['highschool']
-        syllabus = get_syllabus(syllabus_purpose, hs.get('board'), hs.get('grade'))
+    if purpose == 'school' and user_data.get('school'):
+        school = user_data['school']
+        subject_combination = school.get('subject_combination')
+        syllabus = get_syllabus(syllabus_purpose, school.get('board'), school.get('grade'), subject_combination=subject_combination)
     elif purpose == 'exam_prep' and user_data.get('exam'):
         syllabus = get_syllabus(syllabus_purpose, user_data['exam'].get('type'))
     elif purpose == 'after_tenth' and user_data.get('after_tenth'):
@@ -498,12 +499,10 @@ def signup():
             db.collection('users').document(uid).set(user_data)
             session['uid'] = uid
             logger.security_event("user_registered", user_id=uid, ip_address=request.remote_addr)
-            if purpose == 'high_school':
+            if purpose == 'school':
                 return redirect(url_for('setup_highschool'))
             elif purpose == 'exam_prep':
                 return redirect(url_for('setup_exam'))
-            elif purpose == 'after_tenth':
-                return redirect(url_for('setup_after_tenth'))
             else:
                 flash('Invalid purpose selected', 'error')
                 return redirect(url_for('signup'))
@@ -517,9 +516,27 @@ def signup():
 def setup_highschool():
     if request.method == 'POST':
         uid = session['uid']
-        db.collection('users').document(uid).update({
-            'highschool': {'board': request.form.get('board'), 'grade': request.form.get('grade')}
-        })
+        
+        # Basic school info
+        school_data = {
+            'board': request.form.get('board'),
+            'grade': request.form.get('grade')
+        }
+        
+        # Add subject combination for grades 11 and 12
+        grade = request.form.get('grade')
+        if grade in ['11', '12']:
+            subject_combination = request.form.get('subject_combination')
+            if subject_combination:
+                school_data['subject_combination'] = subject_combination
+                
+                # Add custom subjects if selected
+                if subject_combination == 'Custom':
+                    custom_subjects = request.form.getlist('subjects')
+                    if custom_subjects:
+                        school_data['custom_subjects'] = custom_subjects
+        
+        db.collection('users').document(uid).update({'school': school_data})
         flash('Setup complete!', 'success')
         return redirect(url_for('profile_dashboard'))
     return render_template('setup_highschool.html')
@@ -532,21 +549,6 @@ def setup_exam():
         flash('Setup complete!', 'success')
         return redirect(url_for('profile_dashboard'))
     return render_template('setup_exam.html')
-@app.route('/setup/after_tenth', methods=['GET', 'POST'])
-@require_login
-def setup_after_tenth():
-    if request.method == 'POST':
-        uid = session['uid']
-        db.collection('users').document(uid).update({
-            'after_tenth': {
-                'stream': request.form.get('stream'),
-                'grade': request.form.get('grade'),
-                'subjects': request.form.getlist('subjects')
-            }
-        })
-        flash('Setup complete!', 'success')
-        return redirect(url_for('profile_dashboard'))
-    return render_template('setup_after_tenth.html')
 @app.route('/login', methods=['GET', 'POST'])
 @limiter.limit(config[env].RATE_LIMIT_LOGIN)
 def login():
@@ -1210,9 +1212,9 @@ def profile_dashboard():
         return redirect(url_for('logout'))
     purpose = user_data.get('purpose')
     academic_summary = ''
-    if purpose == 'highschool' and user_data.get('highschool'):
-        hs = user_data['highschool']
-        academic_summary = f"{hs.get('board', '')} – Grade {hs.get('grade', '')}"
+    if purpose == 'school' and user_data.get('school'):
+        school = user_data['school']
+        academic_summary = f"{school.get('board', '')} – Grade {school.get('grade', '')}"
     elif purpose == 'exam' and user_data.get('exam'):
         academic_summary = f"{user_data['exam'].get('type', '')} Preparation"
     elif purpose == 'after_tenth' and user_data.get('after_tenth'):
@@ -2187,7 +2189,8 @@ def search_people():
                     'name': user_data.get('name'),
                     'purpose_display': user_data.get('purpose', '').replace('_', ' ').title(),
                     'academic_summary': '',
-                    'connection_status': 'none'
+                    'connection_status': 'none',
+                    'has_public_profile': user_data.get('has_public_profile', False)
                 }
                 users.append(profile)
                 logger.debug(f"MAIN: Added user {doc.id} to results")
@@ -2205,6 +2208,89 @@ def search_people():
     except Exception as e:
         logger.error(f"MAIN: People search error: {str(e)}")
         return jsonify({'error': 'Search failed', 'details': str(e)}), 500
+
+@app.route('/api/user/<user_uid>/public-profile', methods=['GET'])
+@require_login
+def get_public_profile(user_uid):
+    """Get public profile information for a user"""
+    try:
+        # Get user data
+        user_doc = db.collection('users').document(user_uid).get()
+        if not user_doc.exists:
+            return jsonify({'error': 'User not found'}), 404
+        
+        user_data = user_doc.to_dict()
+        
+        # Check if user has public profile enabled
+        if not user_data.get('has_public_profile', False):
+            return jsonify({'error': 'Profile not public'}), 403
+        
+        # Get privacy settings
+        visibility = user_data.get('profile_visibility', {})
+        
+        # Build public profile data
+        profile_data = {
+            'uid': user_uid,
+            'name': user_data.get('name', '') if visibility.get('name', True) else 'Anonymous',
+            'purpose_display': user_data.get('purpose', '').replace('_', ' ').title() if visibility.get('purpose', True) else '',
+            'about': user_data.get('about', '') if visibility.get('about', True) else '',
+            'academic_summary': user_data.get('academic_summary', '') if visibility.get('academic_summary', True) else '',
+            'grade': user_data.get('grade', '') if visibility.get('grade', True) else '',
+            'school': user_data.get('school', '') if visibility.get('school', True) else '',
+            'skills': user_data.get('skills', []) if visibility.get('skills', True) else [],
+            'subjects': user_data.get('subjects', []) if visibility.get('subjects', True) else []
+        }
+        
+        return jsonify({
+            'success': True,
+            'profile': profile_data
+        })
+        
+    except Exception as e:
+        logger.error(f"Get public profile error: {str(e)}")
+        return jsonify({'error': 'Failed to load profile'}), 500
+
+@app.route('/api/user/<user_uid>/search-by-uid', methods=['GET'])
+@require_login
+def search_user_by_uid(user_uid):
+    """Search for a specific user by their UID"""
+    try:
+        # Get current user
+        current_uid = session['uid']
+        
+        # Prevent searching for self
+        if user_uid == current_uid:
+            return jsonify({'error': 'Cannot search for yourself'}), 400
+        
+        # Get user data
+        user_doc = db.collection('users').document(user_uid).get()
+        if not user_doc.exists:
+            return jsonify({'error': 'User not found'}), 404
+        
+        user_data = user_doc.to_dict()
+        
+        # Check privacy settings
+        visibility = user_data.get('profile_visibility', {})
+        
+        # Build user data for search result
+        result_user = {
+            'uid': user_uid,
+            'name': user_data.get('name', '') if visibility.get('name', True) else 'Anonymous',
+            'purpose_display': user_data.get('purpose', '').replace('_', ' ').title() if visibility.get('purpose', True) else '',
+            'grade': user_data.get('grade', '') if visibility.get('grade', True) else '',
+            'school': user_data.get('school', '') if visibility.get('school', True) else '',
+            'has_public_profile': user_data.get('has_public_profile', False)
+        }
+        
+        return jsonify({
+            'success': True,
+            'user': result_user
+        })
+        
+    except Exception as e:
+        logger.error(f"UID search error: {str(e)}")
+        return jsonify({'error': 'Search failed'}), 500
+
 # ============================================================================
 # BUBBLES SYSTEM
 # ============================================================================
@@ -3247,8 +3333,8 @@ def academic_leaderboard():
             })
             # Add grade info if available
             purpose = user_doc.get('purpose')
-            if purpose == 'high_school' and user_doc.get('highschool'):
-                leaderboard_data[-1]['grade'] = user_doc['highschool'].get('grade')
+            if purpose == 'school' and user_doc.get('school'):
+                leaderboard_data[-1]['grade'] = user_doc['school'].get('grade')
             elif purpose == 'after_tenth' and user_doc.get('after_tenth'):
                 leaderboard_data[-1]['grade'] = user_doc['after_tenth'].get('grade')
         except Exception as e:
@@ -3325,8 +3411,8 @@ def bubble_detail(bubble_id):
                     })
                     # Add grade info if available
                     purpose = member_data.get('purpose')
-                    if purpose == 'high_school' and member_data.get('highschool'):
-                        leaderboard_data[-1]['grade'] = member_data['highschool'].get('grade')
+                    if purpose == 'school' and member_data.get('school'):
+                        leaderboard_data[-1]['grade'] = member_data['school'].get('grade')
                     elif purpose == 'after_tenth' and member_data.get('after_tenth'):
                         leaderboard_data[-1]['grade'] = member_data['after_tenth'].get('grade')
         except Exception as e:
@@ -3592,9 +3678,9 @@ def profile_resume():
         return redirect(url_for('logout'))
     purpose = user_data.get('purpose')
     academic_summary = ''
-    if purpose == 'highschool' and user_data.get('highschool'):
-        hs = user_data['highschool']
-        academic_summary = f"{hs.get('board', '')} – Grade {hs.get('grade', '')}"
+    if purpose == 'school' and user_data.get('school'):
+        school = user_data['school']
+        academic_summary = f"{school.get('board', '')} – Grade {school.get('grade', '')}"
     elif purpose == 'exam' and user_data.get('exam'):
         academic_summary = f"{user_data['exam'].get('type', '')} Preparation"
     elif purpose == 'after_tenth' and user_data.get('after_tenth'):
@@ -3800,14 +3886,15 @@ def academic_dashboard():
         return redirect(url_for('logout'))
     purpose = user_data.get('purpose')
     syllabus_purpose = {
-        'high_school': 'highschool',
+        'school': 'school',
         'exam_prep': 'exam',
         'after_tenth': 'after_tenth'
     }.get(purpose, purpose)
     syllabus = {}
-    if purpose == 'high_school' and user_data.get('highschool'):
-        hs = user_data['highschool']
-        syllabus = get_syllabus(syllabus_purpose, hs.get('board'), hs.get('grade'))
+    if purpose == 'school' and user_data.get('school'):
+        school = user_data['school']
+        subject_combination = school.get('subject_combination')
+        syllabus = get_syllabus(syllabus_purpose, school.get('board'), school.get('grade'), subject_combination=subject_combination)
     elif purpose == 'exam_prep' and user_data.get('exam'):
         syllabus = get_syllabus(syllabus_purpose, user_data['exam'].get('type'))
     elif purpose == 'after_tenth' and user_data.get('after_tenth'):
@@ -3902,14 +3989,15 @@ def chapter_detail(subject_name, chapter_name):
         return redirect(url_for('logout'))
     purpose = user_data.get('purpose')
     syllabus_purpose = {
-        'high_school': 'highschool',
+        'school': 'school',
         'exam_prep': 'exam',
         'after_tenth': 'after_tenth'
     }.get(purpose, purpose)
     syllabus = {}
-    if purpose == 'high_school' and user_data.get('highschool'):
-        hs = user_data['highschool']
-        syllabus = get_syllabus(syllabus_purpose, hs.get('board'), hs.get('grade'))
+    if purpose == 'school' and user_data.get('school'):
+        school = user_data['school']
+        subject_combination = school.get('subject_combination')
+        syllabus = get_syllabus(syllabus_purpose, school.get('board'), school.get('grade'), subject_combination=subject_combination)
     elif purpose == 'exam_prep' and user_data.get('exam'):
         syllabus = get_syllabus(syllabus_purpose, user_data['exam'].get('type'))
     elif purpose == 'after_tenth' and user_data.get('after_tenth'):
@@ -4338,6 +4426,72 @@ def interests_dashboard():
         'has_class': bool(user_data.get('class_ids'))
     }
     return render_template('interests_dashboard.html', **context)
+
+# ============================================================================
+# SEARCH API ENDPOINTS
+# ============================================================================
+@app.route('/api/search/careers')
+@require_login
+def api_search_careers():
+    query = request.args.get('q', '').strip()
+    domain = request.args.get('domain', '').strip()
+    skills = request.args.getlist('skills')
+    
+    results = search_careers(
+        query=query if query else None,
+        domain=domain if domain else None,
+        skills=skills if skills else None
+    )
+    
+    return jsonify({'success': True, 'results': results})
+
+@app.route('/api/search/courses')
+@require_login
+def api_search_courses():
+    query = request.args.get('q', '').strip()
+    level = request.args.get('level', '').strip()
+    price_type = request.args.get('price_type', '').strip()
+    provider = request.args.get('provider', '').strip()
+    
+    results = search_courses(
+        query=query if query else None,
+        level=level if level else None,
+        price_type=price_type if price_type else None,
+        provider=provider if provider else None
+    )
+    
+    return jsonify({'success': True, 'results': results})
+
+@app.route('/api/search/internships')
+@require_login
+def api_search_internships():
+    query = request.args.get('q', '').strip()
+    domain = request.args.get('domain', '').strip()
+    location = request.args.get('location', '').strip()
+    company = request.args.get('company', '').strip()
+    
+    results = search_internships(
+        query=query if query else None,
+        domain=domain if domain else None,
+        location=location if location else None,
+        company=company if company else None
+    )
+    
+    return jsonify({'success': True, 'results': results})
+
+@app.route('/api/search/filters')
+@require_login
+def api_search_filters():
+    """Get available filter options for search"""
+    filters = {
+        'domains': get_all_domains(),
+        'course_levels': get_all_course_levels(),
+        'providers': get_all_providers(),
+        'internship_domains': get_all_internship_domains(),
+        'locations': get_all_locations()
+    }
+    return jsonify({'success': True, 'filters': filters})
+
 @app.route('/career/<career_id>')
 @require_login
 def career_detail(career_id):
@@ -4472,6 +4626,13 @@ def settings():
             new_purpose = request.form.get('purpose')
             new_board = request.form.get('board')
             new_grade = request.form.get('grade')
+            
+            # Validation: CBSE grades 11-12 require subject combination
+            if new_purpose == 'school' and new_board == 'CBSE' and new_grade in ['11', '12']:
+                subject_combination = request.form.get('subject_combination')
+                if not subject_combination:
+                    flash('Subject combination is required for CBSE grades 11-12.', 'error')
+                    return redirect(url_for('settings'))
             # Fields to clear when changing academic config
             updates = {
                 'purpose': new_purpose,
@@ -4479,39 +4640,63 @@ def settings():
                 'exam_results': [],        # Clear exam results
                 'time_studied': 0,         # Reset study time
                 'highschool': None,
+                'school': None,
                 'exam': None,
                 'after_tenth': None,
             }
             # Set new academic data based on purpose
-            if new_purpose == 'high_school':
-                updates['highschool'] = {'board': new_board, 'grade': new_grade}
+            if new_purpose == 'school':
+                school_data = {'board': new_board, 'grade': new_grade}
+                # Add subject combination for CBSE grades 11-12
+                if new_board == 'CBSE' and new_grade in ['11', '12']:
+                    subject_combination = request.form.get('subject_combination')
+                    if subject_combination:
+                        school_data['subject_combination'] = subject_combination
+                updates['school'] = school_data
             elif new_purpose == 'exam_prep':
                 exam_type = request.form.get('exam_type', 'JEE')
                 updates['exam'] = {'type': exam_type}
-            elif new_purpose == 'after_tenth':
-                stream = request.form.get('stream', 'Science')
-                grade = request.form.get('grade_after')
-                updates['after_tenth'] = {
-                    'grade': grade,
-                    'stream': stream,
-                    'subjects': []
-                }
             db.collection('users').document(uid).update(updates)
             flash('Academic configuration updated. All previous progress has been reset.', 'success')
         elif action == 'account':
             # Handle account updates
             name = request.form.get('name')
+            has_public_profile = request.form.get('has_public_profile') == 'true'
+            
+            updates = {}
             if name:
-                db.collection('users').document(uid).update({'name': name})
-                flash('Profile name updated!', 'success')
+                updates['name'] = name
+            
+            # Update public profile consent
+            updates['has_public_profile'] = has_public_profile
+            
+            # Update privacy settings if public profile is enabled
+            if has_public_profile:
+                profile_visibility = {
+                    'name': request.form.get('visibility_name') == 'true',
+                    'purpose': request.form.get('visibility_purpose') == 'true',
+                    'academic_summary': request.form.get('visibility_academic_summary') == 'true',
+                    'about': request.form.get('visibility_about') == 'true',
+                    'grade': request.form.get('visibility_grade') == 'true',
+                    'school': request.form.get('visibility_school') == 'true',
+                    'skills': request.form.get('visibility_skills') == 'true',
+                    'subjects': request.form.get('visibility_subjects') == 'true'
+                }
+                updates['profile_visibility'] = profile_visibility
+            else:
+                # If disabling public profile, keep existing visibility settings for future re-enable
+                updates['profile_visibility'] = user_data.get('profile_visibility', {})
+            
+            if updates:
+                db.collection('users').document(uid).update(updates)
+                flash('Profile settings updated!', 'success')
         return redirect(url_for('settings'))
     # Get current settings or defaults
     current_settings = user_data.get('settings', {})
     # Get available options for academic configuration
-    available_boards = ['CBSE', 'ICSE', 'State Board']
-    available_grades = ['9', '10', '11', '12']
+    available_boards = ['CBSE', 'ICSE', 'IB', 'IGCSE', 'State Board']
+    available_grades = ['8', '9', '10', '11', '12']
     available_exams = ['JEE', 'NEET', 'SAT', 'ACT', 'GRE', 'GMAT', 'CAT', 'UPSC', 'SSC', 'Bank PO', 'Other']
-    available_streams = ['Science (PCM)', 'Science (PCB)', 'Commerce', 'Arts', 'Diploma', 'Vocational']
     return render_template('settings.html',
                          user=user_data,
                          name=user_data.get('name') or 'Student',
@@ -4519,7 +4704,6 @@ def settings():
                          available_boards=available_boards,
                          available_grades=available_grades,
                          available_exams=available_exams,
-                         available_streams=available_streams,
                          in_institution=bool(user_data.get('institution_id')),
                          has_class=bool(user_data.get('class_ids')))
 @app.route('/api/tutorial/complete', methods=['POST'])
@@ -4757,13 +4941,14 @@ def manage_class_syllabus(class_id):
     # Get syllabus based on class metadata
     purpose = class_data.get('purpose', 'highschool')
     syllabus_purpose = {
-        'high_school': 'highschool',
+        'school': 'school',
         'exam_prep': 'exam',
         'after_tenth': 'after_tenth'
     }.get(purpose, purpose)
     board = class_data.get('board', 'CBSE')
     grade = class_data.get('grade', '10')
-    syllabus = get_syllabus(syllabus_purpose, board, grade)
+    subject_combination = class_data.get('subject_combination')
+    syllabus = get_syllabus(syllabus_purpose, board, grade, subject_combination=subject_combination)
     if not syllabus:
         syllabus = {} # Fallback to empty if not found
     context = {
@@ -5471,9 +5656,9 @@ def docs_dashboard():
     # Get available subjects based on user's academic path
     subjects = []
     purpose = user_data.get('purpose', '')
-    if purpose == 'high_school' and user_data.get('highschool'):
-        hs = user_data['highschool']
-        subjects = get_available_subjects('highschool', hs.get('board'), hs.get('grade'))
+    if purpose == 'school' and user_data.get('school'):
+        school = user_data['school']
+        subjects = get_available_subjects('highschool', school.get('board'), school.get('grade'))
     elif purpose == 'exam_prep' and user_data.get('exam'):
         subjects = get_available_subjects('exam', user_data['exam'].get('type'))
     elif purpose == 'after_tenth' and user_data.get('after_tenth'):

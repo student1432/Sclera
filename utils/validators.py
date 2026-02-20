@@ -23,7 +23,7 @@ class UserRegistrationSchema(Schema):
     password = fields.String(required=True, validate=validate.Length(min=8, max=128))
     name = fields.String(required=True, validate=validate.Length(min=2, max=100))
     purpose = fields.String(required=True, validate=validate.OneOf([
-        'high_school', 'exam_prep', 'after_tenth'
+        'school', 'exam_prep'
     ]))
     institution_id = fields.String(allow_none=True)
     

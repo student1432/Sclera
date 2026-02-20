@@ -152,6 +152,105 @@
             color: var(--text-secondary);
             background-color: var(--bg-tertiary);
         }
+        
+        /* Custom dropdown styling */
+        .filter-dropdown {
+            animation: slideDown 0.2s ease-out;
+        }
+        
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        /* Badge styling for light mode */
+        .light .bg-green-100 {
+            background-color: #dcfce7 !important;
+            color: #166534 !important;
+        }
+        
+        .light .bg-blue-100 {
+            background-color: #dbeafe !important;
+            color: #1e40af !important;
+        }
+        
+        .light .bg-purple-100 {
+            background-color: #f3e8ff !important;
+            color: #6b21a8 !important;
+        }
+        
+        .light .bg-gray-100 {
+            background-color: #f3f4f6 !important;
+            color: #374151 !important;
+        }
+        
+        /* Badge styling for dark mode */
+        .dark .bg-green-100 {
+            background-color: #14532d !important;
+            color: #86efac !important;
+        }
+        
+        .dark .bg-blue-100 {
+            background-color: #1e3a8a !important;
+            color: #93c5fd !important;
+        }
+        
+        .dark .bg-purple-100 {
+            background-color: #581c87 !important;
+            color: #d8b4fe !important;
+        }
+        
+        .dark .bg-gray-100 {
+            background-color: #1f2937 !important;
+            color: #d1d5db !important;
+        }
+        
+        /* Enhanced hover effects */
+        .group:hover .group-hover\:text-blue-500 {
+            color: #3b82f6 !important;
+        }
+        
+        /* Smooth transitions */
+        .transition-all {
+            transition: all 0.2s ease-in-out;
+        }
+        
+        /* Filter button active state */
+        .filter-active {
+            background-color: var(--accent) !important;
+            color: var(--bg-primary) !important;
+            border-color: var(--accent) !important;
+        }
+        
+        /* Search input focus enhancement */
+        .focus\:ring-2:focus {
+            box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.5);
+        }
+        
+        /* Dropdown shadow enhancement */
+        .shadow-lg {
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+        }
+        
+        /* Filter count badge animation */
+        @keyframes pulse {
+            0%, 100% {
+                transform: scale(1);
+            }
+            50% {
+                transform: scale(1.1);
+            }
+        }
+        
+        .animate-pulse-once {
+            animation: pulse 0.3s ease-in-out;
+        }
     </style>
 
 </head>
@@ -214,6 +313,104 @@
             <div class="flex flex-col gap-4">
                 <h3 class="text-lg font-bold interests-text">Explore</h3>
                 
+                <!-- Single Line Search with Filter Dropdown -->
+                <div class="interests-bg-tertiary rounded-xl p-3">
+                    <div class="flex gap-3 items-center">
+                        <!-- Search Input -->
+                        <div class="flex-1 relative">
+                            <span class="material-symbols-outlined absolute left-3 top-1/2 transform -translate-y-1/2 interests-text-muted text-lg">search</span>
+                            <input type="text" id="searchInput" placeholder="Search careers, courses, internships..." 
+                                   class="w-full pl-10 pr-4 py-2.5 rounded-lg interests-bg-secondary interests-text border interests-border-subtle focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all">
+                        </div>
+                        
+                        <!-- Filter Dropdown -->
+                        <div class="relative">
+                            <button id="filterDropdownBtn" class="relative px-4 py-2.5 rounded-lg interests-bg-secondary interests-text border interests-border-subtle hover:interests-bg-hover transition-all flex items-center gap-2">
+                                <span class="material-symbols-outlined">tune</span>
+                                <span class="text-sm">Filters</span>
+                                <span id="activeFilterCount" class="absolute -top-1 -right-1 w-5 h-5 bg-blue-500 text-white text-xs rounded-full flex items-center justify-center hidden">0</span>
+                            </button>
+                            
+                            <!-- Dropdown Menu -->
+                            <div id="filterDropdown" class="absolute right-0 mt-2 w-80 interests-bg-tertiary rounded-xl border interests-border shadow-lg z-50 hidden filter-dropdown">
+                                <div class="p-4">
+                                    <div class="flex items-center justify-between mb-4">
+                                        <span class="font-semibold interests-text">Filter Options</span>
+                                        <button id="clearFilters" class="text-sm interests-text-muted hover:interests-text">Clear all</button>
+                                    </div>
+                                    
+                                    <!-- Career Filters -->
+                                    <div id="careerFilters" class="filter-section">
+                                        <div class="space-y-3">
+                                            <div>
+                                                <label class="block text-sm interests-text-secondary mb-1.5">Domain</label>
+                                                <select id="careerDomainFilter" class="w-full px-3 py-2 rounded-lg interests-bg-secondary interests-text border interests-border-subtle focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm">
+                                                    <option value="">All Domains</option>
+                                                </select>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Course Filters -->
+                                    <div id="courseFilters" class="filter-section hidden">
+                                        <div class="space-y-3">
+                                            <div>
+                                                <label class="block text-sm interests-text-secondary mb-1.5">Level</label>
+                                                <select id="courseLevelFilter" class="w-full px-3 py-2 rounded-lg interests-bg-secondary interests-text border interests-border-subtle focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm">
+                                                    <option value="">All Levels</option>
+                                                </select>
+                                            </div>
+                                            <div>
+                                                <label class="block text-sm interests-text-secondary mb-1.5">Price</label>
+                                                <select id="coursePriceFilter" class="w-full px-3 py-2 rounded-lg interests-bg-secondary interests-text border interests-border-subtle focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm">
+                                                    <option value="">All Prices</option>
+                                                    <option value="free">Free</option>
+                                                    <option value="paid">Paid</option>
+                                                </select>
+                                            </div>
+                                            <div>
+                                                <label class="block text-sm interests-text-secondary mb-1.5">Provider</label>
+                                                <select id="courseProviderFilter" class="w-full px-3 py-2 rounded-lg interests-bg-secondary interests-text border interests-border-subtle focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm">
+                                                    <option value="">All Providers</option>
+                                                </select>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Internship Filters -->
+                                    <div id="internshipFilters" class="filter-section hidden">
+                                        <div class="space-y-3">
+                                            <div>
+                                                <label class="block text-sm interests-text-secondary mb-1.5">Domain</label>
+                                                <select id="internshipDomainFilter" class="w-full px-3 py-2 rounded-lg interests-bg-secondary interests-text border interests-border-subtle focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm">
+                                                    <option value="">All Domains</option>
+                                                </select>
+                                            </div>
+                                            <div>
+                                                <label class="block text-sm interests-text-secondary mb-1.5">Location</label>
+                                                <select id="internshipLocationFilter" class="w-full px-3 py-2 rounded-lg interests-bg-secondary interests-text border interests-border-subtle focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm">
+                                                    <option value="">All Locations</option>
+                                                </select>
+                                            </div>
+                                            <div>
+                                                <label class="block text-sm interests-text-secondary mb-1.5">Company</label>
+                                                <select id="internshipCompanyFilter" class="w-full px-3 py-2 rounded-lg interests-bg-secondary interests-text border interests-border-subtle focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm">
+                                                    <option value="">All Companies</option>
+                                                </select>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Clear Search Button -->
+                        <button id="clearSearch" class="px-3 py-2.5 rounded-lg interests-bg-hover interests-text hidden transition-all">
+                            <span class="material-symbols-outlined">clear</span>
+                        </button>
+                    </div>
+                </div>
+                <br>
                 <!-- Tabs -->
                 <div class="flex gap-6 justify-center">
                     <button class="explore-tab active interests-border interests-text font-bold text-sm px-6 py-3 rounded-full interests-accent-hover transition-all" data-tab="careers">Careers</button>
@@ -221,46 +418,86 @@
                     <button class="explore-tab interests-border interests-text font-bold text-sm px-6 py-3 rounded-full interests-accent-hover transition-all" data-tab="internships">Internships</button>
                 </div>
 
+                <!-- Search Results Counter -->
+                <div id="searchResults" class="hidden">
+                    <div class="flex items-center justify-between">
+                        <span class="interests-text-secondary text-sm">
+                            <span id="resultCount">0</span> results found
+                        </span>
+                        <button id="resetSearch" class="text-sm interests-text-muted hover:interests-text">Reset search</button>
+                    </div>
+                </div>
+
                 <!-- Careers Tab -->
                 <div class="explore-section active" id="tab-careers">
-                    {% for domain, career_list in all_careers.items() %}
-                    <div class="mb-6">
-                        <h4 class="interests-text-muted text-xs font-bold uppercase tracking-widest mb-4">{{ domain }}</h4>
-                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                            {% for career in career_list %}
-                            <a href="{{ url_for('career_detail', career_id=career.id) }}" class="interests-bg-tertiary rounded-xl p-6 hover:interests-bg-hover transition-all block">
-                                <h4 class="interests-text font-semibold text-base mb-3">{{ career.name }}</h4>
-                                <p class="interests-text-muted text-sm">{{ career.skills[:3]|join(', ') }}</p>
-                            </a>
-                            {% endfor %}
+                    <div id="careersResults">
+                        {% for domain, career_list in all_careers.items() %}
+                        <div class="mb-6">
+                            <h4 class="interests-text-muted text-xs font-bold uppercase tracking-widest mb-4">{{ domain }}</h4>
+                            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                                {% for career in career_list %}
+                                <a href="{{ url_for('career_detail', career_id=career.id) }}" class="interests-bg-tertiary rounded-xl p-6 hover:interests-bg-hover transition-all block">
+                                    <h4 class="interests-text font-semibold text-base mb-3">{{ career.name }}</h4>
+                                    <p class="interests-text-muted text-sm">{{ career.skills[:3]|join(', ') }}</p>
+                                </a>
+                                {% endfor %}
+                            </div>
                         </div>
+                        {% endfor %}
                     </div>
-                    {% endfor %}
+                    <div id="careersLoading" class="hidden text-center py-8">
+                        <span class="material-symbols-outlined animate-spin text-3xl interests-text-muted">refresh</span>
+                        <p class="interests-text-muted mt-2">Searching...</p>
+                    </div>
+                    <div id="careersNoResults" class="hidden text-center py-8 interests-text-muted">
+                        <span class="material-symbols-outlined text-4xl mb-4 block">search_off</span>
+                        <p>No careers found matching your search criteria.</p>
+                    </div>
                 </div>
 
                 <!-- Courses Tab -->
                 <div class="explore-section" id="tab-courses">
-                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                        {% for course in all_courses %}
-                        <a href="{{ url_for('course_detail', course_id=course.id) }}" class="interests-bg-tertiary rounded-xl p-6 hover:interests-bg-hover transition-all block">
-                            <div class="interests-text-secondary text-xs font-bold uppercase tracking-widest mb-2">{{ course.provider }} · {{ course.level }}</div>
-                            <h4 class="interests-text font-semibold text-base mb-3">{{ course.name }}</h4>
-                            <p class="interests-text-muted text-sm">{{ course.duration }} · {{ course.price }}</p>
-                        </a>
-                        {% endfor %}
+                    <div id="coursesResults">
+                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                            {% for course in all_courses %}
+                            <a href="{{ url_for('course_detail', course_id=course.id) }}" class="interests-bg-tertiary rounded-xl p-6 hover:interests-bg-hover transition-all block">
+                                <div class="interests-text-secondary text-xs font-bold uppercase tracking-widest mb-2">{{ course.provider }} · {{ course.level }}</div>
+                                <h4 class="interests-text font-semibold text-base mb-3">{{ course.name }}</h4>
+                                <p class="interests-text-muted text-sm">{{ course.duration }} · {{ course.price }}</p>
+                            </a>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    <div id="coursesLoading" class="hidden text-center py-8">
+                        <span class="material-symbols-outlined animate-spin text-3xl interests-text-muted">refresh</span>
+                        <p class="interests-text-muted mt-2">Searching...</p>
+                    </div>
+                    <div id="coursesNoResults" class="hidden text-center py-8 interests-text-muted">
+                        <span class="material-symbols-outlined text-4xl mb-4 block">search_off</span>
+                        <p>No courses found matching your search criteria.</p>
                     </div>
                 </div>
 
                 <!-- Internships Tab -->
                 <div class="explore-section" id="tab-internships">
-                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                        {% for intern in all_internships %}
-                        <a href="{{ url_for('internship_detail', internship_id=intern.id) }}" class="interests-bg-tertiary rounded-xl p-6 hover:interests-bg-hover transition-all block">
-                            <div class="interests-text-secondary text-xs font-bold uppercase tracking-widest mb-2">{{ intern.domain }} · {{ intern.company }}</div>
-                            <h4 class="interests-text font-semibold text-base mb-3">{{ intern.name }}</h4>
-                            <p class="interests-text-muted text-sm">{{ intern.duration }} · {{ intern.location }}</p>
-                        </a>
-                        {% endfor %}
+                    <div id="internshipsResults">
+                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                            {% for intern in all_internships %}
+                            <a href="{{ url_for('internship_detail', internship_id=intern.id) }}" class="interests-bg-tertiary rounded-xl p-6 hover:interests-bg-hover transition-all block">
+                                <div class="interests-text-secondary text-xs font-bold uppercase tracking-widest mb-2">{{ intern.domain }} · {{ intern.company }}</div>
+                                <h4 class="interests-text font-semibold text-base mb-3">{{ intern.name }}</h4>
+                                <p class="interests-text-muted text-sm">{{ intern.duration }} · {{ intern.location }}</p>
+                            </a>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    <div id="internshipsLoading" class="hidden text-center py-8">
+                        <span class="material-symbols-outlined animate-spin text-3xl interests-text-muted">refresh</span>
+                        <p class="interests-text-muted mt-2">Searching...</p>
+                    </div>
+                    <div id="internshipsNoResults" class="hidden text-center py-8 interests-text-muted">
+                        <span class="material-symbols-outlined text-4xl mb-4 block">search_off</span>
+                        <p>No internships found matching your search criteria.</p>
                     </div>
                 </div>
             </div>
@@ -276,10 +513,26 @@
         var tabs = document.querySelectorAll('.explore-tab');
         tabs.forEach(function (tab) {
             tab.addEventListener('click', function () {
+                // Remove active class from all tabs and sections
                 tabs.forEach(function (t) { t.classList.remove('active'); });
                 document.querySelectorAll('.explore-section').forEach(function (s) { s.classList.remove('active'); });
+                document.querySelectorAll('.filter-section').forEach(function (f) { f.classList.add('hidden'); });
+                
+                // Add active class to clicked tab and corresponding section
                 tab.classList.add('active');
-                document.getElementById('tab-' + tab.dataset.tab).classList.add('active');
+                var targetSection = document.getElementById('tab-' + tab.dataset.tab);
+                if (targetSection) {
+                    targetSection.classList.add('active');
+                }
+                
+                // Show corresponding filter section
+                var filterSection = document.getElementById(tab.dataset.tab + 'Filters');
+                if (filterSection) {
+                    filterSection.classList.remove('hidden');
+                }
+                
+                // Update current tab for search functionality
+                window.currentTab = tab.dataset.tab;
             });
         });
     })();
@@ -293,6 +546,417 @@
         if (savedTheme) {
             root.classList.toggle('dark', savedTheme === 'dark');
             root.classList.toggle('light', savedTheme === 'light');
+        }
+    })();
+</script>
+
+<script>
+    (function () {
+        // Search functionality
+        let searchTimeout;
+        let currentTab = 'careers';
+        let filterOptions = {};
+
+        // DOM elements
+        const searchInput = document.getElementById('searchInput');
+        const clearSearchBtn = document.getElementById('clearSearch');
+        const clearFiltersBtn = document.getElementById('clearFilters');
+        const resetSearchBtn = document.getElementById('resetSearch');
+        const searchResults = document.getElementById('searchResults');
+        const resultCount = document.getElementById('resultCount');
+        const filterDropdownBtn = document.getElementById('filterDropdownBtn');
+        const filterDropdown = document.getElementById('filterDropdown');
+        const activeFilterCount = document.getElementById('activeFilterCount');
+
+        // Initialize filter options
+        async function loadFilterOptions() {
+            try {
+                const response = await fetch('/api/search/filters');
+                const data = await response.json();
+                if (data.success) {
+                    filterOptions = data.filters;
+                    populateFilterDropdowns();
+                }
+            } catch (error) {
+                console.error('Error loading filter options:', error);
+            }
+        }
+
+        // Populate filter dropdowns
+        function populateFilterDropdowns() {
+            // Career domains
+            const careerDomainFilter = document.getElementById('careerDomainFilter');
+            filterOptions.domains.forEach(domain => {
+                const option = document.createElement('option');
+                option.value = domain;
+                option.textContent = domain;
+                careerDomainFilter.appendChild(option);
+            });
+
+            // Course filters
+            const courseLevelFilter = document.getElementById('courseLevelFilter');
+            filterOptions.course_levels.forEach(level => {
+                const option = document.createElement('option');
+                option.value = level;
+                option.textContent = level;
+                courseLevelFilter.appendChild(option);
+            });
+
+            const courseProviderFilter = document.getElementById('courseProviderFilter');
+            filterOptions.providers.forEach(provider => {
+                const option = document.createElement('option');
+                option.value = provider;
+                option.textContent = provider;
+                courseProviderFilter.appendChild(option);
+            });
+
+            // Internship filters
+            const internshipDomainFilter = document.getElementById('internshipDomainFilter');
+            filterOptions.internship_domains.forEach(domain => {
+                const option = document.createElement('option');
+                option.value = domain;
+                option.textContent = domain;
+                internshipDomainFilter.appendChild(option);
+            });
+
+            const internshipLocationFilter = document.getElementById('internshipLocationFilter');
+            filterOptions.locations.forEach(location => {
+                const option = document.createElement('option');
+                option.value = location;
+                option.textContent = location;
+                internshipLocationFilter.appendChild(option);
+            });
+
+            const internshipCompanyFilter = document.getElementById('internshipCompanyFilter');
+            // Extract unique companies from internships data
+            const companies = ['Tech Corp', 'Analytics Inc', 'Brand Agency', 'Investment Firm', 'Design Studio', 'Media House'];
+            companies.forEach(company => {
+                const option = document.createElement('option');
+                option.value = company;
+                option.textContent = company;
+                internshipCompanyFilter.appendChild(option);
+            });
+        }
+
+        // Toggle filter dropdown
+        function toggleFilterDropdown() {
+            filterDropdown.classList.toggle('hidden');
+        }
+
+        // Close filter dropdown when clicking outside
+        function closeFilterDropdown(event) {
+            if (!filterDropdownBtn.contains(event.target) && !filterDropdown.contains(event.target)) {
+                filterDropdown.classList.add('hidden');
+            }
+        }
+
+        // Get current search parameters
+        function getSearchParams() {
+            const params = {
+                q: searchInput.value.trim()
+            };
+
+            if (currentTab === 'careers') {
+                const domain = document.getElementById('careerDomainFilter').value;
+                if (domain) params.domain = domain;
+            } else if (currentTab === 'courses') {
+                const level = document.getElementById('courseLevelFilter').value;
+                const priceType = document.getElementById('coursePriceFilter').value;
+                const provider = document.getElementById('courseProviderFilter').value;
+                if (level) params.level = level;
+                if (priceType) params.price_type = priceType;
+                if (provider) params.provider = provider;
+            } else if (currentTab === 'internships') {
+                const domain = document.getElementById('internshipDomainFilter').value;
+                const location = document.getElementById('internshipLocationFilter').value;
+                const company = document.getElementById('internshipCompanyFilter').value;
+                if (domain) params.domain = domain;
+                if (location) params.location = location;
+                if (company) params.company = company;
+            }
+
+            return params;
+        }
+
+        // Build query string from parameters
+        function buildQueryString(params) {
+            const query = new URLSearchParams();
+            Object.keys(params).forEach(key => {
+                if (params[key]) query.append(key, params[key]);
+            });
+            return query.toString();
+        }
+
+        // Perform search
+        async function performSearch() {
+            const params = getSearchParams();
+            const hasSearch = params.q || Object.keys(params).length > 1;
+
+            if (!hasSearch) {
+                showOriginalContent();
+                return;
+            }
+
+            showLoading();
+            updateClearButtons();
+
+            try {
+                const response = await fetch(`/api/search/${currentTab}?${buildQueryString(params)}`);
+                const data = await response.json();
+
+                if (data.success) {
+                    displayResults(data.results);
+                    updateResultCount(data.results.length);
+                    searchResults.classList.remove('hidden');
+                } else {
+                    showError('Search failed. Please try again.');
+                }
+            } catch (error) {
+                console.error('Search error:', error);
+                showError('Search failed. Please try again.');
+            }
+        }
+
+        // Display search results
+        function displayResults(results) {
+            const resultsContainer = document.getElementById(`${currentTab}Results`);
+            const noResultsContainer = document.getElementById(`${currentTab}NoResults`);
+            const loadingContainer = document.getElementById(`${currentTab}Loading`);
+
+            loadingContainer.classList.add('hidden');
+
+            if (results.length === 0) {
+                resultsContainer.classList.add('hidden');
+                noResultsContainer.classList.remove('hidden');
+                return;
+            }
+
+            noResultsContainer.classList.add('hidden');
+            resultsContainer.classList.remove('hidden');
+
+            let html = '';
+            
+            if (currentTab === 'careers') {
+                // Group careers by domain
+                const careersByDomain = {};
+                results.forEach(career => {
+                    if (!careersByDomain[career.domain]) {
+                        careersByDomain[career.domain] = [];
+                    }
+                    careersByDomain[career.domain].push(career);
+                });
+
+                Object.keys(careersByDomain).forEach(domain => {
+                    html += `<div class="mb-6">
+                        <h4 class="interests-text-muted text-xs font-bold uppercase tracking-widest mb-4">${domain}</h4>
+                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">`;
+                    
+                    careersByDomain[domain].forEach(career => {
+                        html += `<a href="/career/${career.id}" class="interests-bg-tertiary rounded-xl p-6 hover:interests-bg-hover transition-all block group">
+                            <h4 class="interests-text font-semibold text-base mb-3 group-hover:text-blue-500 transition-colors">${career.name}</h4>
+                            <p class="interests-text-muted text-sm">${career.skills.slice(0, 3).join(', ')}</p>
+                        </a>`;
+                    });
+                    
+                    html += `</div></div>`;
+                });
+            } else if (currentTab === 'courses') {
+                html = '<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">';
+                results.forEach(course => {
+                    const priceBadge = course.price.toLowerCase().includes('free') 
+                        ? '<span class="inline-block px-2 py-1 bg-green-100 text-green-800 text-xs rounded-full">Free</span>'
+                        : '<span class="inline-block px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full">Paid</span>';
+                    
+                    html += `<a href="/course/${course.id}" class="interests-bg-tertiary rounded-xl p-6 hover:interests-bg-hover transition-all block group">
+                        <div class="interests-text-secondary text-xs font-bold uppercase tracking-widest mb-2">${course.provider} · ${course.level}</div>
+                        <h4 class="interests-text font-semibold text-base mb-3 group-hover:text-blue-500 transition-colors">${course.name}</h4>
+                        <div class="flex items-center justify-between">
+                            <p class="interests-text-muted text-sm">${course.duration}</p>
+                            ${priceBadge}
+                        </div>
+                    </a>`;
+                });
+                html += '</div>';
+            } else if (currentTab === 'internships') {
+                html = '<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">';
+                results.forEach(internship => {
+                    const locationBadge = internship.location.toLowerCase() === 'remote' 
+                        ? '<span class="inline-block px-2 py-1 bg-purple-100 text-purple-800 text-xs rounded-full">Remote</span>'
+                        : `<span class="inline-block px-2 py-1 bg-gray-100 text-gray-800 text-xs rounded-full">${internship.location}</span>`;
+                    
+                    html += `<a href="/internship/${internship.id}" class="interests-bg-tertiary rounded-xl p-6 hover:interests-bg-hover transition-all block group">
+                        <div class="interests-text-secondary text-xs font-bold uppercase tracking-widest mb-2">${internship.domain} · ${internship.company}</div>
+                        <h4 class="interests-text font-semibold text-base mb-3 group-hover:text-blue-500 transition-colors">${internship.name}</h4>
+                        <div class="flex items-center justify-between">
+                            <p class="interests-text-muted text-sm">${internship.duration}</p>
+                            ${locationBadge}
+                        </div>
+                    </a>`;
+                });
+                html += '</div>';
+            }
+
+            resultsContainer.innerHTML = html;
+        }
+
+        // Show loading state
+        function showLoading() {
+            const resultsContainer = document.getElementById(`${currentTab}Results`);
+            const noResultsContainer = document.getElementById(`${currentTab}NoResults`);
+            const loadingContainer = document.getElementById(`${currentTab}Loading`);
+
+            resultsContainer.classList.add('hidden');
+            noResultsContainer.classList.add('hidden');
+            loadingContainer.classList.remove('hidden');
+        }
+
+        // Show original content
+        function showOriginalContent() {
+            const resultsContainer = document.getElementById(`${currentTab}Results`);
+            const noResultsContainer = document.getElementById(`${currentTab}NoResults`);
+            const loadingContainer = document.getElementById(`${currentTab}Loading`);
+
+            loadingContainer.classList.add('hidden');
+            noResultsContainer.classList.add('hidden');
+            searchResults.classList.add('hidden');
+            
+            // Don't reload - just hide search results and show original content
+            resultsContainer.classList.remove('hidden');
+        }
+
+        // Update result count
+        function updateResultCount(count) {
+            resultCount.textContent = count;
+        }
+
+        // Update clear buttons and filter count
+        function updateClearButtons() {
+            const hasSearch = searchInput.value.trim();
+            const hasFilters = getActiveFiltersCount() > 0;
+            
+            clearSearchBtn.classList.toggle('hidden', !hasSearch);
+            
+            // Update filter count badge
+            const filterCount = getActiveFiltersCount();
+            if (filterCount > 0) {
+                activeFilterCount.textContent = filterCount;
+                activeFilterCount.classList.remove('hidden');
+                activeFilterCount.classList.add('animate-pulse-once');
+                setTimeout(() => {
+                    activeFilterCount.classList.remove('animate-pulse-once');
+                }, 300);
+            } else {
+                activeFilterCount.classList.add('hidden');
+            }
+            
+            // Update filter button state
+            filterDropdownBtn.classList.toggle('filter-active', hasFilters);
+        }
+
+        // Get count of active filters
+        function getActiveFiltersCount() {
+            let count = 0;
+            
+            if (currentTab === 'careers') {
+                if (document.getElementById('careerDomainFilter').value) count++;
+            } else if (currentTab === 'courses') {
+                if (document.getElementById('courseLevelFilter').value) count++;
+                if (document.getElementById('coursePriceFilter').value) count++;
+                if (document.getElementById('courseProviderFilter').value) count++;
+            } else if (currentTab === 'internships') {
+                if (document.getElementById('internshipDomainFilter').value) count++;
+                if (document.getElementById('internshipLocationFilter').value) count++;
+                if (document.getElementById('internshipCompanyFilter').value) count++;
+            }
+            
+            return count;
+        }
+
+        // Clear search
+        function clearSearch() {
+            searchInput.value = '';
+            updateClearButtons();
+            performSearch();
+        }
+
+        // Clear all filters
+        function clearAllFilters() {
+            if (currentTab === 'careers') {
+                document.getElementById('careerDomainFilter').value = '';
+            } else if (currentTab === 'courses') {
+                document.getElementById('courseLevelFilter').value = '';
+                document.getElementById('coursePriceFilter').value = '';
+                document.getElementById('courseProviderFilter').value = '';
+            } else if (currentTab === 'internships') {
+                document.getElementById('internshipDomainFilter').value = '';
+                document.getElementById('internshipLocationFilter').value = '';
+                document.getElementById('internshipCompanyFilter').value = '';
+            }
+            
+            updateClearButtons();
+            performSearch();
+            filterDropdown.classList.add('hidden');
+        }
+
+        // Show error message
+        function showError(message) {
+            const resultsContainer = document.getElementById(`${currentTab}Results`);
+            const noResultsContainer = document.getElementById(`${currentTab}NoResults`);
+            const loadingContainer = document.getElementById(`${currentTab}Loading`);
+
+            loadingContainer.classList.add('hidden');
+            resultsContainer.classList.add('hidden');
+            noResultsContainer.classList.remove('hidden');
+            noResultsContainer.querySelector('p').textContent = message;
+        }
+
+        // Event listeners
+        searchInput.addEventListener('input', function () {
+            clearTimeout(searchTimeout);
+            searchTimeout = setTimeout(performSearch, 300);
+        });
+
+        clearSearchBtn.addEventListener('click', clearSearch);
+        clearFiltersBtn.addEventListener('click', clearAllFilters);
+        resetSearchBtn.addEventListener('click', showOriginalContent);
+
+        // Filter dropdown
+        filterDropdownBtn.addEventListener('click', function(e) {
+            e.stopPropagation();
+            toggleFilterDropdown();
+        });
+
+        document.addEventListener('click', closeFilterDropdown);
+
+        // Tab switching
+        document.querySelectorAll('.explore-tab').forEach(tab => {
+            tab.addEventListener('click', function () {
+                window.currentTab = this.dataset.tab;
+                currentTab = window.currentTab; // Update local variable
+                updateClearButtons();
+                // Close dropdown when switching tabs
+                filterDropdown.classList.add('hidden');
+                // Don't perform search automatically on tab switch
+            });
+        });
+
+        // Filter change listeners
+        document.querySelectorAll('select').forEach(select => {
+            select.addEventListener('change', function () {
+                clearTimeout(searchTimeout);
+                searchTimeout = setTimeout(performSearch, 300);
+                updateClearButtons();
+            });
+        });
+
+        // Initialize
+        loadFilterOptions();
+        
+        // Set initial currentTab from active tab
+        const activeTab = document.querySelector('.explore-tab.active');
+        if (activeTab) {
+            window.currentTab = activeTab.dataset.tab;
+            currentTab = window.currentTab;
         }
     })();
 </script>

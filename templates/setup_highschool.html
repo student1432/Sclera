@@ -3,14 +3,31 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>High School Setup - Student Platform</title>
+    <title>School Setup - Student Platform</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <style>
+        .hidden {
+            display: none;
+        }
+        .checkbox-group {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 10px;
+            margin-top: 10px;
+        }
+        .checkbox-group label {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+        }
+    </style>
 </head>
 <body>
     <div class="container">
         <div class="form-card">
-            <h1>High School Setup</h1>
-            <p class="subtitle">Tell us about your high school education</p>
+            <h1>School Setup</h1>
+            <p class="subtitle">Tell us about your school education</p>
             
             <form method="POST" action="{{ url_for('setup_highschool') }}">
                 <div class="form-group">
@@ -29,6 +46,14 @@
                     <label for="grade">Current Grade</label>
                     <select id="grade" name="grade" required>
                         <option value="">Select your grade</option>
+                        <option value="1">Grade 1</option>
+                        <option value="2">Grade 2</option>
+                        <option value="3">Grade 3</option>
+                        <option value="4">Grade 4</option>
+                        <option value="5">Grade 5</option>
+                        <option value="6">Grade 6</option>
+                        <option value="7">Grade 7</option>
+                        <option value="8">Grade 8</option>
                         <option value="9">Grade 9</option>
                         <option value="10">Grade 10</option>
                         <option value="11">Grade 11</option>
@@ -36,9 +61,49 @@
                     </select>
                 </div>
                 
+                <div class="form-group">
+                    <label for="subject_combination" class="hidden" id="subject_combination_group">Subject Combination (for Grades 11-12)</label>
+                    <select id="subject_combination" name="subject_combination">
+                        <option value="">Select your subject combination</option>
+                        <option value="PCM">Physics, Chemistry, Mathematics</option>
+                        <option value="PCB">Physics, Chemistry, Biology</option>
+                        <option value="PCMB">Physics, Chemistry, Mathematics, Biology</option>
+                        <option value="Commerce">Accountancy, Business Studies, Economics</option>
+                        <option value="COM">Computer Applications, Informatics Practices</option>
+                    </select>
+                </div>
+                
                 <button type="submit" class="btn btn-primary">Complete Setup</button>
             </form>
         </div>
     </div>
+    
+    <script>
+        document.getElementById('grade').addEventListener('change', function() {
+            const grade = this.value;
+            const subjectCombinationGroup = document.getElementById('subject_combination_group');
+            const customSubjectsGroup = document.getElementById('custom_subjects_group');
+            
+            // Show subject combination for grades 11 and 12
+            if (grade === '11' || grade === '12') {
+                subjectCombinationGroup.classList.remove('hidden');
+            } else {
+                subjectCombinationGroup.classList.add('hidden');
+                customSubjectsGroup.classList.add('hidden');
+            }
+        });
+        
+        document.getElementById('subject_combination').addEventListener('change', function() {
+            const combination = this.value;
+            const customSubjectsGroup = document.getElementById('custom_subjects_group');
+            
+            // Show custom subjects only when "Custom" is selected
+            if (combination === 'Custom') {
+                customSubjectsGroup.classList.remove('hidden');
+            } else {
+                customSubjectsGroup.classList.add('hidden');
+            }
+        });
+    </script>
 </body>
 </html>

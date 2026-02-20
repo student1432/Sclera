@@ -30,6 +30,7 @@
             {% endwith %}
 
             <div class="profile-edit-form">
+                <form method="POST" action="{{ url_for('profile_edit') }}" enctype="multipart/form-data">
                 <!-- Profile Picture Section -->
                 <div class="form-section">
                     <div class="section-header">
@@ -124,11 +125,18 @@
                         <input type="text" id="certificates" name="certificates" value="{{ certificates }}" placeholder="Certificate 1, Certificate 2 (comma-separated)" class="form-input">
                         <small class="form-hint">Enter certificates and achievements separated by commas</small>
                     </div>
+
+                    <div class="form-group">
+                        <label for="achievements" class="form-label">Personal Achievements</label>
+                        <input type="text" id="achievements" name="achievements" value="{{ achievements }}" placeholder="First place in science competition, Dean's list (comma-separated)" class="form-input">
+                        <small class="form-hint">Enter personal achievements separated by commas</small>
+                    </div>
                 </div>
 
                 <div class="form-actions">
                     <button type="submit" class="btn btn-primary save-btn">Save Changes</button>
                 </div>
+                </form>
             </div>
         </main>
     </div>

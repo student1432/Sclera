@@ -60,3 +60,114 @@ def get_internship_by_id(internship_id):
         if internship['id'] == internship_id:
             return internship
     return None
+
+def search_careers(query=None, domain=None, skills=None):
+    """Search careers with optional filters"""
+    results = []
+    
+    for domain_name, careers in CAREERS_DATA.items():
+        # Filter by domain if specified
+        if domain and domain.lower() != domain_name.lower():
+            continue
+            
+        for career in careers:
+            # Filter by query (search in name, description, skills)
+            if query:
+                query_lower = query.lower()
+                searchable_text = f"{career['name']} {career['description']} {' '.join(career['skills'])}".lower()
+                if query_lower not in searchable_text:
+                    continue
+            
+            # Filter by skills if specified
+            if skills:
+                career_skills_lower = [skill.lower() for skill in career['skills']]
+                skills_lower = [skill.lower() for skill in skills]
+                if not any(skill in career_skills_lower for skill in skills_lower):
+                    continue
+            
+            # Add domain to career for display
+            career_copy = career.copy()
+            career_copy['domain'] = domain_name
+            results.append(career_copy)
+    
+    return results
+
+def search_courses(query=None, level=None, price_type=None, provider=None):
+    """Search courses with optional filters"""
+    results = []
+    
+    for course in COURSES_DATA:
+        # Filter by query (search in name, description, provider, skills)
+        if query:
+            query_lower = query.lower()
+            searchable_text = f"{course['name']} {course['description']} {course['provider']} {' '.join(course['skills_gained'])}".lower()
+            if query_lower not in searchable_text:
+                continue
+        
+        # Filter by level
+        if level and level.lower() != course['level'].lower():
+            continue
+        
+        # Filter by price type (free/paid)
+        if price_type:
+            price_lower = course['price'].lower()
+            if price_type.lower() == 'free' and 'free' not in price_lower:
+                continue
+            elif price_type.lower() == 'paid' and 'free' in price_lower:
+                continue
+        
+        # Filter by provider
+        if provider and provider.lower() != course['provider'].lower():
+            continue
+        
+        results.append(course)
+    
+    return results
+
+def search_internships(query=None, domain=None, location=None, company=None):
+    """Search internships with optional filters"""
+    results = []
+    
+    for internship in INTERNSHIPS_DATA:
+        # Filter by query (search in name, description, company, skills)
+        if query:
+            query_lower = query.lower()
+            searchable_text = f"{internship['name']} {internship['description']} {internship['company']} {' '.join(internship['skills_required'])}".lower()
+            if query_lower not in searchable_text:
+                continue
+        
+        # Filter by domain
+        if domain and domain.lower() != internship['domain'].lower():
+            continue
+        
+        # Filter by location
+        if location and location.lower() != internship['location'].lower():
+            continue
+        
+        # Filter by company
+        if company and company.lower() != internship['company'].lower():
+            continue
+        
+        results.append(internship)
+    
+    return results
+
+def get_all_domains():
+    """Get all available career domains"""
+    return list(CAREERS_DATA.keys())
+
+def get_all_course_levels():
+    """Get all available course levels"""
+    return list(set(course['level'] for course in COURSES_DATA))
+
+def get_all_providers():
+    """Get all available course providers"""
+    return list(set(course['provider'] for course in COURSES_DATA))
+
+def get_all_internship_domains():
+    """Get all available internship domains"""
+    return list(set(intern['domain'] for intern in INTERNSHIPS_DATA))
+
+def get_all_locations():
+    """Get all available internship locations"""
+    return list(set(intern['location'] for intern in INTERNSHIPS_DATA))

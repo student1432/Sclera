@@ -1666,6 +1666,35 @@
                 // Handle filter change
                 subjectFilter.addEventListener('change', (e) => {
                     currentFilter = e.target.value;
+                    renderRecentDocs();
+                    updateFilteredItems();
+                });
+            }
+            
+            // Filtered section event listeners
+            if (filteredSubjectFilter) {
+                // Populate subject options for filtered section
+                subjects.forEach(subject => {
+                    const option = document.createElement('option');
+                    option.value = subject;
+                    option.textContent = subject;
+                    filteredSubjectFilter.appendChild(option);
+                });
+                
+                // Handle filtered subject filter change
+                filteredSubjectFilter.addEventListener('change', () => {
+                    updateFilteredItems();
+                });
+            }
+            
+            if (filteredSearchInput) {
+                // Handle search input with debouncing
+                let searchTimeout;
+                filteredSearchInput.addEventListener('input', () => {
+                    clearTimeout(searchTimeout);
+                    searchTimeout = setTimeout(() => {
+                        updateFilteredItems();
+                    }, 300);
                 });
             }
             

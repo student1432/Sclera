@@ -1,22 +1,149 @@
 <!DOCTYPE html>
-<html lang="en" data-theme="{{ settings.get('theme', 'dark') }}">
+<html class="dark" lang="en">
 
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Community — Sclera</title>
-    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Serif+Display:ital,wght@0,300;0,400;0,600;0,700;1,400&family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
     <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    
+    <script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#ffffff",
+                        "background-light": "#f6f6f8",
+                        "background-dark": "#0a0c10",
+                    },
+                    fontFamily: {
+                        "display": ["Inter", "sans-serif"],
+                        "serif": ["Noto Serif Display", "serif"]
+                    },
+                    borderRadius: {
+                        "DEFAULT": "1rem",
+                        "lg": "2rem",
+                        "xl": "3rem",
+                        "full": "9999px"
+                    },
+                },
+            },
+        }
+    </script>
+    
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
+        }
+        .serif-text {
+            font-family: 'Noto Serif Display', serif;
+        }
+        .glass-panel {
+            background: var(--bg-secondary);
+            backdrop-filter: blur(16px);
+            border: 1px solid var(--border);
+        }
+        .floating-notch {
+            background: var(--bg-elevated);
+            backdrop-filter: blur(24px);
+            border: 1px solid var(--border);
+        }
+        .hide-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .hide-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+        
+        /* Community specific classes using root variables */
+        .community-container {
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
+        }
+        .community-text {
+            color: var(--text-primary);
+        }
+        .community-text-secondary {
+            color: var(--text-secondary);
+        }
+        .community-text-muted {
+            color: var(--text-muted);
+        }
+        .community-border {
+            border-color: var(--border);
+        }
+        .community-border-t {
+            border-top-color: var(--border);
+        }
+        .community-border-subtle {
+            border-color: var(--border-subtle);
+        }
+        .community-bg-secondary {
+            background-color: var(--bg-secondary);
+        }
+        .community-bg-tertiary {
+            background-color: var(--bg-tertiary);
+        }
+        .community-bg-hover {
+            background-color: var(--bg-hover);
+        }
+        .community-accent {
+            background-color: var(--accent);
+            color: var(--bg-primary);
+        }
+        .community-accent-hover {
+            background-color: var(--accent-hover);
+            color: var(--bg-primary);
+        }
+        .community-success {
+            color: var(--success);
+        }
+        .community-success-bg {
+            background-color: var(--success-bg);
+        }
+        .community-warning {
+            color: var(--warning);
+        }
+        .community-warning-bg {
+            background-color: var(--warning-bg);
+        }
+        .community-error {
+            color: var(--error);
+        }
+        .community-error-bg {
+            background-color: var(--error-bg);
+        }
+        
+        /* Smooth transitions */
+        .transition-all {
+            transition: all 0.2s ease-in-out;
+        }
+        
+        /* Filter chip active state */
+        .filter-active {
+            background-color: var(--accent) !important;
+            color: var(--bg-primary) !important;
+            border-color: var(--accent) !important;
+        }
+    </style>
 </head>
 
-<body>
-    <div class="dashboard-layout">
+<body class="community-container community-text min-h-screen">
 
-        <!-- TOPNAV -->
-        {% include '_topnav.html' %}
+    <!-- Use existing topnav -->
+    {% include '_topnav.html' %}
 
-        <!-- MAIN -->
-        <main class="main-content" style="padding: 0; margin-top: 64px;">
+    <!-- Main Content Area -->
+    <main class="flex mt-24 mb-8 px-6 gap-6 max-w-[1600px] mx-auto">
+        
+        <!-- Full width panel for community -->
+        <div class="flex-1 glass-panel rounded-xl p-6 flex flex-col gap-6">
 
             {% with messages = get_flashed_messages(with_categories=true) %}
             {% if messages %}
@@ -26,97 +153,136 @@
             {% endif %}
             {% endwith %}
 
-            <!-- HEADER -->
-            <div class="community-header" style="margin-bottom: 2rem;">
-                <h1 style="font-size: 2.5rem; font-weight: 300; color: var(--text-primary); margin-bottom: 0.5rem;">Community</h1>
-                <p style="color: var(--text-muted); font-size: 1.1rem;">Connect with fellow students and build study groups</p>
-            </div>
-
-            <!-- SEARCH SECTION -->
-            <div class="community-search-section" style="margin-bottom: 3rem;">
-                <div class="search-container" style="max-width: 600px;">
-                    <div class="search-input-wrapper" style="position: relative; margin-bottom: 1rem;">
-                        <span class="material-symbols-outlined" style="position: absolute; left: 1rem; top: 50%; transform: translateY(-50%); color: var(--text-muted);">search</span>
-                        <input type="text" id="peopleSearch" placeholder="Search for students by name..." style="width: 100%; padding: 1rem 1rem 1rem 3rem; border: 1px solid var(--border); border-radius: 0.75rem; background: var(--surface); color: var(--text-primary); font-size: 1rem;">
-                    </div>
-
-                    <!-- FILTER CHIPS -->
-                    <div class="filter-chips" id="filterChips" style="display: flex; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 1rem;">
-                        <button class="filter-chip" data-filter="grade" data-value="" style="padding: 0.5rem 1rem; background: var(--surface); border: 1px solid var(--border); border-radius: 2rem; color: var(--text-secondary); cursor: pointer; transition: all 0.2s;">Grade</button>
-                        <button class="filter-chip" data-filter="school" data-value="" style="padding: 0.5rem 1rem; background: var(--surface); border: 1px solid var(--border); border-radius: 2rem; color: var(--text-secondary); cursor: pointer; transition: all 0.2s;">School</button>
-                        <button class="filter-chip" data-filter="subject" data-value="" style="padding: 0.5rem 1rem; background: var(--surface); border: 1px solid var(--border); border-radius: 2rem; color: var(--text-secondary); cursor: pointer; transition: all 0.2s;">Subject</button>
-                    </div>
-
-                    <!-- SEARCH RESULTS -->
-                    <div id="searchResults" style="display: none;"></div>
+            <!-- Header -->
+            <div class="flex items-center justify-between mb-2">
+                <div>
+                    <h1 class="text-2xl font-bold community-text">Community</h1>
+                    <p class="community-text-secondary text-sm">Connect with fellow students and build study groups</p>
                 </div>
+                <span class="material-symbols-outlined community-text-secondary text-lg">groups</span>
             </div>
 
-            <!-- MAIN GRID -->
-            <div class="community-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; margin-bottom: 3rem;">
+            <!-- Search Section -->
+            <div class="flex flex-col gap-4">
+                <h3 class="text-lg font-bold community-text">Find Students</h3>
+                
+                <!-- Search Input -->
+                <div class="community-bg-tertiary rounded-xl p-3">
+                    <div class="relative">
+                        <span class="material-symbols-outlined absolute left-3 top-1/2 transform -translate-y-1/2 community-text-muted text-lg">search</span>
+                        <input type="text" id="peopleSearch" placeholder="Search for students by name..." 
+                               class="w-full pl-10 pr-4 py-2.5 rounded-lg community-bg-secondary community-text border community-border-subtle focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all">
+                    </div>
+                </div>
 
-                <!-- CONNECTIONS CARD -->
-                <div class="community-card" style="background: var(--surface); border: 1px solid var(--border); border-radius: 1rem; padding: 2rem;">
-                    <div class="card-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
-                        <h3 style="font-size: 1.5rem; font-weight: 400; color: var(--text-primary); margin: 0;">Connections</h3>
-                        <span class="count-badge" style="background: var(--primary); padding: 0.25rem 0.75rem; border-radius: 1rem; font-size: 0.875rem; font-weight: 500;">{{ connections_count }}</span>
+                <!-- Filter Chips -->
+                <div class="flex gap-2 flex-wrap" id="filterChips">
+                    <button class="filter-chip community-bg-tertiary community-text-secondary border community-border-subtle px-4 py-2 rounded-full text-sm transition-all hover:community-bg-hover" data-filter="grade" data-value="">
+                        <span class="material-symbols-outlined text-lg align-middle mr-1">school</span>
+                        Grade
+                    </button>
+                    <button class="filter-chip community-bg-tertiary community-text-secondary border community-border-subtle px-4 py-2 rounded-full text-sm transition-all hover:community-bg-hover" data-filter="school" data-value="">
+                        <span class="material-symbols-outlined text-lg align-middle mr-1">account_balance</span>
+                        School
+                    </button>
+                    <button class="filter-chip community-bg-tertiary community-text-secondary border community-border-subtle px-4 py-2 rounded-full text-sm transition-all hover:community-bg-hover" data-filter="subject" data-value="">
+                        <span class="material-symbols-outlined text-lg align-middle mr-1">psychology</span>
+                        Subject
+                    </button>
+                </div>
+
+                <!-- Search Results -->
+                <div id="searchResults" class="hidden"></div>
+            </div>
+
+            <!-- UID Connection Section -->
+            <div class="flex flex-col gap-4">
+                <h3 class="text-lg font-bold community-text">Connect by UID</h3>
+                
+                <!-- UID Search Input -->
+                <div class="community-bg-tertiary rounded-xl p-3">
+                    <div class="relative">
+                        <span class="material-symbols-outlined absolute left-3 top-1/2 transform -translate-y-1/2 community-text-muted text-lg">tag</span>
+                        <input type="text" id="uidSearch" placeholder="Enter user UID to connect..." 
+                               class="w-full pl-10 pr-4 py-2.5 rounded-lg community-bg-secondary community-text border community-border-subtle focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all">
+                    </div>
+                </div>
+
+                <!-- UID Search Button -->
+                <button id="connectByUidBtn" class="community-accent px-4 py-2 rounded-lg text-sm font-medium hover:community-accent-hover transition-all">
+                    <span class="material-symbols-outlined text-sm align-middle mr-1">person_add</span>
+                    Connect by UID
+                </button>
+
+                <!-- UID Search Results -->
+                <div id="uidSearchResults" class="hidden"></div>
+            </div>
+
+            <!-- Main Grid -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+                <!-- Connections Card -->
+                <div class="glass-panel rounded-xl p-6">
+                    <div class="flex items-center justify-between mb-6">
+                        <h3 class="text-xl font-semibold community-text">Connections</h3>
+                        <span class="community-accent px-3 py-1 rounded-full text-sm font-medium">{{ connections_count }}</span>
                     </div>
 
                     {% if connections_data.accepted %}
-                    <div class="connections-list" style="display: flex; flex-direction: column; gap: 1rem;">
+                    <div class="space-y-3">
                         {% for connection in connections_data.accepted[:5] %}
-                        <div class="connection-item" style="display: flex; align-items: center; gap: 1rem; padding: 1rem; background: var(--background); border-radius: 0.75rem;">
-                            <div class="avatar" style="width: 3rem; height: 3rem; background: var(--primary); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 500;">
+                        <div class="flex items-center gap-3 p-3 community-bg-tertiary rounded-lg">
+                            <div class="w-12 h-12 community-accent rounded-full flex items-center justify-center font-semibold text-black">
                                 {{ connection.name[0]|upper if connection.name else '?' }}
                             </div>
-                            <div class="connection-info" style="flex: 1;">
-                                <div style="font-weight: 500; color: var(--text-primary);">{{ connection.name }}</div>
-                                <div style="font-size: 0.875rem; color: var(--text-muted);">{{ connection.purpose_display }}</div>
+                            <div class="flex-1">
+                                <div class="font-medium community-text">{{ connection.name }}</div>
+                                <div class="text-sm community-text-muted">{{ connection.purpose_display }}</div>
                             </div>
-                            <div class="connection-status" style="color: var(--success); font-size: 0.75rem;">Connected</div>
+                            <div class="community-success text-xs">Connected</div>
                         </div>
                         {% endfor %}
                         {% if connections_data.accepted|length > 5 %}
-                        <div style="text-align: center; padding: 1rem; color: var(--text-muted); font-size: 0.875rem;">
+                        <div class="text-center py-3 community-text-muted text-sm">
                             +{{ connections_data.accepted|length - 5 }} more connections
                         </div>
                         {% endif %}
                     </div>
                     {% else %}
-                    <div class="empty-state" style="text-align: center; padding: 3rem 1rem; color: var(--text-muted);">
-                        <span class="material-symbols-outlined" style="font-size: 3rem; display: block; margin-bottom: 1rem;">people</span>
-                        <div style="font-size: 1.1rem; margin-bottom: 0.5rem;">No connections yet</div>
-                        <div style="font-size: 0.875rem;">Search for students above to start connecting!</div>
+                    <div class="text-center py-8 community-text-muted">
+                        <span class="material-symbols-outlined text-4xl mb-3 block">people</span>
+                        <div class="text-base mb-2">No connections yet</div>
+                        <div class="text-sm">Search for students above to start connecting!</div>
                     </div>
                     {% endif %}
                 </div>
 
-                <!-- BUBBLES CARD -->
-                <div class="community-card" style="background: var(--surface); border: 1px solid var(--border); border-radius: 1rem; padding: 2rem;">
-                    <div class="card-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
-                        <h3 style="font-size: 1.5rem; font-weight: 400; color: var(--text-primary); margin: 0;">Study Bubbles</h3>
-                        <button class="create-bubble-btn" style="background: var(--primary); border: none; padding: 0.5rem 1rem; border-radius: 0.5rem; cursor: pointer; font-size: 0.875rem;">Create Bubble</button>
+                <!-- Bubbles Card -->
+                <div class="glass-panel rounded-xl p-6">
+                    <div class="flex items-center justify-between mb-6">
+                        <h3 class="text-xl font-semibold community-text">Study Bubbles</h3>
+                        <button class="community-accent px-4 py-2 rounded-lg text-sm font-medium hover:community-accent-hover transition-all create-bubble-btn">Create Bubble</button>
                     </div>
 
                     {% if user_bubbles %}
-                    <div class="bubbles-navigation" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1rem;">
+                    <div class="space-y-3">
                         {% for bubble in user_bubbles %}
-                        <a href="/bubble/{{ bubble.id }}" class="bubble-nav-card" style="display: block; background: var(--background); border: 1px solid var(--border); border-radius: 0.75rem; padding: 1.5rem; text-decoration: none; transition: all 0.2s ease;">
-                            <div class="bubble-nav-header" style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1rem;">
-                                <h4 style="font-size: 1.1rem; font-weight: 600; color: var(--text-primary); margin: 0;">{{ bubble.name }}</h4>
+                        <a href="/bubble/{{ bubble.id }}" class="block community-bg-tertiary rounded-lg p-4 hover:community-bg-hover transition-all group">
+                            <div class="flex items-start justify-between mb-3">
+                                <h4 class="font-semibold community-text group-hover:community-accent transition-colors">{{ bubble.name }}</h4>
                                 {% if bubble.creator_uid == user.uid %}
-                                <span class="creator-badge" style="background: var(--primary); font-size: 0.75rem; padding: 0.25rem 0.5rem; border-radius: 0.375rem;">Owner</span>
+                                <span class="community-accent text-xs px-2 py-1 rounded font-medium">Owner</span>
                                 {% endif %}
                             </div>
                             {% if bubble.description %}
-                            <p style="font-size: 0.9rem; color: var(--text-secondary); margin-bottom: 1rem; line-height: 1.4;">{{ bubble.description }}</p>
+                            <p class="text-sm community-text-secondary mb-3 line-clamp-2">{{ bubble.description }}</p>
                             {% endif %}
-                            <div class="bubble-nav-stats" style="display: flex; justify-content: space-between; align-items: center;">
-                                <span class="member-count" style="font-size: 0.85rem; color: var(--text-muted);">
-                                    <span class="material-symbols-outlined" style="font-size: 1rem; vertical-align: middle;">group</span>
+                            <div class="flex items-center justify-between">
+                                <span class="text-sm community-text-muted">
+                                    <span class="material-symbols-outlined text-base align-middle mr-1">group</span>
                                     {{ bubble.member_count }} members
                                 </span>
-                                <span class="nav-arrow" style="color: var(--text-muted);">
+                                <span class="community-text-muted">
                                     <span class="material-symbols-outlined">arrow_forward</span>
                                 </span>
                             </div>
@@ -124,67 +290,39 @@
                         {% endfor %}
                     </div>
                     {% else %}
-                    <div class="empty-state" style="text-align: center; padding: 3rem 1rem; color: var(--text-muted);">
-                        <span class="material-symbols-outlined" style="font-size: 3rem; display: block; margin-bottom: 1rem;">bubble_chart</span>
-                        <div style="font-size: 1.1rem; margin-bottom: 0.5rem;">No bubbles yet</div>
-                        <div style="font-size: 0.875rem;">Create your first study group!</div>
+                    <div class="text-center py-8 community-text-muted">
+                        <span class="material-symbols-outlined text-4xl mb-3 block">bubble_chart</span>
+                        <div class="text-base mb-2">No bubbles yet</div>
+                        <div class="text-sm">Create your first study group!</div>
                     </div>
                     {% endif %}
                 </div>
 
             </div>
 
-            <!-- BUBBLE INVITATIONS SECTION -->
+            <!-- Bubble Invitations Section -->
             {% if bubble_invitations %}
-            <div class="bubble-invitations-section" style="background: var(--surface); border: 1px solid var(--border); border-radius: 1rem; padding: 2rem; margin-bottom: 3rem;">
-                <h3 style="font-size: 1.5rem; font-weight: 400; color: var(--text-primary); margin-bottom: 1.5rem;">Bubble Invitations</h3>
+            <div class="glass-panel rounded-xl p-6">
+                <h3 class="text-xl font-semibold community-text mb-6">Bubble Invitations</h3>
 
-                <div class="invitations-list" style="display: flex; flex-direction: column; gap: 1rem;">
+                <div class="space-y-3">
                     {% for invitation in bubble_invitations %}
-                        <div class="invitation-card" style="display: flex; align-items: center; gap: 1rem; padding: 1.5rem; background: var(--background); border-radius: 0.75rem;">
-                            <div class="bubble-icon" style="width: 3rem; height: 3rem; background: var(--primary); border-radius: 50%; display: flex; align-items: center; justify-content: center;">
-                                <span class="material-symbols-outlined">bubble_chart</span>
-                            </div>
-                            <div class="invitation-info" style="flex: 1;">
-                                <div style="font-weight: 500; color: var(--text-primary); margin-bottom: 0.25rem;">You've been invited to join "{{ invitation.bubble_name }}"!</div>
-                                <div style="font-size: 0.875rem; color: var(--text-muted); margin-bottom: 0.5rem;">{{ invitation.message }}</div>
-                                {% if invitation.created_at %}
-                                <div style="font-size: 0.75rem; color: var(--text-secondary);">
-                                    Received {{ invitation.created_at[:10] if invitation.created_at else 'recently' }}
-                                </div>
-                                {% endif %}
-                            </div>
-                            <div class="invitation-actions" style="display: flex; gap: 0.5rem;">
-                                <button onclick="handleBubbleInvitation('{{ invitation.id }}', 'accept')" style="background: var(--success); border: none; padding: 0.5rem 1rem; border-radius: 0.5rem; cursor: pointer; font-size: 0.875rem;">Accept</button>
-                                <button onclick="handleBubbleInvitation('{{ invitation.id }}', 'decline')" style="background: var(--error); border: none; padding: 0.5rem 1rem; border-radius: 0.5rem; cursor: pointer; font-size: 0.875rem;">Decline</button>
-                            </div>
+                    <div class="flex items-center gap-3 p-4 community-bg-tertiary rounded-lg">
+                        <div class="w-12 h-12 community-accent rounded-full flex items-center justify-center">
+                            <span class="material-symbols-outlined">bubble_chart</span>
                         </div>
-                    {% endfor %}
-                </div>
-            </div>
-            {% endif %}
-
-            <!-- CONNECTION REQUESTS SECTION -->
-            {% if connections_data.pending_received %}
-            <div class="connection-requests-section" style="background: var(--surface); border: 1px solid var(--border); border-radius: 1rem; padding: 2rem; margin-bottom: 3rem;">
-                <h3 style="font-size: 1.5rem; font-weight: 400; color: var(--text-primary); margin-bottom: 1.5rem;">Connection Requests</h3>
-
-                <div class="requests-list" style="display: flex; flex-direction: column; gap: 1rem;">
-                    {% for request in connections_data.pending_received %}
-                    <div class="request-card" style="display: flex; align-items: center; gap: 1rem; padding: 1.5rem; background: var(--background); border-radius: 0.75rem;">
-                        <div class="avatar" style="width: 3rem; height: 3rem; background: var(--primary); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: 500;">
-                            {{ request.name[0]|upper if request.name else '?' }}
-                        </div>
-                        <div class="request-info" style="flex: 1;">
-                            <div style="font-weight: 500; color: var(--text-primary); margin-bottom: 0.25rem;">{{ request.name }} wants to connect</div>
-                            <div style="font-size: 0.875rem; color: var(--text-muted); margin-bottom: 0.5rem;">{{ request.purpose_display }}</div>
-                            {% if request.message %}
-                            <div style="font-size: 0.875rem; color: var(--text-secondary); font-style: italic;">"{{ request.message }}"</div>
+                        <div class="flex-1">
+                            <div class="font-medium community-text mb-1">You've been invited to join "{{ invitation.bubble_name }}"!</div>
+                            <div class="text-sm community-text-muted mb-2">{{ invitation.message }}</div>
+                            {% if invitation.created_at %}
+                            <div class="text-xs community-text-secondary">
+                                Received {{ invitation.created_at[:10] if invitation.created_at else 'recently' }}
+                            </div>
                             {% endif %}
                         </div>
-                        <div class="request-actions" style="display: flex; gap: 0.5rem;">
-                            <button class="accept-btn" data-connection-id="{{ request.connection_id }}" style="background: var(--success); color: white; border: none; padding: 0.5rem 1rem; border-radius: 0.5rem; cursor: pointer; font-size: 0.875rem;">Accept</button>
-                            <button class="decline-btn" data-connection-id="{{ request.connection_id }}" style="background: var(--error); color: white; border: none; padding: 0.5rem 1rem; border-radius: 0.5rem; cursor: pointer; font-size: 0.875rem;">Decline</button>
+                        <div class="flex gap-2">
+                            <button onclick="handleBubbleInvitation('{{ invitation.id }}', 'accept')" class="community-success-bg community-success px-3 py-2 rounded-lg text-sm font-medium hover:opacity-80 transition-all">Accept</button>
+                            <button onclick="handleBubbleInvitation('{{ invitation.id }}', 'decline')" class="community-error-bg community-error px-3 py-2 rounded-lg text-sm font-medium hover:opacity-80 transition-all">Decline</button>
                         </div>
                     </div>
                     {% endfor %}
@@ -192,22 +330,54 @@
             </div>
             {% endif %}
 
-        </main>
-    </div>
+            <!-- Connection Requests Section -->
+            {% if connections_data.pending_received %}
+            <div class="glass-panel rounded-xl p-6">
+                <h3 class="text-xl font-semibold community-text mb-6">Connection Requests</h3>
 
-    <!-- SEARCH RESULT TEMPLATE (hidden) -->
+                <div class="space-y-3">
+                    {% for request in connections_data.pending_received %}
+                    <div class="flex items-center gap-3 p-4 community-bg-tertiary rounded-lg">
+                        <div class="w-12 h-12 community-accent rounded-full flex items-center justify-center text-black font-semibold">
+                            {{ request.name[0]|upper if request.name else '?' }}
+                        </div>
+                        <div class="flex-1">
+                            <div class="font-medium community-text mb-1">{{ request.name }} wants to connect</div>
+                            <div class="text-sm community-text-muted mb-2">{{ request.purpose_display }}</div>
+                            {% if request.message %}
+                            <div class="text-sm community-text-secondary italic">"{{ request.message }}"</div>
+                            {% endif %}
+                        </div>
+                        <div class="flex gap-2">
+                            <button class="accept-btn community-success-bg community-success px-3 py-2 rounded-lg text-sm font-medium hover:opacity-80 transition-all" data-connection-id="{{ request.connection_id }}">Accept</button>
+                            <button class="decline-btn community-error-bg community-error px-3 py-2 rounded-lg text-sm font-medium hover:opacity-80 transition-all" data-connection-id="{{ request.connection_id }}">Decline</button>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+
+        </div>
+    </main>
+
+    <!-- Search Result Template (hidden) -->
     <template id="searchResultTemplate">
-        <div class="search-result-item" style="display: flex; align-items: center; gap: 1rem; padding: 1rem; background: var(--surface); border: 1px solid var(--border); border-radius: 0.75rem; margin-bottom: 0.5rem;">
-            <div class="avatar" style="width: 3rem; height: 3rem; background: var(--primary); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: 500;">
+        <div class="search-result-item flex items-center gap-3 p-3 community-bg-tertiary rounded-lg mb-2">
+            <div class="w-12 h-12 community-accent rounded-full flex items-center justify-center text-black font-semibold">
                 <!-- Avatar initial will be inserted here -->
             </div>
-            <div class="result-info" style="flex: 1;">
-                <div class="name" style="font-weight: 500; color: var(--text-primary); margin-bottom: 0.25rem;"></div>
-                <div class="details" style="font-size: 0.875rem; color: var(--text-muted);"></div>
-                <div class="academic-summary" style="font-size: 0.875rem; color: var(--text-secondary); margin-top: 0.25rem;"></div>
+            <div class="flex-1">
+                <div class="font-medium community-text mb-1 name"></div>
+                <div class="text-sm community-text-muted details"></div>
+                <div class="text-sm community-text-secondary mt-1 academic-summary"></div>
             </div>
-            <div class="result-actions">
-                <button class="connect-btn" style="background: var(--primary); color: white; border: none; padding: 0.5rem 1rem; border-radius: 0.5rem; cursor: pointer; font-size: 0.875rem;">Connect</button>
+            <div class="result-actions flex gap-2">
+                <button class="view-profile-btn community-bg-secondary community-text px-3 py-2 rounded-lg text-sm font-medium hover:community-bg-hover transition-all">
+                    <span class="material-symbols-outlined text-sm align-middle mr-1">person</span>
+                    Profile
+                </button>
+                <button class="connect-btn community-accent px-3 py-2 rounded-lg text-sm font-medium hover:community-accent-hover transition-all">Connect</button>
             </div>
         </div>
     </template>
@@ -224,7 +394,7 @@
             const query = this.value.trim();
 
             if (query.length < 2) {
-                searchResults.style.display = 'none';
+                searchResults.classList.add('hidden');
                 return;
             }
 
@@ -240,15 +410,16 @@
 
                 if (data.results && data.results.length > 0) {
                     displaySearchResults(data.results);
-                    searchResults.style.display = 'block';
+                    searchResults.classList.remove('hidden');
+                    searchResults.classList.add('glass-panel', 'rounded-xl', 'p-4', 'mt-4');
                 } else {
-                    searchResults.innerHTML = '<div style="text-align: center; padding: 2rem; color: var(--text-muted);">No students found</div>';
-                    searchResults.style.display = 'block';
+                    searchResults.innerHTML = '<div class="text-center py-8 community-text-muted glass-panel rounded-xl mt-4">No students found</div>';
+                    searchResults.classList.remove('hidden');
                 }
             } catch (error) {
                 console.error('Search error:', error);
-                searchResults.innerHTML = '<div style="text-align: center; padding: 2rem; color: var(--text-muted);">Search failed</div>';
-                searchResults.style.display = 'block';
+                searchResults.innerHTML = '<div class="text-center py-8 community-text-muted glass-panel rounded-xl mt-4">Search failed</div>';
+                searchResults.classList.remove('hidden');
             }
         }
 
@@ -260,7 +431,7 @@
                 const item = resultElement.querySelector('.search-result-item');
 
                 // Set avatar initial
-                const avatar = item.querySelector('.avatar');
+                const avatar = item.querySelector('.w-12');
                 avatar.textContent = (result.name || '?')[0].toUpperCase();
 
                 // Set name
@@ -276,18 +447,29 @@
                 if (result.academic_summary) {
                     item.querySelector('.academic-summary').textContent = result.academic_summary;
                 } else {
-                    item.querySelector('.academic-summary').style.display = 'none';
+                    item.querySelector('.academic-summary').classList.add('hidden');
+                }
+
+                // Set up profile button
+                const profileBtn = item.querySelector('.view-profile-btn');
+                if (result.has_public_profile) {
+                    profileBtn.addEventListener('click', () => viewPublicProfile(result.uid));
+                    profileBtn.disabled = false;
+                } else {
+                    profileBtn.textContent = 'Private';
+                    profileBtn.disabled = true;
+                    profileBtn.classList.add('opacity-50', 'cursor-not-allowed');
                 }
 
                 // Set connection status
                 const connectBtn = item.querySelector('.connect-btn');
                 if (result.connection_status === 'connected') {
                     connectBtn.textContent = 'Connected';
-                    connectBtn.style.background = 'var(--success)';
+                    connectBtn.className = 'community-success-bg community-success px-3 py-2 rounded-lg text-sm font-medium';
                     connectBtn.disabled = true;
                 } else if (result.connection_status === 'pending') {
                     connectBtn.textContent = 'Pending';
-                    connectBtn.style.background = 'var(--warning)';
+                    connectBtn.className = 'community-warning-bg community-warning px-3 py-2 rounded-lg text-sm font-medium';
                     connectBtn.disabled = true;
                 } else {
                     connectBtn.textContent = 'Connect';
@@ -357,26 +539,250 @@
             }
         }
 
+        function viewPublicProfile(userUid) {
+            // Fetch and display public profile
+            fetch(`/api/user/${userUid}/public-profile`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        showPublicProfileModal(data.profile);
+                    } else {
+                        showToast('Profile not available', 'error');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error fetching public profile:', error);
+                    showToast('Failed to load profile', 'error');
+                });
+        }
+
+        function showPublicProfileModal(profile) {
+            const modal = document.createElement('div');
+            modal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50';
+            
+            // Handle empty profile data
+            const displayName = profile.name || 'Anonymous';
+            const initial = displayName ? displayName[0].toUpperCase() : '?';
+            
+            modal.innerHTML = `
+                <div class="glass-panel rounded-xl p-6 max-w-5xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+                    <div class="flex items-center justify-between mb-6 sticky top-0 bg-inherit z-10 pb-2">
+                        <h3 class="text-2xl font-semibold community-text">Public Profile</h3>
+                        <button onclick="this.closest('div').parentElement.remove()" class="community-bg-tertiary community-text p-2 rounded-lg hover:community-bg-hover transition-all">
+                            <span class="material-symbols-outlined">close</span>
+                        </button>
+                    </div>
+                    
+                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                        <!-- Profile Header -->
+                        <div class="lg:col-span-1">
+                            <div class="text-center">
+                                <div class="w-24 h-24 community-accent rounded-full flex items-center justify-center text-black text-2xl font-bold mx-auto mb-4">
+                                    ${initial}
+                                </div>
+                                <h4 class="text-xl font-semibold community-text mb-2">${displayName}</h4>
+                                <p class="community-text-secondary mb-4">${profile.purpose_display || 'Student'}</p>
+                                
+                                ${profile.grade ? `<div class="community-bg-tertiary rounded-lg px-3 py-2 mb-2"><span class="material-symbols-outlined text-sm align-middle mr-1">school</span> Grade ${profile.grade}</div>` : ''}
+                                ${profile.school ? `<div class="text-sm community-text-muted"><span class="material-symbols-outlined text-sm align-middle mr-1">account_balance</span> ${profile.school}</div>` : ''}
+                            </div>
+                        </div>
+                        
+                        <!-- Profile Details -->
+                        <div class="lg:col-span-2 space-y-4">
+                            <!-- About Section -->
+                            ${profile.about ? `
+                                <div class="community-bg-tertiary rounded-lg p-4">
+                                    <h5 class="font-semibold community-text mb-3 flex items-center">
+                                        <span class="material-symbols-outlined text-lg mr-2">person</span>
+                                        About
+                                    </h5>
+                                    <p class="community-text-secondary whitespace-pre-wrap">${profile.about}</p>
+                                </div>
+                            ` : ''}
+                            
+                            <!-- Academic Summary Section -->
+                            ${profile.academic_summary ? `
+                                <div class="community-bg-tertiary rounded-lg p-4">
+                                    <h5 class="font-semibold community-text mb-3 flex items-center">
+                                        <span class="material-symbols-outlined text-lg mr-2">school</span>
+                                        Academic Summary
+                                    </h5>
+                                    <p class="community-text-secondary whitespace-pre-wrap">${profile.academic_summary}</p>
+                                </div>
+                            ` : ''}
+                            
+                            <!-- Skills & Interests -->
+                            ${profile.skills && profile.skills.length > 0 ? `
+                                <div class="community-bg-tertiary rounded-lg p-4">
+                                    <h5 class="font-semibold community-text mb-3 flex items-center">
+                                        <span class="material-symbols-outlined text-lg mr-2">psychology</span>
+                                        Skills & Interests
+                                    </h5>
+                                    <div class="flex flex-wrap gap-2">
+                                        ${profile.skills.map(skill => `<span class="community-accent px-3 py-1 rounded-full text-sm">${skill}</span>`).join('')}
+                                    </div>
+                                </div>
+                            ` : ''}
+                            
+                            <!-- Subjects -->
+                            ${profile.subjects && profile.subjects.length > 0 ? `
+                                <div class="community-bg-tertiary rounded-lg p-4">
+                                    <h5 class="font-semibold community-text mb-3 flex items-center">
+                                        <span class="material-symbols-outlined text-lg mr-2">menu_book</span>
+                                        Subjects
+                                    </h5>
+                                    <div class="grid grid-cols-2 gap-2">
+                                        ${profile.subjects.map(subject => `<div class="community-bg-secondary rounded px-3 py-2 text-sm">${subject}</div>`).join('')}
+                                    </div>
+                                </div>
+                            ` : ''}
+                            
+                            <!-- No Information Available -->
+                            ${!profile.about && !profile.academic_summary && (!profile.skills || profile.skills.length === 0) && (!profile.subjects || profile.subjects.length === 0) ? `
+                                <div class="text-center py-8 community-text-muted">
+                                    <span class="material-symbols-outlined text-4xl mb-3 block">info</span>
+                                    <div class="text-lg mb-2">No public information available</div>
+                                    <div class="text-sm">This user hasn't shared any public profile information.</div>
+                                </div>
+                            ` : ''}
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            document.body.appendChild(modal);
+            
+            // Close modal on backdrop click
+            modal.addEventListener('click', function(e) {
+                if (e.target === modal) {
+                    modal.remove();
+                }
+            });
+        }
+
         function showToast(message, type) {
             // Simple toast notification
             const toast = document.createElement('div');
-            toast.style.cssText = `
-                position: fixed;
-                top: 80px;
-                right: 20px;
-                background: ${type === 'success' ? 'var(--success)' : 'var(--error)'};
-                color: white;
-                padding: 1rem 1.5rem;
-                border-radius: 0.5rem;
-                z-index: 1000;
-                font-weight: 500;
-            `;
+            const bgColor = type === 'success' ? 'community-success-bg community-success' : 'community-error-bg community-error';
+            toast.className = `fixed top-20 right-5 ${bgColor} px-6 py-3 rounded-lg z-50 font-medium shadow-lg transition-all transform translate-x-full`;
             toast.textContent = message;
             document.body.appendChild(toast);
 
+            // Animate in
             setTimeout(() => {
-                toast.remove();
+                toast.classList.remove('translate-x-full');
+                toast.classList.add('translate-x-0');
+            }, 100);
+
+            // Remove after 3 seconds
+            setTimeout(() => {
+                toast.classList.add('translate-x-full');
+                setTimeout(() => {
+                    toast.remove();
+                }, 300);
             }, 3000);
+        }
+
+        // UID Search functionality
+        const uidSearchInput = document.getElementById('uidSearch');
+        const uidSearchResults = document.getElementById('uidSearchResults');
+        const connectByUidBtn = document.getElementById('connectByUidBtn');
+
+        if (connectByUidBtn) {
+            connectByUidBtn.addEventListener('click', function() {
+                const uid = uidSearchInput.value.trim();
+                if (!uid) {
+                    showToast('Please enter a UID', 'error');
+                    return;
+                }
+                connectByUid(uid);
+            });
+        }
+
+        if (uidSearchInput) {
+            uidSearchInput.addEventListener('input', function() {
+                const uid = this.value.trim();
+                if (uid.length < 3) {
+                    uidSearchResults.classList.add('hidden');
+                    return;
+                }
+                searchUserByUid(uid);
+            });
+        }
+
+        async function searchUserByUid(uid) {
+            try {
+                const response = await fetch(`/api/user/${uid}/search-by-uid`);
+                const data = await response.json();
+
+                if (data.success) {
+                    displayUidSearchResult(data.user);
+                } else {
+                    showToast(data.error || 'User not found', 'error');
+                    uidSearchResults.classList.add('hidden');
+                }
+            } catch (error) {
+                console.error('UID search error:', error);
+                showToast('Search failed', 'error');
+            }
+        }
+
+        function displayUidSearchResult(user) {
+            const resultHtml = `
+                <div class="flex items-center gap-3 p-3 community-bg-tertiary rounded-lg mb-2">
+                    <div class="w-12 h-12 community-accent rounded-full flex items-center justify-center text-black font-semibold">
+                        ${user.name ? user.name[0].toUpperCase() : '?'}
+                    </div>
+                    <div class="flex-1">
+                        <div class="font-medium community-text mb-1">${user.name || 'Unknown User'}</div>
+                        <div class="text-sm community-text-muted mb-1">${user.purpose_display || 'Student'}</div>
+                        ${user.grade ? `<div class="text-xs community-text-secondary"><span class="material-symbols-outlined text-sm align-middle mr-1">school</span> Grade ${user.grade}</div>` : ''}
+                    </div>
+                    <div class="flex gap-2">
+                        <button class="community-accent px-3 py-2 rounded-lg text-sm font-medium hover:community-accent-hover transition-all" onclick="connectByUid('${user.uid}')">
+                            <span class="material-symbols-outlined text-sm align-middle mr-1">person_add</span>
+                            Connect
+                        </button>
+                        <button class="community-bg-secondary community-text px-3 py-2 rounded-lg text-sm font-medium hover:community-bg-hover transition-all" onclick="viewPublicProfile('${user.uid}')">
+                            <span class="material-symbols-outlined text-sm align-middle mr-1">person</span>
+                            Profile
+                        </button>
+                    </div>
+                </div>
+            `;
+
+            uidSearchResults.innerHTML = resultHtml;
+            uidSearchResults.classList.remove('hidden');
+            uidSearchResults.classList.add('glass-panel', 'rounded-xl', 'p-4', 'mt-4');
+        }
+
+        async function connectByUid(uid) {
+            try {
+                const response = await fetch('/api/connections/send', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        target_uid: uid,
+                        message: 'Hi! I\'d like to connect with you on StudyOS.'
+                    })
+                });
+
+                const data = await response.json();
+                if (data.success) {
+                    showToast('Connection request sent!', 'success');
+                    // Clear search
+                    uidSearchInput.value = '';
+                    uidSearchResults.classList.add('hidden');
+                } else {
+                    showToast(data.error || 'Failed to send connection request', 'error');
+                }
+            } catch (error) {
+                console.error('Connection error:', error);
+                showToast('Failed to send connection request', 'error');
+            }
         }
 
         // Create Bubble button functionality
@@ -398,34 +804,23 @@
             console.log('Showing create bubble modal');
             // Simple modal for bubble creation
             const modal = document.createElement('div');
-            modal.style.cssText = `
-                position: fixed;
-                top: 0;
-                left: 0;
-                width: 100%;
-                height: 100%;
-                background: rgba(0,0,0,0.5);
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                z-index: 1000;
-            `;
+            modal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50';
             
             modal.innerHTML = `
-                <div style="background: var(--surface); padding: 2rem; border-radius: 1rem; max-width: 500px; width: 90%; color: var(--text-primary);">
-                    <h3 style="margin-bottom: 1rem;">Create Study Bubble</h3>
-                    <form id="createBubbleForm">
-                        <div style="margin-bottom: 1rem;">
-                            <label style="display: block; margin-bottom: 0.5rem;">Bubble Name</label>
-                            <input type="text" id="bubbleName" required style="width: 100%; padding: 0.75rem; border: 1px solid var(--border); border-radius: 0.5rem; background: var(--background); color: var(--text-primary);" placeholder="e.g., Math Study Group">
+                <div class="glass-panel rounded-xl p-8 max-w-lg w-full mx-4">
+                    <h3 class="text-xl font-semibold community-text mb-6">Create Study Bubble</h3>
+                    <form id="createBubbleForm" class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium community-text mb-2">Bubble Name</label>
+                            <input type="text" id="bubbleName" required class="w-full px-4 py-3 community-bg-tertiary community-text border community-border-subtle rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="e.g., Math Study Group">
                         </div>
-                        <div style="margin-bottom: 1rem;">
-                            <label style="display: block; margin-bottom: 0.5rem;">Description (Optional)</label>
-                            <textarea id="bubbleDescription" style="width: 100%; padding: 0.75rem; border: 1px solid var(--border); border-radius: 0.5rem; background: var(--background); color: var(--text-primary); min-height: 80px;" placeholder="Describe your study bubble..."></textarea>
+                        <div>
+                            <label class="block text-sm font-medium community-text mb-2">Description (Optional)</label>
+                            <textarea id="bubbleDescription" class="w-full px-4 py-3 community-bg-tertiary community-text border community-border-subtle rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 min-h-24 resize-none" placeholder="Describe your study bubble..."></textarea>
                         </div>
-                        <div style="display: flex; gap: 1rem; justify-content: flex-end;">
-                            <button type="button" onclick="this.closest('div').parentElement.remove()" style="background: var(--text-muted); color: white; border: none; padding: 0.5rem 1rem; border-radius: 0.5rem; cursor: pointer;">Cancel</button>
-                            <button type="submit" style="background: var(--primary); color: black; border: none; padding: 0.5rem 1rem; border-radius: 0.5rem; cursor: pointer;">Create Bubble</button>
+                        <div class="flex gap-3 justify-end pt-4">
+                            <button type="button" onclick="this.closest('div').parentElement.remove()" class="community-bg-tertiary community-text px-4 py-2 rounded-lg hover:community-bg-hover transition-all">Cancel</button>
+                            <button type="submit" class="community-accent px-4 py-2 rounded-lg font-medium hover:community-accent-hover transition-all">Create Bubble</button>
                         </div>
                     </form>
                 </div>
@@ -584,36 +979,25 @@
             
             // Create invitation modal
             const modal = document.createElement('div');
-            modal.style.cssText = `
-                position: fixed;
-                top: 0;
-                left: 0;
-                width: 100%;
-                height: 100%;
-                background: rgba(0,0,0,0.5);
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                z-index: 1000;
-            `;
+            modal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50';
             
             modal.innerHTML = `
-                <div style="background: var(--surface); padding: 2rem; border-radius: 1rem; max-width: 600px; width: 90%; max-height: 80vh; overflow-y: auto; color: var(--text-primary);">
-                    <h3 style="margin-bottom: 1rem;">Invite Friends to "${bubbleName}"</h3>
-                    <p style="margin-bottom: 1.5rem; color: var(--text-secondary);">
+                <div class="glass-panel rounded-xl p-8 max-w-2xl w-full mx-4 max-h-[80vh] overflow-y-auto">
+                    <h3 class="text-xl font-semibold community-text mb-4">Invite Friends to "${bubbleName}"</h3>
+                    <p class="community-text-secondary mb-6">
                         Select your connections to invite to join this study bubble. They will receive a notification and can choose to accept or decline.
                     </p>
                     
-                    <div id="connectionsList" style="margin-bottom: 2rem;">
-                        <div style="text-align: center; padding: 2rem; color: var(--text-muted);">
-                            <span class="material-symbols-outlined" style="font-size: 2rem; display: block; margin-bottom: 1rem;">hourglass_empty</span>
+                    <div id="connectionsList" class="mb-8">
+                        <div class="text-center py-8 community-text-muted">
+                            <span class="material-symbols-outlined text-5xl mb-4 block">hourglass_empty</span>
                             Loading connections...
                         </div>
                     </div>
                     
-                    <div style="display: flex; gap: 1rem; justify-content: flex-end;">
-                        <button onclick="this.closest('div').parentElement.remove()" style="background: var(--text-muted); color: white; border: none; padding: 0.5rem 1rem; border-radius: 0.5rem; cursor: pointer;">Skip for Now</button>
-                        <button id="sendInvitationsBtn" style="background: var(--primary); color: white; border: none; padding: 0.5rem 1rem; border-radius: 0.5rem; cursor: pointer;">Send Invitations</button>
+                    <div class="flex gap-3 justify-end">
+                        <button onclick="this.closest('div').parentElement.remove()" class="community-bg-tertiary community-text px-4 py-2 rounded-lg hover:community-bg-hover transition-all">Skip for Now</button>
+                        <button id="sendInvitationsBtn" class="community-accent px-4 py-2 rounded-lg font-medium hover:community-accent-hover transition-all">Send Invitations</button>
                     </div>
                 </div>
             `;
@@ -637,34 +1021,34 @@
                 if (data.accepted && data.accepted.length > 0) {
                     const connectionsList = document.getElementById('connectionsList');
                     connectionsList.innerHTML = `
-                        <div style="margin-bottom: 1rem; font-weight: 500; color: var(--text-primary);">Select connections to invite:</div>
+                        <div class="font-medium community-text mb-4">Select connections to invite:</div>
                         ${data.accepted.map(conn => `
-                            <label style="display: flex; align-items: center; gap: 1rem; padding: 0.75rem; background: var(--background); border-radius: 0.5rem; margin-bottom: 0.5rem; cursor: pointer;">
-                                <input type="checkbox" value="${conn.uid}" style="margin: 0;">
-                                <div class="avatar" style="width: 2.5rem; height: 2.5rem; background: var(--primary); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: 500; flex-shrink: 0;">
+                            <label class="flex items-center gap-3 p-3 community-bg-tertiary rounded-lg mb-2 cursor-pointer hover:community-bg-hover transition-all">
+                                <input type="checkbox" value="${conn.uid}" class="m-0">
+                                <div class="w-10 h-10 community-accent rounded-full flex items-center justify-center text-black font-semibold flex-shrink-0">
                                     ${conn.name[0].toUpperCase()}
                                 </div>
-                                <div style="flex: 1;">
-                                    <div style="font-weight: 500; color: var(--text-primary);">${conn.name}</div>
-                                    <div style="font-size: 0.875rem; color: var(--text-secondary);">${conn.purpose_display}</div>
+                                <div class="flex-1">
+                                    <div class="font-medium community-text">${conn.name}</div>
+                                    <div class="text-sm community-text-secondary">${conn.purpose_display}</div>
                                 </div>
                             </label>
                         `).join('')}
                     `;
                 } else {
                     document.getElementById('connectionsList').innerHTML = `
-                        <div style="text-align: center; padding: 2rem; color: var(--text-muted);">
-                            <span class="material-symbols-outlined" style="font-size: 2rem; display: block; margin-bottom: 1rem;">people</span>
-                            <div style="font-size: 1.1rem; margin-bottom: 0.5rem;">No connections yet</div>
-                            <div style="font-size: 0.875rem;">Connect with friends first, then you can invite them to your bubbles!</div>
+                        <div class="text-center py-8 community-text-muted">
+                            <span class="material-symbols-outlined text-5xl mb-4 block">people</span>
+                            <div class="text-lg mb-2">No connections yet</div>
+                            <div class="text-sm">Connect with friends first, then you can invite them to your bubbles!</div>
                         </div>
                     `;
                 }
             } catch (error) {
                 console.error('Load connections error:', error);
                 document.getElementById('connectionsList').innerHTML = `
-                    <div style="text-align: center; padding: 2rem; color: var(--text-muted);">
-                        <span class="material-symbols-outlined" style="font-size: 2rem; display: block; margin-bottom: 1rem;">error</span>
+                    <div class="text-center py-8 community-text-muted">
+                        <span class="material-symbols-outlined text-5xl mb-4 block">error</span>
                         Failed to load connections
                     </div>
                 `;
@@ -735,23 +1119,11 @@
     <script>
         (function () {
             const root = document.documentElement;
-            const toggle = document.getElementById("themeToggle");
 
             const savedTheme = localStorage.getItem("sclera-theme");
             if (savedTheme) {
-                root.setAttribute("data-theme", savedTheme);
-            }
-
-            if (toggle) {
-                toggle.addEventListener("click", () => {
-                    const next =
-                        root.getAttribute("data-theme") === "dark"
-                            ? "light"
-                            : "dark";
-
-                    root.setAttribute("data-theme", next);
-                    localStorage.setItem("sclera-theme", next);
-                });
+                root.classList.toggle('dark', savedTheme === 'dark');
+                root.classList.toggle('light', savedTheme === 'light');
             }
         })();
     </script>

@@ -114,6 +114,142 @@
                                 </p>
                             </div>
 
+                            <div class="info-group" style="margin-bottom:16px;">
+                                <label>Current Academic Configuration</label>
+                                {% if user.get('purpose') == 'school' %}
+                                    {% set school_data = user.get('school', {}) %}
+                                    {% if school_data %}
+                                        <p style="color:var(--text-muted);margin-top:4px;">
+                                            <strong>Board:</strong> {{ school_data.get('board', 'Not set') }}<br>
+                                            <strong>Grade:</strong> {{ school_data.get('grade', 'Not set') }}<br>
+                                            {% if school_data.get('subject_combination') %}
+                                                <strong>Subject Combination:</strong> {{ school_data.get('subject_combination') }}<br>
+                                            {% endif %}
+                                        </p>
+                                    {% else %}
+                                        <p style="color:var(--text-muted);margin-top:4px;">Not configured</p>
+                                    {% endif %}
+                                {% elif user.get('purpose') == 'exam_prep' %}
+                                    {% set exam_data = user.get('exam', {}) %}
+                                    {% if exam_data %}
+                                        <p style="color:var(--text-muted);margin-top:4px;">
+                                            <strong>Exam Type:</strong> {{ exam_data.get('type', 'Not set') }}
+                                        </p>
+                                    {% else %}
+                                        <p style="color:var(--text-muted);margin-top:4px;">Not configured</p>
+                                    {% endif %}
+                                {% else %}
+                                    <p style="color:var(--text-muted);margin-top:4px;">Not configured</p>
+                                {% endif %}
+                            </div>
+
+                            <!-- PUBLIC PROFILE CONSENT -->
+                            <div class="form-group" style="margin-bottom:16px;">
+                                <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+                                    <input type="checkbox" name="has_public_profile" value="true" 
+                                        {% if user.get('has_public_profile', False) %}checked{% endif %} 
+                                        style="cursor:pointer;"
+                                        onchange="togglePublicProfileSettings(this.checked)">
+                                    <span>Make my profile public</span>
+                                </label>
+                                <p style="color:var(--text-muted);font-size:0.875rem;margin-top:4px;">
+                                    When enabled, other users can view your academic profile when searching for students. 
+                                    You can control what information is visible below.
+                                </p>
+                            </div>
+
+                            <!-- PRIVACY SETTINGS (shown only when public profile is enabled) -->
+                            <div id="privacySettings" style="{% if not user.get('has_public_profile', False) %}display:none;{% else %}display:block;{% endif %}margin-bottom:16px;">
+                                <div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:16px;margin-top:8px;">
+                                    <h4 style="margin-bottom:12px;color:var(--text-primary);font-weight:500;">Profile Visibility Settings</h4>
+                                    <p style="color:var(--text-muted);font-size:0.875rem;margin-bottom:16px;">
+                                        Choose what information to display in your public profile:
+                                    </p>
+                                    
+                                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+                                        <div>
+                                            <label style="display:flex;align-items:center;gap:8px;cursor:pointer;margin-bottom:8px;">
+                                                <input type="checkbox" name="visibility_name" value="true" 
+                                                    {% if user.get('profile_visibility', {}).get('name', True) %}checked{% endif %} 
+                                                    style="cursor:pointer;">
+                                                <span>Show Name</span>
+                                            </label>
+                                            <label style="display:flex;align-items:center;gap:8px;cursor:pointer;margin-bottom:8px;">
+                                                <input type="checkbox" name="visibility_purpose" value="true" 
+                                                    {% if user.get('profile_visibility', {}).get('purpose', True) %}checked{% endif %} 
+                                                    style="cursor:pointer;">
+                                                <span>Show Academic Purpose</span>
+                                            </label>
+                                        </div>
+                                        
+                                        <div>
+                                            <label style="display:flex;align-items:center;gap:8px;cursor:pointer;margin-bottom:8px;">
+                                                <input type="checkbox" name="visibility_academic_summary" value="true" 
+                                                    {% if user.get('profile_visibility', {}).get('academic_summary', True) %}checked{% endif %} 
+                                                    style="cursor:pointer;">
+                                                <span>Show Academic Summary</span>
+                                            </label>
+                                            <label style="display:flex;align-items:center;gap:8px;cursor:pointer;margin-bottom:8px;">
+                                                <input type="checkbox" name="visibility_about" value="true" 
+                                                    {% if user.get('profile_visibility', {}).get('about', True) %}checked{% endif %} 
+                                                    style="cursor:pointer;">
+                                                <span>Show About/Bio</span>
+                                            </label>
+                                            <label style="display:flex;align-items:center;gap:8px;cursor:pointer;margin-bottom:8px;">
+                                                <input type="checkbox" name="visibility_grade" value="true" 
+                                                    {% if user.get('profile_visibility', {}).get('grade', True) %}checked{% endif %} 
+                                                    style="cursor:pointer;">
+                                                <span>Show Grade</span>
+                                            </label>
+                                        </div>
+                                        
+                                        <div>
+                                            <label style="display:flex;align-items:center;gap:8px;cursor:pointer;margin-bottom:8px;">
+                                                <input type="checkbox" name="visibility_school" value="true" 
+                                                    {% if user.get('profile_visibility', {}).get('school', True) %}checked{% endif %} 
+                                                    style="cursor:pointer;">
+                                                <span>Show School</span>
+                                            </label>
+                                            <label style="display:flex;align-items:center;gap:8px;cursor:pointer;margin-bottom:8px;">
+                                                <input type="checkbox" name="visibility_skills" value="true" 
+                                                    {% if user.get('profile_visibility', {}).get('skills', True) %}checked{% endif %} 
+                                                    style="cursor:pointer;">
+                                                <span>Show Skills & Interests</span>
+                                            </label>
+                                        </div>
+                                        
+                                        <div>
+                                            <label style="display:flex;align-items:center;gap:8px;cursor:pointer;margin-bottom:8px;">
+                                                <input type="checkbox" name="visibility_subjects" value="true" 
+                                                    {% if user.get('profile_visibility', {}).get('subjects', True) %}checked{% endif %} 
+                                                    style="cursor:pointer;">
+                                                <span>Show Subjects</span>
+                                            </label>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- USER UID SECTION -->
+                            <div class="form-group" style="margin-bottom:16px;">
+                                <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+                                    <span class="material-symbols-outlined" style="color:var(--accent);">tag</span>
+                                    <span>Your User ID (UID)</span>
+                                </label>
+                                <div style="display:flex;align-items:center;gap:8px;margin-top:8px;">
+                                    <input type="text" value="{{ user.uid }}" readonly 
+                                           style="flex:1;padding:8px;background:var(--surface);border:1px solid var(--border);border-radius:6px;color:var(--text-primary);font-family:monospace;">
+                                    <button type="button" onclick="copyUid()" 
+                                            style="padding:8px 12px;background:var(--accent);color:var(--bg-primary);border:none;border-radius:6px;cursor:pointer;font-size:0.875rem;">
+                                        <span class="material-symbols-outlined" style="font-size:16px;vertical-align:middle;">content_copy</span>
+                                        Copy
+                                    </button>
+                                </div>
+                                <p style="color:var(--text-muted);font-size:0.875rem;margin-top:4px;">
+                                    Share your UID with friends so they can find and connect with you directly.
+                                </p>
+                            </div>
+
                             <button type="submit" class="btn btn-primary">Update Profile</button>
                         </form>
                     </div>
@@ -154,28 +290,22 @@
                                 <select name="purpose" id="purpose" required style="width:100%;margin-top:8px;"
                                     onchange="updateAcademicFields()">
                                     <option value="">Select purpose...</option>
-                                    <option value="high_school" {% if user.get('purpose')=='high_school' %}selected{%
-                                        endif %}>
-                                        High School
+                                    <option value="school" {% if user.get('purpose')=='school' %}selected{% endif %}>
+                                        School
                                     </option>
-                                    <option value="exam_prep" {% if user.get('purpose')=='exam_prep' %}selected{% endif
-                                        %}>
+                                    <option value="exam_prep" {% if user.get('purpose')=='exam_prep' %}selected{% endif %}>
                                         Competitive Exam
-                                    </option>
-                                    <option value="after_tenth" {% if user.get('purpose')=='after_tenth' %}selected{%
-                                        endif %}>
-                                        After 10th Grade
                                     </option>
                                 </select>
                             </div>
 
-                            <!-- Fields for High School -->
-                            <div id="highschool-fields" class="academic-fields" style="display:none;">
+                            <!-- Fields for School -->
+                            <div id="school-fields" class="academic-fields" style="display:none;">
                                 <div class="form-group" style="margin-bottom:16px;">
                                     <label for="board">Board</label>
-                                    <select name="board" id="board" style="width:100%;margin-top:8px;">
+                                    <select name="board" id="board" style="width:100%;margin-top:8px;" onchange="updateGradeFields()">
                                         {% for board in available_boards %}
-                                        <option value="{{ board }}" {% if (user.get('highschool') or
+                                        <option value="{{ board }}" {% if (user.get('school') or
                                             {}).get('board')==board %}selected{% endif %}>
                                             {{ board }}
                                         </option>
@@ -184,13 +314,24 @@
                                 </div>
                                 <div class="form-group" style="margin-bottom:16px;">
                                     <label for="grade">Grade</label>
-                                    <select name="grade" id="grade" style="width:100%;margin-top:8px;">
+                                    <select name="grade" id="grade" style="width:100%;margin-top:8px;" onchange="updateSubjectCombination()">
                                         {% for grade in available_grades %}
-                                        <option value="{{ grade }}" {% if (user.get('highschool') or
+                                        <option value="{{ grade }}" {% if (user.get('school') or
                                             {}).get('grade')==grade %}selected{% endif %}>
                                             Grade {{ grade }}
                                         </option>
                                         {% endfor %}
+                                    </select>
+                                </div>
+                                <div class="form-group" style="margin-bottom:16px;display:none;" id="subject_combination_group">
+                                    <label for="subject_combination">Subject Combination (for Grades 11-12)</label>
+                                    <select name="subject_combination" id="subject_combination" style="width:100%;margin-top:8px;">
+                                        <option value="">Select your subject combination</option>
+                                        <option value="PCM" {% if (user.get('school') or {}).get('subject_combination')=='PCM' %}selected{% endif %}>Physics, Chemistry, Mathematics</option>
+                                        <option value="PCB" {% if (user.get('school') or {}).get('subject_combination')=='PCB' %}selected{% endif %}>Physics, Chemistry, Biology</option>
+                                        <option value="PCMB" {% if (user.get('school') or {}).get('subject_combination')=='PCMB' %}selected{% endif %}>Physics, Chemistry, Mathematics, Biology</option>
+                                        <option value="COMMAT" {% if (user.get('school') or {}).get('subject_combination')=='COMMAT' %}selected{% endif %}>Accountancy, Business Studies, Economics</option>
+                                        <option value="COM" {% if (user.get('school') or {}).get('subject_combination')=='COM' %}selected{% endif %}>Computer Applications, Informatics Practices</option>
                                     </select>
                                 </div>
                             </div>
@@ -210,31 +351,6 @@
                                 </div>
                             </div>
 
-                            <!-- Fields for After 10th -->
-                            <div id="after_tenth-fields" class="academic-fields" style="display:none;">
-                                <div class="form-group" style="margin-bottom:16px;">
-                                    <label for="stream">Stream</label>
-                                    <select name="stream" id="stream" style="width:100%;margin-top:8px;">
-                                        {% for stream in available_streams %}
-                                        <option value="{{ stream }}" {% if (user.get('after_tenth') or
-                                            {}).get('stream')==stream %}selected{% endif %}>
-                                            {{ stream }}
-                                        </option>
-                                        {% endfor %}
-                                    </select>
-                                </div>
-                                <div class="form-group" style="margin-bottom:16px;">
-                                    <label for="grade_after">Grade</label>
-                                    <select name="grade" id="grade_after" style="width:100%;margin-top:8px;">
-                                        {% for grade in ['11', '12'] %}
-                                        <option value="{{ grade }}" {% if (user.get('after_tenth') or
-                                            {}).get('grade')==grade %}selected{% endif %}>
-                                            Grade {{ grade }}
-                                        </option>
-                                        {% endfor %}
-                                    </select>
-                                </div>
-                            </div>
 
                             <div class="form-group checkbox-group"
                                 style="display:flex;align-items:center;gap:12px;margin-top:24px;padding:16px;background:var(--bg-tertiary);border-radius:8px;">
@@ -310,6 +426,33 @@
     </div>
 
     <script>
+        function togglePublicProfileSettings(isChecked) {
+            const privacySettings = document.getElementById('privacySettings');
+            if (privacySettings) {
+                if (isChecked) {
+                    privacySettings.style.display = 'block';
+                } else {
+                    privacySettings.style.display = 'none';
+                }
+            }
+        }
+
+        function copyUid() {
+            const uidInput = document.querySelector('input[value="{{ user.uid }}"]');
+            if (uidInput) {
+                uidInput.select();
+                uidInput.setSelectionRange(0, 99999);
+                
+                try {
+                    navigator.clipboard.writeText(uidInput.value);
+                    showToast('UID copied to clipboard!', 'success');
+                } catch (err) {
+                    console.error('Failed to copy UID:', err);
+                    showToast('Failed to copy UID', 'error');
+                }
+            }
+        }
+
         function updateAcademicFields() {
             const purpose = document.getElementById('purpose').value;
 
@@ -319,13 +462,30 @@
             });
 
             // Show relevant fields
-            if (purpose === 'high_school') {
-                document.getElementById('highschool-fields').style.display = 'block';
+            if (purpose === 'school') {
+                document.getElementById('school-fields').style.display = 'block';
+                // Initialize grade and subject combination visibility
+                updateGradeFields();
             } else if (purpose === 'exam_prep') {
                 document.getElementById('exam-fields').style.display = 'block';
-            } else if (purpose === 'after_tenth') {
-                document.getElementById('after_tenth-fields').style.display = 'block';
             }
+        }
+
+        function updateGradeFields() {
+            const board = document.getElementById('board').value;
+            const grade = document.getElementById('grade').value;
+            const subjectComboGroup = document.getElementById('subject_combination_group');
+            
+            // Show subject combination only for CBSE grades 11-12
+            if (board === 'CBSE' && (grade === '11' || grade === '12')) {
+                subjectComboGroup.style.display = 'block';
+            } else {
+                subjectComboGroup.style.display = 'none';
+            }
+        }
+
+        function updateSubjectCombination() {
+            updateGradeFields();
         }
 
         // Initialize on page load
