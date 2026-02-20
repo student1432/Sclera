@@ -16,13 +16,7 @@
                 <a href="{{ url_for('profile_dashboard') }}" class="btn btn-secondary">Back to Profile</a>
             </div>
 
-            {% with messages = get_flashed_messages(with_categories=true) %}
-            {% if messages %}
-            {% for category, message in messages %}
-            <div class="alert alert-{{ category }}">{{ message }}</div>
-            {% endfor %}
-            {% endif %}
-            {% endwith %}
+
 
             <div class="todo-section">
                 <h2>Add New Goal</h2>

@@ -83,7 +83,7 @@
             }
         }
         .section-spacing {
-            @apply py-[160px];
+            @apply py-[120px];
         }
         .glass-ui {
             backdrop-filter: blur(12px);
@@ -266,24 +266,24 @@
 <button class="w-8 h-8 rounded-full border border-black/10 flex items-center justify-center hover:scale-110 transition-all group theme-text-secondary" id="themeToggle">
 <span class="material-symbols-outlined text-[16px] group-hover:rotate-90 transition-transform duration-500">light_mode</span>
 </button>
-<a href="{{ url_for('login') }}" class="btn-premium text-xs px-6 py-3">
+<a href="{{ url_for('login') }}" class="btn-premium text-xs px-3 py-1">
 Login
 </a>
-<a href="{{ url_for('signup') }}" class="btn-premium text-xs px-6 py-3">
+<a href="{{ url_for('signup') }}" class="btn-premium text-xs px-3 py-1">
 Sign Up
 </a>
 </div>
 </nav>
 <main class="relative z-10">
-<section class="min-h-screen flex flex-col justify-center px-12 lg:px-24 max-w-7xl pt-32">
-<div class="max-w-3xl">
-<h1 class="font-serif text-[clamp(3.5rem,8vw,6.5rem)] leading-[0.95] tracking-tight mb-12 text-reveal" style="transition-delay: 200ms;">
-                    Sclera: <span class="italic font-light opacity-60 text-[clamp(2rem,5vw,4rem)]">The Student Academic Operating System.</span>
+<section class="min-h-screen flex flex-col justify-center items-center px-12 lg:px-24 max-w-7xl mx-auto pt-32">
+<div class="max-w-4xl text-center">
+<h1 class="font-serif text-[clamp(3.5rem,8vw,6.5rem)] leading-[0.95] tracking-tight mb-8 text-reveal" style="transition-delay: 200ms;">
+                    Sclera <span class="italic font-light font-serif opacity-60 text-[clamp(3.5rem,8vw,6.5rem)]">The Student Academic Operating System.</span>
                 </h1>
-<p class="text-2xl font-light theme-text-secondary max-w-xl mb-16 leading-relaxed text-reveal" style="transition-delay: 400ms;">
-                    A unified infrastructure for academics, habits, institutions, and direction.
+<p class="text-2xl font-light theme-text-secondary max-w-2xl mx-auto mb-12 leading-relaxed text-reveal" style="transition-delay: 400ms; text-align: center; line-height: 1.6;">
+                    A unified infrastructure for academics, habits, institutions, and direction. Transform your educational journey with intelligent tools designed for modern students.
                 </p>
-<div class="flex flex-wrap gap-8 justify-start text-reveal" style="transition-delay: 600ms;">
+<div class="flex flex-wrap gap-6 justify-center items-center text-reveal" style="transition-delay: 600ms;">
 <a href="{{ url_for('login') }}" class="btn-premium text-xs px-8 py-4 shadow-lg shadow-black/10">
                         Access Dashboard
                     </a>
@@ -291,15 +291,41 @@ Sign Up
                         Learn More
                     </a>
 </div>
+<div class="mt-16 grid grid-cols-1 md:grid-cols-3 gap-8 text-reveal" style="transition-delay: 800ms;">
+<div class="text-center">
+<div class="w-16 h-16 mx-auto mb-4 rounded-full border-2 border-gray-300 dark:border-gray-600 flex items-center justify-center">
+<span class="material-symbols-outlined text-2xl theme-text-secondary">school</span>
+</div>
+<h3 class="font-semibold text-lg mb-2">Academic Excellence</h3>
+<p class="text-sm theme-text-secondary">Comprehensive tools for tracking grades, assignments, and academic progress</p>
+</div>
+<div class="text-center">
+<div class="w-16 h-16 mx-auto mb-4 rounded-full border-2 border-gray-300 dark:border-gray-600 flex items-center justify-center">
+<span class="material-symbols-outlined text-2xl theme-text-secondary">psychology</span>
+</div>
+<h3 class="font-semibold text-lg mb-2">Smart Learning</h3>
+<p class="text-sm theme-text-secondary">AI-powered study modes and personalized learning recommendations</p>
+</div>
+<div class="text-center">
+<div class="w-16 h-16 mx-auto mb-4 rounded-full border-2 border-gray-300 dark:border-gray-600 flex items-center justify-center">
+<span class="material-symbols-outlined text-2xl theme-text-secondary">groups</span>
+</div>
+<h3 class="font-semibold text-lg mb-2">Community Driven</h3>
+<p class="text-sm theme-text-secondary">Connect with peers and educators in a collaborative environment</p>
+</div>
+</div>
 </div>
 </section>
 <section class="section-spacing consolidation-bg" id="features">
-<div class="max-w-5xl mx-auto px-12 text-center text-reveal">
-<span class="text-[10px] font-bold tracking-[0.5em] uppercase theme-text-secondary mb-12 block">CONSOLIDATION</span>
-<h2 class="font-serif text-5xl md:text-6xl italic font-light leading-[1.2] theme-text-primary">
+<div class="max-w-6xl mx-auto px-12 text-center text-reveal">
+<span class="text-[10px] font-bold tracking-[0.5em] uppercase theme-text-secondary mb-16 block">CONSOLIDATION</span>
+<h2 class="font-serif text-5xl md:text-7xl italic font-light leading-[1.2] theme-text-primary mb-12">
                     Notes. Timers. Dashboards. Portals. <br/>
 <span class="not-italic font-normal">Replaced by a Monolithic System.</span>
 </h2>
+<p class="text-xl theme-text-secondary max-w-3xl mx-auto mb-16 leading-relaxed">
+                    Stop juggling multiple platforms. Sclera brings together all your academic tools into one seamless, intelligent ecosystem designed for modern education.
+                </p>
 <div class="mt-20 flex flex-col items-center gap-6">
 <div class="h-16 w-[1px] central-line"></div>
 </div>
@@ -310,82 +336,131 @@ Sign Up
 <div class="max-w-2xl">
 <span class="text-[10px] font-bold tracking-[0.5em] uppercase theme-text-secondary mb-8 block">SYSTEM SNAPSHOT</span>
 <h3 class="font-serif text-6xl lg:text-7xl mb-10 leading-tight">The Four Pillars</h3>
-<p class="text-xl theme-text-secondary font-light leading-relaxed">Sclera's architecture is built on four core foundations designed for comprehensive academic management.</p>
+<p class="text-xl theme-text-secondary font-light leading-relaxed mb-8">Sclera's architecture is built on four core foundations designed for comprehensive academic management and student success.</p>
+<div class="w-24 h-1 bg-gradient-to-r from-green-500 to-green-700 rounded-full"></div>
 </div>
 </div>
-<div class="grid grid-cols-1 md:grid-cols-2 gap-12 max-w-5xl">
-<div class="glass-card p-14 rounded-[3rem] group cursor-pointer pillar-card">
-<div class="flex justify-between items-start mb-20">
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-16 max-w-6xl mx-auto">
+<div class="glass-card p-16 rounded-[3rem] group cursor-pointer pillar-card transition-all duration-500 hover:scale-105">
+<div class="flex justify-between items-start mb-8">
 <span class="text-[11px] font-black uppercase tracking-[0.4em] theme-text-secondary group-hover:theme-text-primary transition-colors">01 / Profile</span>
-<span class="material-symbols-outlined theme-text-secondary group-hover:theme-text-primary transition-colors">badge</span>
+<span class="material-symbols-outlined theme-text-secondary group-hover:theme-text-primary transition-colors text-2xl">badge</span>
 </div>
 <h4 class="font-serif text-4xl mb-6">Identity</h4>
-<p class="text-sm theme-text-secondary leading-relaxed font-light">Professional Hub, Resume Generation, & Achievement Tracking.</p>
+<p class="text-base theme-text-secondary leading-relaxed font-light mb-6">Professional Hub, Resume Generation, & Achievement Tracking.</p>
+<div class="flex flex-wrap gap-2">
+<span class="text-xs px-3 py-1 rounded-full bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">Portfolio</span>
+<span class="text-xs px-3 py-1 rounded-full bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">Certifications</span>
+<span class="text-xs px-3 py-1 rounded-full bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200">Analytics</span>
 </div>
-<div class="glass-card p-14 rounded-[3rem] group cursor-pointer pillar-card">
-<div class="flex justify-between items-start mb-20">
+</div>
+<div class="glass-card p-16 rounded-[3rem] group cursor-pointer pillar-card transition-all duration-500 hover:scale-105">
+<div class="flex justify-between items-start mb-8">
 <span class="text-[11px] font-black uppercase tracking-[0.4em] theme-text-secondary group-hover:theme-text-primary transition-colors">02 / Knowledge</span>
-<span class="material-symbols-outlined theme-text-secondary group-hover:theme-text-primary transition-colors">menu_book</span>
+<span class="material-symbols-outlined theme-text-secondary group-hover:theme-text-primary transition-colors text-2xl">menu_book</span>
 </div>
 <h4 class="font-serif text-4xl mb-6">Academics</h4>
-<p class="text-sm theme-text-secondary leading-relaxed font-light">Dynamic Syllabus Engine & Real-time Progress Tracking.</p>
+<p class="text-base theme-text-secondary leading-relaxed font-light mb-6">Dynamic Syllabus Engine & Real-time Progress Tracking.</p>
+<div class="flex flex-wrap gap-2">
+<span class="text-xs px-3 py-1 rounded-full bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">Grades</span>
+<span class="text-xs px-3 py-1 rounded-full bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">Assignments</span>
+<span class="text-xs px-3 py-1 rounded-full bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200">Progress</span>
 </div>
-<div class="glass-card p-14 rounded-[3rem] group cursor-pointer pillar-card">
-<div class="flex justify-between items-start mb-20">
+</div>
+<div class="glass-card p-16 rounded-[3rem] group cursor-pointer pillar-card transition-all duration-500 hover:scale-105">
+<div class="flex justify-between items-start mb-8">
 <span class="text-[11px] font-black uppercase tracking-[0.4em] theme-text-secondary group-hover:theme-text-primary transition-colors">03 / Utility</span>
-<span class="material-symbols-outlined theme-text-secondary group-hover:theme-text-primary transition-colors">bolt</span>
+<span class="material-symbols-outlined theme-text-secondary group-hover:theme-text-primary transition-colors text-2xl">bolt</span>
 </div>
 <h4 class="font-serif text-4xl mb-6">Execution</h4>
-<p class="text-sm theme-text-secondary leading-relaxed font-light">Goals, Tasks, & Study Mode with Pomodoro Analytics.</p>
+<p class="text-base theme-text-secondary leading-relaxed font-light mb-6">Goals, Tasks, & Study Mode with Pomodoro Analytics.</p>
+<div class="flex flex-wrap gap-2">
+<span class="text-xs px-3 py-1 rounded-full bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">Timer</span>
+<span class="text-xs px-3 py-1 rounded-full bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">Tasks</span>
+<span class="text-xs px-3 py-1 rounded-full bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200">Analytics</span>
 </div>
-<div class="glass-card p-14 rounded-[3rem] group cursor-pointer pillar-card">
-<div class="flex justify-between items-start mb-20">
+</div>
+<div class="glass-card p-16 rounded-[3rem] group cursor-pointer pillar-card transition-all duration-500 hover:scale-105">
+<div class="flex justify-between items-start mb-8">
 <span class="text-[11px] font-black uppercase tracking-[0.4em] theme-text-secondary group-hover:theme-text-primary transition-colors">04 / Network</span>
-<span class="material-symbols-outlined theme-text-secondary group-hover:theme-text-primary transition-colors">domain</span>
+<span class="material-symbols-outlined theme-text-secondary group-hover:theme-text-primary transition-colors text-2xl">domain</span>
 </div>
 <h4 class="font-serif text-4xl mb-6">Institutions</h4>
-<p class="text-sm theme-text-secondary leading-relaxed font-light">Administrative Dashboards, Teacher Portals, & Cohort Management.</p>
+<p class="text-base theme-text-secondary leading-relaxed font-light mb-6">Administrative Dashboards, Teacher Portals, & Cohort Management.</p>
+<div class="flex flex-wrap gap-2">
+<span class="text-xs px-3 py-1 rounded-full bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">Admin</span>
+<span class="text-xs px-3 py-1 rounded-full bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">Teachers</span>
+<span class="text-xs px-3 py-1 rounded-full bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200">Students</span>
+</div>
 </div>
 </div>
 </section>
 <section class="section-spacing features-bg" id="institutions">
-<div class="max-w-6xl mx-auto px-12">
-<div class="text-center mb-24 text-reveal">
-<span class="text-[11px] font-bold tracking-[0.5em] uppercase theme-text-secondary mb-4 block">CORE CAPABILITIES</span>
-<h3 class="font-serif text-5xl">Engineered Features</h3>
+<div class="max-w-7xl mx-auto px-12">
+<div class="text-center mb-32 text-reveal">
+<span class="text-[11px] font-bold tracking-[0.5em] uppercase theme-text-secondary mb-8 block">CORE CAPABILITIES</span>
+<h3 class="font-serif text-5xl md:text-6xl mb-8">Engineered Features</h3>
+<p class="text-xl theme-text-secondary max-w-3xl mx-auto leading-relaxed mb-16">
+                    Comprehensive tools and capabilities designed to transform every aspect of your academic journey.
+                </p>
 </div>
-<div class="flex flex-wrap justify-center gap-6 max-w-4xl mx-auto">
-<span class="px-10 py-5 glass-ui rounded-full text-[10px] font-bold tracking-[0.4em] uppercase hover:bg-black hover:text-white transition-all cursor-default">Academic Progress</span>
-<span class="px-10 py-5 glass-ui rounded-full text-[10px] font-bold tracking-[0.4em] uppercase hover:bg-black hover:text-white transition-all cursor-default">Study Execution</span>
-<span class="px-10 py-5 glass-ui rounded-full text-[10px] font-bold tracking-[0.4em] uppercase hover:bg-black hover:text-white transition-all cursor-default">Master Library</span>
-<span class="px-10 py-5 glass-ui rounded-full text-[10px] font-bold tracking-[0.4em] uppercase hover:bg-black hover:text-white transition-all cursor-default">Career Discovery</span>
-<span class="px-10 py-5 glass-ui rounded-full text-[10px] font-bold tracking-[0.4em] uppercase hover:bg-black hover:text-white transition-all cursor-default">Institutional Management</span>
-<span class="px-10 py-5 glass-ui rounded-full text-[10px] font-bold tracking-[0.4em] uppercase hover:bg-black hover:text-white transition-all cursor-default">Risk Analytics</span>
-<span class="px-10 py-5 glass-ui rounded-full text-[10px] font-bold tracking-[0.4em] uppercase hover:bg-black hover:text-white transition-all cursor-default">AI Assistant</span>
-<span class="px-10 py-5 glass-ui rounded-full text-[10px] font-bold tracking-[0.4em] uppercase hover:bg-black hover:text-white transition-all cursor-default">Study Mode</span>
-<span class="px-10 py-5 glass-ui rounded-full text-[10px] font-bold tracking-[0.4em] uppercase hover:bg-black hover:text-white transition-all cursor-default">Community</span>
-<span class="px-10 py-5 glass-ui rounded-full text-[10px] font-bold tracking-[0.4em] uppercase hover:bg-black hover:text-white transition-all cursor-default">Profile Management</span>
-<span class="px-10 py-5 glass-ui rounded-full text-[10px] font-bold tracking-[0.4em] uppercase hover:bg-black hover:text-white transition-all cursor-default">Task Management</span>
-<span class="px-10 py-5 glass-ui rounded-full text-[10px] font-bold tracking-[0.4em] uppercase hover:bg-black hover:text-white transition-all cursor-default">Goal Setting</span>
-<span class="px-10 py-5 glass-ui rounded-full text-[10px] font-bold tracking-[0.4em] uppercase hover:bg-black hover:text-white transition-all cursor-default">Exam Results</span>
-<span class="px-10 py-5 glass-ui rounded-full text-[10px] font-bold tracking-[0.4em] uppercase hover:bg-black hover:text-white transition-all cursor-default">Study Sessions</span>
-<span class="px-10 py-5 glass-ui rounded-full text-[10px] font-bold tracking-[0.4em] uppercase hover:bg-black hover:text-white transition-all cursor-default">Teacher Dashboard</span>
-<span class="px-10 py-5 glass-ui rounded-full text-[10px] font-bold tracking-[0.4em] uppercase hover:bg-black hover:text-white transition-all cursor-default">Student Dashboard</span>
+<div class="flex flex-wrap justify-center gap-4 max-w-6xl mx-auto mb-32">
+<span class="px-6 py-3 glass-ui rounded-full text-[10px] font-medium tracking-[0.3em] uppercase hover:scale-105 transition-all cursor-default border border-gray-200 dark:border-gray-700">Academic Progress</span>
+<span class="px-6 py-3 glass-ui rounded-full text-[10px] font-medium tracking-[0.3em] uppercase hover:scale-105 transition-all cursor-default border border-gray-200 dark:border-gray-700">Study Execution</span>
+<span class="px-6 py-3 glass-ui rounded-full text-[10px] font-medium tracking-[0.3em] uppercase hover:scale-105 transition-all cursor-default border border-gray-200 dark:border-gray-700">Master Library</span>
+<span class="px-6 py-3 glass-ui rounded-full text-[10px] font-medium tracking-[0.3em] uppercase hover:scale-105 transition-all cursor-default border border-gray-200 dark:border-gray-700">Career Discovery</span>
+<span class="px-6 py-3 glass-ui rounded-full text-[10px] font-medium tracking-[0.3em] uppercase hover:scale-105 transition-all cursor-default border border-gray-200 dark:border-gray-700">Institutional Management</span>
+<span class="px-6 py-3 glass-ui rounded-full text-[10px] font-medium tracking-[0.3em] uppercase hover:scale-105 transition-all cursor-default border border-gray-200 dark:border-gray-700">Risk Analytics</span>
+<span class="px-6 py-3 glass-ui rounded-full text-[10px] font-medium tracking-[0.3em] uppercase hover:scale-105 transition-all cursor-default border border-gray-200 dark:border-gray-700">AI Assistant</span>
+<span class="px-6 py-3 glass-ui rounded-full text-[10px] font-medium tracking-[0.3em] uppercase hover:scale-105 transition-all cursor-default border border-gray-200 dark:border-gray-700">Study Mode</span>
+<span class="px-6 py-3 glass-ui rounded-full text-[10px] font-medium tracking-[0.3em] uppercase hover:scale-105 transition-all cursor-default border border-gray-200 dark:border-gray-700">Community</span>
+<span class="px-6 py-3 glass-ui rounded-full text-[10px] font-medium tracking-[0.3em] uppercase hover:scale-105 transition-all cursor-default border border-gray-200 dark:border-gray-700">Profile Management</span>
+<span class="px-6 py-3 glass-ui rounded-full text-[10px] font-medium tracking-[0.3em] uppercase hover:scale-105 transition-all cursor-default border border-gray-200 dark:border-gray-700">Task Management</span>
+<span class="px-6 py-3 glass-ui rounded-full text-[10px] font-medium tracking-[0.3em] uppercase hover:scale-105 transition-all cursor-default border border-gray-200 dark:border-gray-700">Goal Setting</span>
+<span class="px-6 py-3 glass-ui rounded-full text-[10px] font-medium tracking-[0.3em] uppercase hover:scale-105 transition-all cursor-default border border-gray-200 dark:border-gray-700">Exam Results</span>
+<span class="px-6 py-3 glass-ui rounded-full text-[10px] font-medium tracking-[0.3em] uppercase hover:scale-105 transition-all cursor-default border border-gray-200 dark:border-gray-700">Study Sessions</span>
+<span class="px-6 py-3 glass-ui rounded-full text-[10px] font-medium tracking-[0.3em] uppercase hover:scale-105 transition-all cursor-default border border-gray-200 dark:border-gray-700">Teacher Dashboard</span>
+<span class="px-6 py-3 glass-ui rounded-full text-[10px] font-medium tracking-[0.3em] uppercase hover:scale-105 transition-all cursor-default border border-gray-200 dark:border-gray-700">Student Dashboard</span>
 </div>
 </div>
 </section>
 <section class="section-spacing px-12" id="enterprise">
 <div class="max-w-7xl mx-auto glass-card rounded-[5rem] p-24 lg:p-40 relative overflow-hidden">
 <div class="absolute inset-0 bg-gradient-to-br from-black/[0.01] to-transparent pointer-events-none"></div>
+<div class="absolute top-0 right-0 w-64 h-64 bg-gradient-to-br from-green-500/10 to-blue-500/10 rounded-full blur-3xl"></div>
+<div class="absolute bottom-0 left-0 w-96 h-96 bg-gradient-to-tr from-purple-500/10 to-pink-500/10 rounded-full blur-3xl"></div>
 <div class="relative z-10 text-center">
-<span class="text-[11px] font-bold tracking-[0.5em] uppercase theme-text-secondary mb-8 block">ENTERPRISE GRADE</span>
-<h2 class="font-serif text-6xl lg:text-7xl mb-12 max-w-4xl mx-auto leading-tight">Built for Scale.</h2>
-<p class="text-2xl font-light theme-text-secondary max-w-3xl mx-auto mb-20 leading-relaxed">
-                        Institutional Tier with administrative oversight, behavioral heatmaps, and secure role-based access.
+<span class="text-[11px] font-bold tracking-[0.5em] uppercase theme-text-secondary mb-12 block">ENTERPRISE GRADE</span>
+<h2 class="font-serif text-6xl lg:text-8xl mb-12 max-w-5xl mx-auto leading-tight">Built for Scale.</h2>
+<p class="text-2xl font-light theme-text-secondary max-w-4xl mx-auto mb-20 leading-relaxed">
+                        Institutional Tier with administrative oversight, behavioral heatmaps, and secure role-based access. Empower your entire educational ecosystem with enterprise-grade tools.
                     </p>
+<div class="grid grid-cols-1 md:grid-cols-3 gap-8 mb-20 max-w-4xl mx-auto">
+<div class="text-center">
+<div class="w-20 h-20 mx-auto mb-4 rounded-full border-2 border-gray-300 dark:border-gray-600 flex items-center justify-center">
+<span class="material-symbols-outlined text-3xl theme-text-secondary">security</span>
+</div>
+<h3 class="font-semibold text-lg mb-2">Secure Access</h3>
+<p class="text-sm theme-text-secondary">Role-based permissions</p>
+</div>
+<div class="text-center">
+<div class="w-20 h-20 mx-auto mb-4 rounded-full border-2 border-gray-300 dark:border-gray-600 flex items-center justify-center">
+<span class="material-symbols-outlined text-3xl theme-text-secondary">insights</span>
+</div>
+<h3 class="font-semibold text-lg mb-2">Analytics</h3>
+<p class="text-sm theme-text-secondary">Behavioral insights</p>
+</div>
+<div class="text-center">
+<div class="w-20 h-20 mx-auto mb-4 rounded-full border-2 border-gray-300 dark:border-gray-600 flex items-center justify-center">
+<span class="material-symbols-outlined text-3xl theme-text-secondary">admin_panel_settings</span>
+</div>
+<h3 class="font-semibold text-lg mb-2">Admin Control</h3>
+<p class="text-sm theme-text-secondary">Complete oversight</p>
+</div>
+</div>
 <div class="flex flex-col sm:flex-row gap-8 justify-center items-center">
-<a href="{{ url_for('login') }}" class="btn-premium bg-black text-white px-20">Request Institutional Access</a>
-<a href="#features" class="btn-premium border border-black/10 px-20">View Case Studies</a>
+<a href="{{ url_for('login') }}" class="btn-premium bg-black text-white px-20 py-6 text-sm hover:scale-105 transition-transform">Request Institutional Access</a>
+<a href="#features" class="btn-premium border border-black/10 px-20 py-6 text-sm hover:scale-105 transition-transform">View Case Studies</a>
 </div>
 </div>
 </div>
@@ -679,28 +754,28 @@ Sign Up
                     // Set theme-specific colors
                     let color1, color2, color3;
                     if (currentTheme === 'dark') {
-                        color1 = hexToRgb('#2d3748');  // Dark grey
-                        color2 = hexToRgb('#475569');  // Medium dark
-                        color3 = hexToRgb('#64748b');  // Lighter dark
+                        color1 = hexToRgb('#000000');  // Black
+                        color2 = hexToRgb('#374151');  // Dark grey
+                        color3 = hexToRgb('#6b7280');  // Light grey
                     } else {
                         color1 = hexToRgb('#ffffff');  // Pure white
-                        color2 = hexToRgb('#f0f0f0');  // Light grey
-                        color3 = hexToRgb('#e2e8f0');  // Lighter grey
+                        color2 = hexToRgb('#9ca3af');  // Grey (more visible)
+                        color3 = hexToRgb('#e5e7eb');  // Light grey
                     }
                     
                     gl.uniform1f(gl.getUniformLocation(program, 'u_timeSpeed'), 0.5);
                     gl.uniform1f(gl.getUniformLocation(program, 'u_colorBalance'), 0.0);
                     gl.uniform1f(gl.getUniformLocation(program, 'u_warpStrength'), 1.5);
                     gl.uniform1f(gl.getUniformLocation(program, 'u_warpFrequency'), 3.0);
-                    gl.uniform1f(gl.getUniformLocation(program, 'u_warpSpeed'), 3.0);
+                    gl.uniform1f(gl.getUniformLocation(program, 'u_warpSpeed'), 6.0);
                     gl.uniform1f(gl.getUniformLocation(program, 'u_warpAmplitude'), 30.0);
                     gl.uniform1f(gl.getUniformLocation(program, 'u_blendAngle'), 0.0);
-                    gl.uniform1f(gl.getUniformLocation(program, 'u_blendSoftness'), 0.05);
+                    gl.uniform1f(gl.getUniformLocation(program, 'u_blendSoftness'), 0.08);
                     gl.uniform1f(gl.getUniformLocation(program, 'u_rotationAmount'), 300.0);
                     gl.uniform1f(gl.getUniformLocation(program, 'u_noiseScale'), 1.5);
                     gl.uniform1f(gl.getUniformLocation(program, 'u_grainAmount'), 0.25);  
                     gl.uniform1f(gl.getUniformLocation(program, 'u_grainScale'), 3.0);
-                    gl.uniform1f(gl.getUniformLocation(program, 'u_grainAnimated'), 0.0);
+                    gl.uniform1f(gl.getUniformLocation(program, 'u_grainAnimated'), 0.01);
                     gl.uniform1f(gl.getUniformLocation(program, 'u_contrast'), 1.2);  
                     gl.uniform1f(gl.getUniformLocation(program, 'u_gamma'), 1.0);
                     gl.uniform1f(gl.getUniformLocation(program, 'u_saturation'), 1.0);  

@@ -15,13 +15,7 @@
         {% include '_topnav.html' %}
 
         <main class="main-content">
-            {% with messages = get_flashed_messages(with_categories=true) %}
-            {% if messages %}
-            {% for category, message in messages %}
-            <div class="alert alert-{{ category }}">{{ message }}</div>
-            {% endfor %}
-            {% endif %}
-            {% endwith %}
+
 
             <div class="profile-container">
                 {% if profile_banner %}

@@ -145,13 +145,7 @@
         <!-- Full width panel for community -->
         <div class="flex-1 glass-panel rounded-xl p-6 flex flex-col gap-6">
 
-            {% with messages = get_flashed_messages(with_categories=true) %}
-            {% if messages %}
-            {% for category, message in messages %}
-            <div class="alert alert-{{ category }}">{{ message }}</div>
-            {% endfor %}
-            {% endif %}
-            {% endwith %}
+
 
             <!-- Header -->
             <div class="flex items-center justify-between mb-2">
