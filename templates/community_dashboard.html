@@ -131,6 +131,30 @@
             color: var(--bg-primary) !important;
             border-color: var(--accent) !important;
         }
+        
+        /* Scrollable search results */
+        #searchResults {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        
+        #searchResults::-webkit-scrollbar {
+            width: 6px;
+        }
+        
+        #searchResults::-webkit-scrollbar-track {
+            background: var(--bg-tertiary);
+            border-radius: 3px;
+        }
+        
+        #searchResults::-webkit-scrollbar-thumb {
+            background: var(--border);
+            border-radius: 3px;
+        }
+        
+        #searchResults::-webkit-scrollbar-thumb:hover {
+            background: var(--text-muted);
+        }
     </style>
 </head>
 
@@ -169,21 +193,7 @@
                     </div>
                 </div>
 
-                <!-- Filter Chips -->
-                <div class="flex gap-2 flex-wrap" id="filterChips">
-                    <button class="filter-chip community-bg-tertiary community-text-secondary border community-border-subtle px-4 py-2 rounded-full text-sm transition-all hover:community-bg-hover" data-filter="grade" data-value="">
-                        <span class="material-symbols-outlined text-lg align-middle mr-1">school</span>
-                        Grade
-                    </button>
-                    <button class="filter-chip community-bg-tertiary community-text-secondary border community-border-subtle px-4 py-2 rounded-full text-sm transition-all hover:community-bg-hover" data-filter="school" data-value="">
-                        <span class="material-symbols-outlined text-lg align-middle mr-1">account_balance</span>
-                        School
-                    </button>
-                    <button class="filter-chip community-bg-tertiary community-text-secondary border community-border-subtle px-4 py-2 rounded-full text-sm transition-all hover:community-bg-hover" data-filter="subject" data-value="">
-                        <span class="material-symbols-outlined text-lg align-middle mr-1">psychology</span>
-                        Subject
-                    </button>
-                </div>
+                
 
                 <!-- Search Results -->
                 <div id="searchResults" class="hidden"></div>
