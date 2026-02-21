@@ -7,10 +7,11 @@ This document details the critical bugs, security vulnerabilities, and architect
 ## 1. COMPACT FAULT LIST
 
 ### **Critical Logic Errors**
-- **Broken Signup:** Users choosing "after tenth" cannot complete registration.
+- **Broken Signup:** Users choosing "after tenth" cannot complete registration (Backend redirect + UI missing options).
 - **Syllabus Desync:** Performance metrics read from the wrong database keys (`results` vs `exam_results`).
 - **Identity Mismatch:** AI thread creation and deletion use different mode naming conventions.
 - **Fragile IDs:** Goal management uses list-length IDs, leading to collisions after deletions.
+- **SocketIO Failure:** Real-time typing indicators are broken due to event name mismatches between frontend and backend.
 
 ### **Security & Privacy Risks**
 - **Debug Endpoints:** Unauthenticated user and model debugging APIs are live.
@@ -57,3 +58,13 @@ This document details the critical bugs, security vulnerabilities, and architect
 - **Ambiguous Contact Form:** The form sends emails to `support@studyos.example.com`. Since this is a placeholder, user inquiries are effectively lost unless checked manually in Firestore.
 - **Dashboard Summary Mismatch:** The main dashboard checks for `purpose == 'exam'`, but the onboarding and syllabus logic uses `purpose == 'exam_prep'`. This causes the academic summary to remain blank for these users.
 - **Double Login Guards:** `_institution_login_guard` is registered in `before_request` (running for all routes) but is also manually called inside multiple individual API routes, leading to redundant logic execution.
+
+### 2.4 Template & Frontend Inconsistencies
+- **Missing UI Options (`signup.html` & `settings.html`):** The `after_tenth` purpose is missing from all frontend dropdowns, making it impossible for students to select this path even if the backend bug was fixed.
+- **Broken SocketIO Events (`bubble_chat.html`):**
+    - **Emission:** Frontend emits `typing`, but backend expects `typing_start`/`typing_stop`.
+    - **Listening:** Frontend listens for `typing_status`, but backend emits `user_typing`.
+- **Missing Context Variables (`bubble_chat.html`):** Sidebar refers to `{{ bubble.creator_name }}`, but the `app.py` route does not include this key in the context dictionary passed to the template.
+- **Dead Setup Logic:** `setup_after_tenth.html` is completely missing from the `templates/` directory, causing a 404/TemplateNotFound if a user somehow reaches that onboarding step.
+- **Hardcoded AI User Panel (`ai_assistant.html`):** User name and role are hardcoded in HTML as "Dr. Jane Doe" and "Curriculum Director". This causes a jarring experience before (or if) the `/api/user/profile` fetch succeeds.
+- **Feature Misrepresentation (`results.html`):** This template is a "Coming Soon" placeholder, yet the core results logging functionality already exists in the `academic_dashboard`. This fragments the user experience.

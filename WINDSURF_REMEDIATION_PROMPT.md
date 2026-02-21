@@ -28,7 +28,19 @@
 *   **Secure Asset Filenames:** In `profile_edit()`, modify the filename generation for profile pictures and banners to exclude the raw UID. Use a UUID or a salted hash of the UID/Timestamp to prevent user enumeration.
 *   **Improve File Size Validation:** Implement a pre-save check using `request.content_length` or by reading a small chunk of the stream to verify file size before committing the full upload to disk.
 
-### 5. Support & Export UX
+### 5. Frontend & Template Alignment
+*   **Restore `after_tenth` UI Options:**
+    *   In `signup.html` and `settings.html`, add `<option value="after_tenth">After 10th (Grade 11/12)</option>` to the purpose dropdowns.
+    *   Create a basic `setup_after_tenth.html` template (copy `setup_highschool.html` and adapt fields) to prevent TemplateNotFound errors.
+*   **Fix SocketIO Event Names:** In `bubble_chat.html`, update the JavaScript to:
+    *   Emit `typing_start` (instead of `typing` with `is_typing: true`).
+    *   Emit `typing_stop` (instead of `typing` with `is_typing: false`).
+    *   Listen for `user_typing` (instead of `typing_status`).
+*   **Inject Missing Context:**
+    *   In `app.py` -> `bubble_chat()`, ensure the `bubble` dictionary passed to the template includes the `creator_name`.
+    *   In `ai_assistant.html`, update the hardcoded "Dr. Jane Doe" sidebar to use placeholder `{{ name }}` or `{{ user.name }}` variables from Jinja where possible to minimize JS layout shift.
+
+### 6. Support & Export UX
 *   **Fix PDF Export:** In `export_document()`, either implement a basic PDF generation library (like `ReportLab` or `FPDF`) or update the UI to reflect that only `.txt`, `.md`, and `.html` are currently supported. Do not return a `.txt` file for a PDF request.
 *   **Configure Support Email:** In `contact()`, replace the placeholder `support@studyos.example.com` with a configurable environment variable `SUPPORT_EMAIL`.
 
