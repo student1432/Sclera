@@ -45,6 +45,13 @@ class AppLogger:
         if kwargs:
             message += f" - {kwargs}"
         self.logger.debug(message)
+    
+    def security_event(self, event_type: str, **kwargs):
+        """Log security-related events"""
+        message = f"SECURITY_EVENT: {event_type}"
+        if kwargs:
+            message += f" - {kwargs}"
+        self.logger.warning(message)  # Use warning level for security events
 
 
 def setup_logging(app):

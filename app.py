@@ -420,9 +420,10 @@ def initialize_profile_fields(uid):
             updates[key] = default
     if updates:
         db.collection('users').document(uid).update(updates)
-    uid = session['uid']
-    user_data = get_user_data(uid)
-    name_top_statistics = user_data.get('name')
+    # Remove the problematic lines that try to access session and get_user_data
+    # uid = session['uid']  # This causes error during login
+    # user_data = get_user_data(uid)  # This is unnecessary
+    # name_top_statistics = user_data.get('name')  # This variable is not used
 # ============================================================================
 # AUTH ROUTES
 # ============================================================================
@@ -627,8 +628,8 @@ def login():
             flash('Invalid email or password', 'error')
             return redirect(url_for('login'))
         except Exception as e:
-            logger.error("login_error", error=str(e), email=email, ip=client_ip)
-            flash('Login error: An error occurred during login', 'error')
+            logger.error("login_error", error=str(e), email=email, ip=client_ip, traceback=str(e.__traceback__))
+            flash(f'Login error: {str(e)}', 'error')
             return redirect(url_for('login'))
     return render_template('login.html')
 @app.route('/login/student', methods=['GET', 'POST'])
