@@ -179,6 +179,64 @@
             background: var(--accent) !important;
             color: var(--bg-primary) !important;
         }
+
+        /* Fix navigation button icons - completely replace content */
+        .fc-prev-button .fc-icon {
+            background: none !important;
+            border: none !important;
+            width: auto !important;
+            height: auto !important;
+        }
+        
+        .fc-prev-button .fc-icon::before {
+            display: none !important;
+        }
+        
+        .fc-prev-button .fc-icon::after {
+            content: "chevron_left" !important;
+            font-family: 'Material Symbols Outlined' !important;
+            font-size: 18px !important;
+            font-weight: normal !important;
+            line-height: 1 !important;
+        }
+
+        .fc-next-button .fc-icon {
+            background: none !important;
+            border: none !important;
+            width: auto !important;
+            height: auto !important;
+        }
+        
+        .fc-next-button .fc-icon::before {
+            display: none !important;
+        }
+        
+        .fc-next-button .fc-icon::after {
+            content: "chevron_right" !important;
+            font-family: 'Material Symbols Outlined' !important;
+            font-size: 18px !important;
+            font-weight: normal !important;
+            line-height: 1 !important;
+        }
+
+        .fc-today-button .fc-icon {
+            background: none !important;
+            border: none !important;
+            width: auto !important;
+            height: auto !important;
+        }
+        
+        .fc-today-button .fc-icon::before {
+            display: none !important;
+        }
+        
+        .fc-today-button .fc-icon::after {
+            content: "today" !important;
+            font-family: 'Material Symbols Outlined' !important;
+            font-size: 18px !important;
+            font-weight: normal !important;
+            line-height: 1 !important;
+        }
     </style>
 </head>
 

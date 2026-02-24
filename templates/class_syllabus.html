@@ -18,42 +18,84 @@
         <main class="main-content">
             <div class="header-row">
                 <h1>{{ class_data.get('name', 'Class') }} - Syllabus Management</h1>
+                <div class="class-info" style="display: flex; gap: 20px; align-items: center; margin-bottom: 20px;">
+                    <span class="badge" style="background: var(--primary); color: white; padding: 4px 12px; border-radius: 12px; font-size: 12px;">
+                        {% if class_data.get('original_purpose') == 'exam' %}
+                            {{ class_data.get('purpose', 'Exam') }} Preparation
+                        {% else %}
+                            {{ class_data.get('board', 'CBSE') }} Class {{ class_data.get('grade', '10') }}
+                            {% if class_data.get('subject_combination') %}
+                                - {{ class_data.get('subject_combination') }}
+                            {% endif %}
+                        {% endif %}
+                    </span>
+                    {% if class_data.get('exam_type') %}
+                        <span class="badge" style="background: var(--accent); color: white; padding: 4px 12px; border-radius: 12px; font-size: 12px;">
+                            {{ class_data.get('exam_type') }}
+                        </span>
+                    {% endif %}
+                </div>
                 <p class="text-muted">Exclude chapters to hide them from all students in this class</p>
             </div>
 
             <div class="syllabus-container">
-                {% for subject_name, subject_data in syllabus.items() %}
-                <details class="syllabus-subject" open>
-                    <summary>
-                        <h4>{{ subject_name }}</h4>
-                    </summary>
+                {% if syllabus and syllabus.items() %}
+                    {% for subject_name, subject_data in syllabus.items() %}
+                        <details class="syllabus-subject" open>
+                            <summary>
+                                <h4>{{ subject_name }}</h4>
+                                {% if subject_data.get('chapters') %}
+                                    <span style="color: var(--text-muted); font-size: 12px; margin-left: 10px;">
+                                        {{ subject_data.chapters|length }} chapters
+                                    </span>
+                                {% endif %}
+                            </summary>
 
-                    <div class="syllabus-chapters">
-                        {% for chapter_name in subject_data.get('chapters', {}).keys() %}
-                        {% set exclusion_key = subject_name + "::" + chapter_name %}
-                        {% set is_excluded = exclusions.get(exclusion_key, False) %}
+                            <div class="syllabus-chapters">
+                                {% if subject_data.get('chapters') %}
+                                    {% for chapter_name, chapter_data in subject_data.get('chapters', {}).items() %}
+                                        {% set exclusion_key = subject_name + "::" + chapter_name %}
+                                        {% set is_excluded = exclusions.get(exclusion_key, False) %}
 
-                        <div class="chapter-row {% if is_excluded %}excluded{% endif %}">
-                            <span class="chapter-name">{{ chapter_name }}</span>
+                                        <div class="chapter-row {% if is_excluded %}excluded{% endif %}">
+                                            <span class="chapter-name">{{ chapter_name }}</span>
+                                            
+                                            {% if chapter_data.get('topics') %}
+                                                <span class="topic-count" style="color: var(--text-muted); font-size: 11px;">
+                                                    {{ chapter_data.topics|length }} topics
+                                                </span>
+                                            {% endif %}
 
-                            <form method="POST" style="display:inline;">
-                                <input type="hidden" name="subject" value="{{ subject_name }}">
-                                <input type="hidden" name="chapter" value="{{ chapter_name }}">
-                                <input type="hidden" name="action"
-                                    value="{% if is_excluded %}include{% else %}exclude{% endif %}">
-                                <button type="submit" class="toggle-btn">
-                                    {% if is_excluded %}
-                                    ↺ Include
-                                    {% else %}
-                                    ✕ Exclude
-                                    {% endif %}
-                                </button>
-                            </form>
-                        </div>
-                        {% endfor %}
+                                            <form method="POST" style="display:inline;">
+                                                <input type="hidden" name="subject" value="{{ subject_name }}">
+                                                <input type="hidden" name="chapter" value="{{ chapter_name }}">
+                                                <input type="hidden" name="action"
+                                                    value="{% if is_excluded %}include{% else %}exclude{% endif %}">
+                                                <button type="submit" class="toggle-btn">
+                                                    {% if is_excluded %}
+                                                    ↺ Include
+                                                    {% else %}
+                                                    ✕ Exclude
+                                                    {% endif %}
+                                                </button>
+                                            </form>
+                                        </div>
+                                    {% endfor %}
+                                {% else %}
+                                    <p style="color: var(--text-muted); padding: 20px; text-align: center;">
+                                        No chapters available for this subject
+                                    </p>
+                                {% endif %}
+                            </div>
+                        </details>
+                    {% endfor %}
+                {% else %}
+                    <div style="text-align: center; padding: 40px; color: var(--text-muted);">
+                        <h3>No Syllabus Available</h3>
+                        <p>Syllabus data is not available for this class configuration.</p>
+                        <p>Please check your class settings or contact support.</p>
                     </div>
-                </details>
-                {% endfor %}
+                {% endif %}
             </div>
         </main>
     </div>

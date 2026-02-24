@@ -695,9 +695,39 @@ def institution_teacher_create_class():
         board = request.form.get('board', '').strip()
         grade = request.form.get('grade', '').strip()
         purpose = request.form.get('purpose', '').strip()
+        exam_type = request.form.get('exam_type', '').strip()
+        subject_combination = request.form.get('subject_combination', '').strip()
+        
         if not name:
             flash('Class name is required', 'error')
             return render_template('institution_teacher_create_class.html', profile=teacher_profile)
+        
+        if not purpose:
+            flash('Purpose selection is required', 'error')
+            return render_template('institution_teacher_create_class.html', profile=teacher_profile)
+        
+        if purpose == 'exam':
+            if not exam_type:
+                flash('Exam type selection is required for exam preparation', 'error')
+                return render_template('institution_teacher_create_class.html', profile=teacher_profile)
+            # For exam purpose, board and grade are not required
+            board = board or 'Not Applicable'  # Set default value for database
+            grade = grade or 'Not Applicable'  # Set default value for database
+        elif purpose == 'school':
+            if not board:
+                flash('Board selection is required for school studies', 'error')
+                return render_template('institution_teacher_create_class.html', profile=teacher_profile)
+            
+            if not grade:
+                flash('Grade selection is required for school studies', 'error')
+                return render_template('institution_teacher_create_class.html', profile=teacher_profile)
+            
+            if board == 'CBSE' and grade in ['11', '12'] and not subject_combination:
+                flash('Subject combination selection is required for CBSE Class 11-12', 'error')
+                return render_template('institution_teacher_create_class.html', profile=teacher_profile)
+        
+        # For exam purpose, use exam_type as the purpose value
+        final_purpose = exam_type if purpose == 'exam' else purpose
         try:
             institution_id = teacher_profile.get('institution_id')
             class_id = str(uuid.uuid4())
@@ -707,7 +737,10 @@ def institution_teacher_create_class():
                 'name': name,
                 'board': board,
                 'grade': grade,
-                'purpose': purpose,
+                'purpose': final_purpose,
+                'original_purpose': purpose,  # Store the original purpose for reference
+                'exam_type': exam_type if purpose == 'exam' else None,
+                'subject_combination': subject_combination if purpose == 'school' and board == 'CBSE' and grade in ['11', '12'] else None,
                 'teacher_id': uid,
                 'institution_id': institution_id,
                 'student_uids': [],
@@ -753,6 +786,59 @@ def institution_teacher_classes():
         logger.error("teacher_list_classes_error", error=str(e))
         flash('Failed to load classes', 'error')
         return redirect(url_for('institution_teacher_dashboard'))
+
+@app.route('/institution/teacher/class/<class_id>/delete', methods=['POST'])
+@require_teacher_v2
+def delete_class(class_id):
+    """Delete a class and all associated data"""
+    try:
+        uid = session.get('uid')
+        profile = _get_teacher_profile(uid) or {}
+        institution_id = profile.get('institution_id')
+        
+        # Verify class belongs to teacher and institution
+        class_doc = db.collection('classes').document(class_id).get()
+        if not class_doc.exists or class_doc.to_dict().get('teacher_id') != uid or class_doc.to_dict().get('institution_id') != institution_id:
+            abort(403)
+        
+        class_data = class_doc.to_dict()
+        class_name = class_data.get('name', 'Class')
+        
+        # Delete all associated data
+        batch = db.batch()
+        
+        # Delete class document
+        batch.delete(db.collection('classes').document(class_id))
+        
+        # Delete invite codes
+        invites = db.collection('class_invites').where('class_id', '==', class_id).stream()
+        for invite_doc in invites:
+            batch.delete(invite_doc.reference)
+        
+        # Delete excluded chapters
+        batch.delete(db.collection('classes').document(class_id).collection('excluded_chapters').document('current'))
+        
+        # Remove class ID from all students
+        students = class_data.get('student_uids', [])
+        for student_uid in students:
+            student_doc = db.collection('users').document(student_uid).get()
+            if student_doc.exists:
+                student_data = student_doc.to_dict()
+                current_class_ids = student_data.get('class_ids', [])
+                if class_id in current_class_ids:
+                    current_class_ids.remove(class_id)
+                    batch.update(db.collection('users').document(student_uid), {'class_ids': current_class_ids})
+        
+        # Commit all deletions
+        batch.commit()
+        
+        flash(f'Class "{class_name}" has been deleted successfully.', 'success')
+        return redirect(url_for('institution_teacher_classes'))
+        
+    except Exception as e:
+        logger.error("delete_class_error", error=str(e))
+        flash('Failed to delete class', 'error')
+        return redirect(url_for('institution_teacher_classes'))
 # ============================================================================
 # INSTITUTION V2 AUTH (ADMIN / TEACHER)
 # ============================================================================
@@ -1458,6 +1544,45 @@ def calendar_dashboard():
         'has_class': bool(user_data.get('class_ids')) if user_data else False
     }
     return render_template('calendar_dashboard.html', **context)
+
+@app.route('/api/syllabus', methods=['GET'])
+def get_syllabus_api():
+    """Get syllabus data based on purpose, board/exam, and grade"""
+    try:
+        purpose = request.args.get('purpose')
+        board = request.args.get('board')
+        exam = request.args.get('exam')
+        grade = request.args.get('grade')
+        subject_combination = request.args.get('subject_combination')
+        
+        if not purpose:
+            return jsonify({'error': 'Purpose parameter is required'}), 400
+        
+        if purpose == 'school' and (not board or not grade):
+            return jsonify({'error': 'Board and grade parameters required for school purpose'}), 400
+        
+        if purpose == 'exam' and not exam:
+            return jsonify({'error': 'Exam parameter required for exam purpose'}), 400
+        
+        # Get syllabus data
+        if purpose == 'school':
+            syllabus = get_syllabus('school', board, grade, subject_combination=subject_combination)
+        elif purpose == 'exam':
+            syllabus = get_syllabus('exam', exam)
+        else:
+            return jsonify({'error': 'Invalid purpose'}), 400
+        
+        return jsonify(syllabus)
+        
+    except Exception as e:
+        logger.error(f"Get syllabus API error: {str(e)}")
+        return jsonify({'error': 'Failed to fetch syllabus data'}), 500
+
+@app.route('/api/test', methods=['GET'])
+def test_api():
+    """Test endpoint to verify API is working"""
+    return jsonify({'message': 'API is working', 'timestamp': datetime.now().isoformat()})
+
 @app.route('/api/calendar/events', methods=['GET'])
 @require_login
 def get_calendar_events():
@@ -4940,15 +5065,22 @@ def manage_class_syllabus(class_id):
     exclusions = exclusions_doc.to_dict().get('chapters', {}) if exclusions_doc.exists else {}
     # Get syllabus based on class metadata
     purpose = class_data.get('purpose', 'highschool')
-    syllabus_purpose = {
-        'school': 'school',
-        'exam_prep': 'exam',
-        'after_tenth': 'after_tenth'
-    }.get(purpose, purpose)
+    original_purpose = class_data.get('original_purpose', 'school')
     board = class_data.get('board', 'CBSE')
     grade = class_data.get('grade', '10')
     subject_combination = class_data.get('subject_combination')
-    syllabus = get_syllabus(syllabus_purpose, board, grade, subject_combination=subject_combination)
+    
+    # Determine syllabus purpose based on original purpose
+    if original_purpose == 'school':
+        syllabus_purpose = 'school'
+        syllabus = get_syllabus(syllabus_purpose, board, grade, subject_combination=subject_combination)
+    elif original_purpose == 'exam':
+        syllabus_purpose = 'exam'
+        # For exam purpose, use the exam type directly
+        syllabus = get_syllabus(syllabus_purpose, purpose)  # purpose contains exam type (JEE/NEET)
+    else:
+        syllabus_purpose = 'school'  # fallback
+        syllabus = get_syllabus(syllabus_purpose, board, grade, subject_combination=subject_combination)
     if not syllabus:
         syllabus = {} # Fallback to empty if not found
     context = {
@@ -6170,6 +6302,10 @@ def internal_error(error):
 @app.before_request
 def log_request():
     """Log all incoming requests"""
+    # Skip login guard for API routes
+    if request.path.startswith('/api/'):
+        return None
+    
     guard_resp = _institution_login_guard()
     if guard_resp is not None:
         return guard_resp

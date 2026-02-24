@@ -1,78 +1,358 @@
 <!DOCTYPE html>
 <html lang="en" data-theme="dark">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Classes - Teacher | StudyOS</title>
-    <link rel="stylesheet" href="/styles.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet" />
+    <style>
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1.5rem;
+            padding: 2rem;
+        }
+        
+        .island {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 1.5rem;
+            padding: 1.5rem;
+            backdrop-filter: blur(12px);
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .island:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+        }
+        
+        .island-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 1.5rem;
+        }
+        
+        .island-title {
+            font-size: 1.1rem;
+            font-weight: 700;
+            margin: 0;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .class-item {
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border);
+            border-radius: 1rem;
+            padding: 1.5rem;
+            margin-bottom: 1rem;
+            transition: all 0.2s ease;
+            position: relative;
+        }
+        
+        .class-item:hover {
+            transform: translateX(4px);
+            border-color: var(--accent);
+        }
+        
+        .class-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 1rem;
+        }
+        
+        .class-title {
+            font-size: 1.1rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+        }
+        
+        .class-meta {
+            font-size: 0.9rem;
+            opacity: 0.7;
+            margin-bottom: 0.5rem;
+        }
+        
+        .class-code {
+            font-size: 0.85rem;
+            color: var(--accent);
+            font-weight: 600;
+        }
+        
+        .class-stats {
+            display: flex;
+            gap: 0.5rem;
+            margin-top: 1rem;
+        }
+        
+        .stat-badge {
+            padding: 0.25rem 0.75rem;
+            border-radius: 0.5rem;
+            font-size: 0.75rem;
+            font-weight: 600;
+            background: var(--bg-secondary);
+            color: var(--text-muted);
+        }
+        
+        .stat-badge.primary {
+            background: var(--accent);
+            color: var(--bg-secondary);
+        }
+        
+        .class-actions {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
+        
+        .btn {
+            padding: 0.4rem 0.8rem;
+            border-radius: 0.5rem;
+            border: none;
+            font-size: 0.75rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .btn-primary {
+            background: var(--accent);
+            color: var(--bg-secondary);
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+        }
+        
+        .btn-secondary {
+            background: var(--bg-tertiary);
+            color: var(--text-primary);
+            border: 1px solid var(--border);
+        }
+        
+        .btn-secondary:hover {
+            background: var(--bg-secondary);
+            border-color: var(--accent);
+        }
+        
+        .btn-danger {
+            background: rgba(239, 68, 68, 0.1);
+            color: #ef4444;
+            border: 1px solid rgba(239, 68, 68, 0.2);
+        }
+        
+        .btn-danger:hover {
+            background: rgba(239, 68, 68, 0.2);
+            border-color: #ef4444;
+        }
+        
+        .empty-state {
+            text-align: center;
+            padding: 3rem;
+            opacity: 0.6;
+        }
+        
+        .info-card {
+            background: var(--bg-tertiary);
+            border-radius: 1rem;
+            padding: 1.5rem;
+            margin-bottom: 1rem;
+        }
+        
+        .info-card h4 {
+            font-size: 1rem;
+            font-weight: 600;
+            margin-bottom: 0.75rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .info-card p {
+            font-size: 0.9rem;
+            line-height: 1.6;
+            color: var(--text-muted);
+        }
+        
+        .alert {
+            padding: 1rem;
+            border-radius: 1rem;
+            margin-bottom: 1rem;
+            border-left: 4px solid;
+        }
+        
+        .alert-success {
+            background: rgba(52, 211, 153, 0.1);
+            border-color: #34d399;
+            color: #34d399;
+        }
+        
+        .alert-error {
+            background: rgba(239, 68, 68, 0.1);
+            border-color: #ef4444;
+            color: #ef4444;
+        }
+        
+        .alert-info {
+            background: rgba(59, 130, 246, 0.1);
+            border-color: #3b82f6;
+            color: #3b82f6;
+        }
+        
+        @media (max-width: 768px) {
+            .dashboard-grid {
+                grid-template-columns: 1fr;
+                padding: 1rem;
+            }
+            
+            .class-header {
+                flex-direction: column;
+                gap: 1rem;
+            }
+            
+            .class-actions {
+                width: 100%;
+            }
+        }
+    </style>
 </head>
 <body>
     <div class="dashboard-layout">
         {% include '_teacher_topnav.html' %}
 
-        <main class="main-content">
-            <div class="content-header">
-                <h1>Your Classes</h1>
-                <p>Manage classes and invite codes</p>
+        <main class="main-content" style="margin-left: 0;">
+            <div class="content-header" style="padding: 2rem 2rem 1rem;">
+                <h1 style="font-size: 2.5rem; font-weight: 800; margin-bottom: 0.5rem;">Your Classes</h1>
+                <p style="opacity: 0.7; font-size: 1.1rem;">Manage classes and invite codes</p>
             </div>
 
             {% with messages = get_flashed_messages(with_categories=true) %}
                 {% if messages %}
-                    {% for category, message in messages %}
-                        <div class="alert alert-{{ category }}">{{ message }}</div>
-                    {% endfor %}
+                    <div style="padding: 0 2rem;">
+                        {% for category, message in messages %}
+                            <div class="alert alert-{{ category }}">{{ message }}</div>
+                        {% endfor %}
+                    </div>
                 {% endif %}
             {% endwith %}
 
-            <div class="academic-split">
-                <div class="syllabus-panel">
-                    <div class="study-island">
-                        <div class="study-island-header">
-                            <h3>Classes</h3>
-                            <a href="{{ url_for('institution_teacher_create_class') }}" class="btn btn-primary">Create New Class</a>
-                        </div>
+            <div class="dashboard-grid">
+                <!-- Classes List -->
+                <div class="island" style="grid-column: span 2;">
+                    <div class="island-header">
+                        <h3 class="island-title">
+                            <span class="material-symbols-outlined" style="color: var(--accent);">class</span>
+                            Classes
+                        </h3>
+                        <a href="{{ url_for('institution_teacher_create_class') }}" class="btn btn-primary">
+                            <span class="material-symbols-outlined" style="font-size: 0.9rem; margin-right: 0.5rem;">add</span>
+                            Create New Class
+                        </a>
+                    </div>
 
-                        {% if classes %}
-                            {% for cls in classes %}
-                                <div class="study-item">
-                                    <div class="study-item-body">
-                                        <div class="study-item-title">{{ cls.get('name', cls.get('id')) }}</div>
-                                        <div class="study-item-meta">
-                                            {{ cls.get('board', 'Board') }} · Grade {{ cls.get('grade', '-') }} · {{ cls.get('purpose', 'Class') }}
+                    {% if classes %}
+                        {% for cls in classes %}
+                            <div class="class-item">
+                                <div class="class-header">
+                                    <div>
+                                        <div class="class-title">{{ cls.get('name', cls.get('id')) }}</div>
+                                        <div class="class-meta">
+                                            {% if cls.get('original_purpose') == 'exam' %}
+                                                {{ cls.get('purpose', 'Exam') }} Preparation
+                                                {% if cls.get('exam_type') %}
+                                                    - {{ cls.get('exam_type') }}
+                                                {% endif %}
+                                            {% else %}
+                                                {{ cls.get('board', 'Board') }} · Grade {{ cls.get('grade', '-') }}
+                                                {% if cls.get('subject_combination') %}
+                                                    · {{ cls.get('subject_combination') }}
+                                                {% endif %}
+                                            {% endif %}
                                         </div>
                                         {% if cls.get('invite_code') %}
-                                            <div class="study-item-meta">Invite Code: <strong>{{ cls.invite_code }}</strong></div>
+                                            <div class="class-code">Invite Code: <strong>{{ cls.invite_code }}</strong></div>
                                         {% endif %}
                                     </div>
-                                    <div class="study-item-actions">
-                                        <span class="pct-badge avg">{{ (cls.get('student_uids', [])|length) }} students</span>
+                                    <div class="class-actions">
+                                        <a href="{{ url_for('manage_class_syllabus', class_id=cls.id) }}" class="btn btn-secondary">
+                                            <span class="material-symbols-outlined" style="font-size: 0.9rem; margin-right: 0.25rem;">menu_book</span>
+                                            Syllabus
+                                        </a>
+                                        <form method="POST" action="{{ url_for('delete_class', class_id=cls.id) }}" style="display:inline;" onsubmit="return confirm('Are you sure you want to delete this class? This action cannot be undone and will remove all students from the class.');">
+                                            <button type="submit" class="btn btn-danger">
+                                                <span class="material-symbols-outlined" style="font-size: 0.9rem; margin-right: 0.25rem;">delete</span>
+                                                Delete
+                                            </button>
+                                        </form>
                                     </div>
                                 </div>
-                            {% endfor %}
-                        {% else %}
-                            <div class="empty-state">
-                                <h3>No classes yet</h3>
-                                <p>Create your first class to invite students.</p>
+                                <div class="class-stats">
+                                    <span class="stat-badge">
+                                        <span class="material-symbols-outlined" style="font-size: 0.8rem; margin-right: 0.25rem;">groups</span>
+                                        {{ (cls.get('student_uids', [])|length) }} students
+                                    </span>
+                                    {% if cls.get('invite_code') %}
+                                        <span class="stat-badge primary">
+                                            <span class="material-symbols-outlined" style="font-size: 0.8rem; margin-right: 0.25rem;">key</span>
+                                            Code: {{ cls.invite_code }}
+                                        </span>
+                                    {% endif %}
+                                </div>
                             </div>
-                        {% endif %}
+                        {% endfor %}
+                    {% else %}
+                        <div class="empty-state">
+                            <span class="material-symbols-outlined" style="font-size: 3rem; opacity: 0.3; display: block; margin-bottom: 1rem;">class</span>
+                            <h3 style="font-size: 1.2rem; margin-bottom: 0.5rem;">No classes yet</h3>
+                            <p>Create your first class to invite students.</p>
+                        </div>
+                    {% endif %}
+                </div>
+
+                <!-- Info Cards -->
+                <div class="island">
+                    <div class="island-header">
+                        <h3 class="island-title">
+                            <span class="material-symbols-outlined" style="color: var(--accent);">info</span>
+                            How Students Join
+                        </h3>
+                    </div>
+                    <div class="info-card">
+                        <h4>
+                            <span class="material-symbols-outlined" style="color: var(--accent);">how_to_reg</span>
+                            Join Process
+                        </h4>
+                        <p>Students go to <strong>/student/join/class</strong> or use the Join Class link in their student dashboard sidebar and enter the 6-character code. This links them to your class and institution without affecting their academic progress.</p>
                     </div>
                 </div>
 
-                <div class="study-tools-panel">
-                    <div class="study-island">
-                        <div class="study-island-header">
-                            <h3>How Students Join</h3>
-                        </div>
-                        <p style="color:var(--text-muted); font-size:14px; line-height:1.6;">
-                            Students go to <strong>/student/join/class</strong> or use the Join Class link in their student dashboard sidebar and enter the 6-character code. This links them to your class and institution without affecting their academic progress.
-                        </p>
+                <div class="island">
+                    <div class="island-header">
+                        <h3 class="island-title">
+                            <span class="material-symbols-outlined" style="color: var(--accent);">business</span>
+                            Institution
+                        </h3>
                     </div>
-
-                    <div class="study-island">
-                        <div class="study-island-header">
-                            <h3>Institution</h3>
-                        </div>
-                        <p style="color:var(--text-muted); font-size:14px;">Institution ID: <strong>{{ institution_id }}</strong></p>
+                    <div class="info-card">
+                        <h4>
+                            <span class="material-symbols-outlined" style="color: var(--accent);">badge</span>
+                            Institution ID
+                        </h4>
+                        <p><strong>{{ institution_id }}</strong></p>
                     </div>
                 </div>
             </div>

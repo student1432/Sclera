@@ -1,119 +1,65 @@
 """
-Structured logging configuration for StudyOS
-Provides consistent, structured logging across the application
+Simple logging configuration for StudyOS
+Provides basic logging functionality without external dependencies
 """
 import logging
 import sys
-import json
 from datetime import datetime
 from typing import Any, Dict
-import structlog
-
-
-def setup_logging(app):
-    """Set up structured logging for the Flask application"""
-    
-    # Configure structlog
-    structlog.configure(
-        processors=[
-            structlog.stdlib.filter_by_level,
-            structlog.stdlib.add_logger_name,
-            structlog.stdlib.add_log_level,
-            structlog.stdlib.PositionalArgumentsFormatter(),
-            structlog.processors.TimeStamper(fmt="iso"),
-            structlog.processors.StackInfoRenderer(),
-            structlog.processors.format_exc_info,
-            structlog.processors.UnicodeDecoder(),
-            structlog.processors.JSONRenderer()
-        ],
-        context_class=dict,
-        logger_factory=structlog.stdlib.LoggerFactory(),
-        wrapper_class=structlog.stdlib.BoundLogger,
-        cache_logger_on_first_use=True,
-    )
-    
-    # Set up standard logging
-    logging.basicConfig(
-        format="%(message)s",
-        stream=sys.stdout,
-        level=getattr(logging, app.config.get('LOG_LEVEL', 'INFO'))
-    )
-    
-    # Create logger
-    logger = structlog.get_logger("studyos")
-    app.logger = logger
-    
-    return logger
 
 
 class AppLogger:
-    """Application logger with structured output"""
+    """Simple logger wrapper for StudyOS"""
     
-    def __init__(self, name: str = "studyos"):
-        self.logger = structlog.get_logger(name)
+    def __init__(self, name: str = "StudyOS"):
+        self.logger = logging.getLogger(name)
+        if not self.logger.handlers:
+            handler = logging.StreamHandler(sys.stdout)
+            formatter = logging.Formatter(
+                '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+            )
+            handler.setFormatter(formatter)
+            self.logger.addHandler(handler)
+            self.logger.setLevel(logging.INFO)
     
     def info(self, message: str, **kwargs):
-        """Log info level message"""
-        self.logger.info(message, **kwargs)
-    
-    def warning(self, message: str, **kwargs):
-        """Log warning level message"""
-        self.logger.warning(message, **kwargs)
+        """Log info message"""
+        if kwargs:
+            message += f" - {kwargs}"
+        self.logger.info(message)
     
     def error(self, message: str, **kwargs):
-        """Log error level message"""
-        self.logger.error(message, **kwargs)
+        """Log error message"""
+        if kwargs:
+            message += f" - {kwargs}"
+        self.logger.error(message)
+    
+    def warning(self, message: str, **kwargs):
+        """Log warning message"""
+        if kwargs:
+            message += f" - {kwargs}"
+        self.logger.warning(message)
     
     def debug(self, message: str, **kwargs):
-        """Log debug level message"""
-        self.logger.debug(message, **kwargs)
-    
-    def critical(self, message: str, **kwargs):
-        """Log critical level message"""
-        self.logger.critical(message, **kwargs)
-    
-    def security_event(self, event_type: str, user_id: str = None, 
-                      ip_address: str = None, details: Dict = None):
-        """
-        Log security-related events
-        Args:
-            event_type: Type of security event (login, logout, failed_login, etc.)
-            user_id: User identifier
-            ip_address: IP address of the request
-            details: Additional event details
-        """
-        self.logger.info(
-            "security_event",
-            event_type=event_type,
-            user_id=user_id,
-            ip_address=ip_address,
-            timestamp=datetime.utcnow().isoformat(),
-            details=details or {}
-        )
-    
-    def audit_log(self, action: str, user_id: str, resource: str, 
-                  success: bool = True, details: Dict = None):
-        """
-        Log audit trail for data changes
-        Args:
-            action: Action performed (create, update, delete)
-            user_id: User who performed the action
-            resource: Resource that was modified
-            success: Whether the action was successful
-            details: Additional details
-        """
-        self.logger.info(
-            "audit_log",
-            action=action,
-            user_id=user_id,
-            resource=resource,
-            success=success,
-            timestamp=datetime.utcnow().isoformat(),
-            details=details or {}
-        )
+        """Log debug message"""
+        if kwargs:
+            message += f" - {kwargs}"
+        self.logger.debug(message)
 
 
-# Global logger instance
+def setup_logging(app):
+    """Set up logging for the Flask application"""
+    # Simple logging setup without structlog
+    logging.basicConfig(
+        level=logging.INFO,
+        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+        handlers=[
+            logging.StreamHandler(sys.stdout)
+        ]
+    )
+
+
+# Create global logger instance
 logger = AppLogger()
 
 

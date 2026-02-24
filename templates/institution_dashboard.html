@@ -5,6 +5,374 @@
     <meta charset="UTF-8">
     <title>Institution Dashboard | StudyOS</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet" />
+    <style>
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1.5rem;
+            padding: 2rem;
+        }
+        
+        .island {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 1.5rem;
+            padding: 1.5rem;
+            backdrop-filter: blur(12px);
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .island:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+        }
+        
+        .island-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 1.5rem;
+        }
+        
+        .island-title {
+            font-size: 1.1rem;
+            font-weight: 700;
+            margin: 0;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .heatmap-grid {
+            display: grid;
+            gap: 2px;
+        }
+
+        .heatmap-cell {
+            aspect-ratio: 1;
+            border-radius: 4px;
+            background: var(--bg-tertiary);
+            margin: 1px;
+            transition: all 0.2s ease;
+        }
+        
+        .heatmap-cell:hover {
+            transform: scale(1.2);
+            z-index: 10;
+        }
+
+        .heatmap-cell.level-1 {
+            background: rgba(52, 211, 153, 0.4);
+        }
+
+        .heatmap-cell.level-2 {
+            background: rgba(52, 211, 153, 0.7);
+        }
+
+        .heatmap-cell.level-3 {
+            background: #34d399;
+        }
+
+        .heatmap-label {
+            font-size: 10px;
+            color: var(--text-muted);
+            text-align: right;
+            padding-right: 4px;
+        }
+
+        .heatmap-spacer {
+            width: 4px;
+        }
+        
+        .heatmap-legend {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            margin-top: 1rem;
+            font-size: 0.75rem;
+            color: var(--text-muted);
+        }
+        
+        .legend-scale {
+            display: flex;
+            gap: 2px;
+        }
+        
+        .scale-box {
+            width: 12px;
+            height: 12px;
+            border-radius: 2px;
+        }
+        
+        .scale-box.level-0 {
+            background: var(--bg-tertiary);
+        }
+        
+        .scale-box.level-1 {
+            background: rgba(52, 211, 153, 0.4);
+        }
+        
+        .scale-box.level-2 {
+            background: rgba(52, 211, 153, 0.7);
+        }
+        
+        .scale-box.level-3 {
+            background: #34d399;
+        }
+        
+        .risk-row {
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border);
+            border-radius: 1rem;
+            padding: 1rem;
+            margin-bottom: 0.75rem;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        
+        .risk-row:hover {
+            transform: translateX(4px);
+            border-color: var(--accent);
+        }
+        
+        .risk-row.critical {
+            border-left: 4px solid #ef4444;
+        }
+        
+        .risk-row.declining {
+            border-left: 4px solid #f59e0b;
+        }
+        
+        .risk-info {
+            flex: 1;
+        }
+        
+        .risk-info strong {
+            display: block;
+            font-size: 0.95rem;
+            font-weight: 600;
+            margin-bottom: 0.25rem;
+        }
+        
+        .risk-info span {
+            font-size: 0.8rem;
+            opacity: 0.7;
+        }
+        
+        .risk-metrics {
+            display: flex;
+            gap: 0.5rem;
+            margin-right: 1rem;
+        }
+        
+        .tag {
+            padding: 0.25rem 0.5rem;
+            border-radius: 0.5rem;
+            font-size: 0.7rem;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+        
+        .tag.stagnating {
+            background: rgba(239, 68, 68, 0.1);
+            color: #ef4444;
+        }
+        
+        .tag.declining {
+            background: rgba(245, 158, 11, 0.1);
+            color: #f59e0b;
+        }
+        
+        .risk-actions {
+            display: flex;
+            gap: 0.5rem;
+            align-items: center;
+        }
+        
+        .btn {
+            padding: 0.5rem 1rem;
+            border-radius: 0.75rem;
+            border: none;
+            font-size: 0.8rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .btn-primary {
+            background: var(--accent);
+            color: var(--bg-secondary);
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+        }
+        
+        .btn-secondary {
+            background: var(--bg-tertiary);
+            color: var(--text-primary);
+            border: 1px solid var(--border);
+        }
+        
+        .btn-secondary:hover {
+            background: var(--bg-secondary);
+            border-color: var(--accent);
+        }
+        
+        .nudge-btn {
+            background: var(--accent);
+            color: var(--bg-secondary);
+            border: none;
+            padding: 0.4rem 0.8rem;
+            border-radius: 0.5rem;
+            font-size: 0.75rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        
+        .nudge-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+        }
+        
+        .view-btn {
+            background: var(--bg-tertiary);
+            color: var(--text-primary);
+            border: 1px solid var(--border);
+            padding: 0.4rem 0.8rem;
+            border-radius: 0.5rem;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-decoration: none;
+            transition: all 0.2s ease;
+        }
+        
+        .view-btn:hover {
+            background: var(--bg-secondary);
+            border-color: var(--accent);
+        }
+        
+        .class-row {
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border);
+            border-radius: 1rem;
+            padding: 1rem;
+            margin-bottom: 0.75rem;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        
+        .class-row:hover {
+            transform: translateX(4px);
+            border-color: var(--accent);
+        }
+        
+        .student-count {
+            font-size: 0.8rem;
+            opacity: 0.7;
+            padding: 0.25rem 0.5rem;
+            background: var(--bg-secondary);
+            border-radius: 0.5rem;
+        }
+        
+        .small-btn {
+            background: var(--bg-tertiary);
+            color: var(--text-primary);
+            border: 1px solid var(--border);
+            padding: 0.4rem 0.8rem;
+            border-radius: 0.5rem;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-decoration: none;
+            transition: all 0.2s ease;
+        }
+        
+        .small-btn:hover {
+            background: var(--bg-secondary);
+            border-color: var(--accent);
+        }
+        
+        .form-input {
+            width: 100%;
+            padding: 0.75rem;
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border);
+            border-radius: 0.75rem;
+            color: var(--text-primary);
+            font-family: inherit;
+            font-size: 0.9rem;
+            transition: all 0.2s ease;
+        }
+        
+        .form-input:focus {
+            outline: none;
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.1);
+        }
+        
+        .form-label {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 600;
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+        
+        .stat-card {
+            text-align: center;
+            padding: 1rem;
+            background: var(--bg-tertiary);
+            border-radius: 0.75rem;
+        }
+        
+        .stat-number {
+            font-size: 1.8rem;
+            font-weight: 800;
+            color: var(--accent);
+        }
+        
+        .stat-label {
+            font-size: 0.7rem;
+            opacity: 0.7;
+            text-transform: uppercase;
+            font-weight: 600;
+        }
+        
+        .empty-state {
+            text-align: center;
+            padding: 2rem;
+            opacity: 0.6;
+        }
+        
+        @media (max-width: 768px) {
+            .dashboard-grid {
+                grid-template-columns: 1fr;
+                padding: 1rem;
+            }
+        }
+    </style>
 </head>
 
 <body>
@@ -12,20 +380,45 @@
         {% include '_topnav.html' %}
 
         <!-- MAIN CONTENT -->
-        <main class="main-content">
-            <div class="header-row">
-                <h1>Institution Overview</h1>
-                <div class="actions">
-                    <button id="inviteBtn" class="btn-secondary">Generate Invite</button>
-                    <!-- Invite Modal placeholder -->
-                </div>
+        <main class="main-content" style="margin-left: 0;">
+            <div class="content-header" style="padding: 2rem 2rem 1rem;">
+                <h1 style="font-size: 2.5rem; font-weight: 800; margin-bottom: 0.5rem;">Institution Overview</h1>
+                <p style="opacity: 0.7; font-size: 1.1rem;">Managing {{ classes|length }} classes · {{ total_students or 0 }} students</p>
             </div>
 
-            <div class="inst-grid">
+            <div class="dashboard-grid">
+                <!-- Stats Overview -->
+                <div class="island">
+                    <div class="island-header">
+                        <h3 class="island-title">
+                            <span class="material-symbols-outlined" style="color: var(--accent);">dashboard</span>
+                            Overview
+                        </h3>
+                    </div>
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <div class="stat-number">{{ classes|length }}</div>
+                            <div class="stat-label">Classes</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-number">{{ total_students or 0 }}</div>
+                            <div class="stat-label">Students</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-number">{{ at_risk_students|length if at_risk_students else 0 }}</div>
+                            <div class="stat-label">At Risk</div>
+                        </div>
+                    </div>
+                </div>
 
-                <!-- ISLAND A: BEHAVIORAL HEATMAP -->
-                <div class="island heatmap-island">
-                    <h3>Institutional Behavior Heatmap</h3>
+                <!-- Behavioral Heatmap -->
+                <div class="island" style="grid-column: span 2;">
+                    <div class="island-header">
+                        <h3 class="island-title">
+                            <span class="material-symbols-outlined" style="color: var(--accent);">schedule</span>
+                            Institutional Activity Heatmap
+                        </h3>
+                    </div>
                     <div id="heatmapContainer" class="heatmap-grid"
                         style="grid-template-columns: 40px repeat(12, 1fr) 10px repeat(12, 1fr);">
                         <!-- Labels for hours -->
@@ -65,10 +458,15 @@
                     </div>
                 </div>
 
-                <!-- ISLAND B: AI PREDICTION ENGINE -->
-                <div class="island risk-island">
-                    <h3>Risk & Momentum Analytics (AI)</h3>
-                    <div class="risk-list">
+                <!-- Risk & Momentum Analytics -->
+                <div class="island">
+                    <div class="island-header">
+                        <h3 class="island-title">
+                            <span class="material-symbols-outlined" style="color: #ef4444;">warning</span>
+                            Risk & Momentum Analytics (AI)
+                        </h3>
+                    </div>
+                    <div class="risk-list" style="max-height: 300px; overflow-y: auto;">
                         {% if at_risk_students %}
                         {% for student in at_risk_students %}
                         <div class="risk-row {{ student.status }}">
@@ -85,7 +483,10 @@
                                 {% endif %}
                             </div>
                             <div class="risk-actions">
-                                <button class="nudge-btn" data-uid="{{ student.uid }}">Nudge</button>
+                                <button class="nudge-btn" data-uid="{{ student.uid }}">
+                                    <span class="material-symbols-outlined" style="font-size: 0.9rem;">notifications</span>
+                                    Nudge
+                                </button>
                                 <a href="{{ url_for('student_detail', student_uid=student.uid) }}"
                                     class="view-btn">View</a>
                             </div>
@@ -93,16 +494,22 @@
                         {% endfor %}
                         {% else %}
                         <div class="empty-state">
+                            <span class="material-symbols-outlined" style="font-size: 3rem; opacity: 0.3; color: var(--accent); display: block; margin-bottom: 1rem;">check_circle</span>
                             <p>All students active and healthy.</p>
                         </div>
                         {% endif %}
                     </div>
                 </div>
 
-                <!--ISLAND C: CLASS MANAGEMENT-->
-                <div class="island syllabus-island">
-                    <h3>Class Management</h3>
-                    <div class="class-list">
+                <!-- Class Management -->
+                <div class="island">
+                    <div class="island-header">
+                        <h3 class="island-title">
+                            <span class="material-symbols-outlined" style="color: var(--accent);">class</span>
+                            Class Management
+                        </h3>
+                    </div>
+                    <div class="class-list" style="max-height: 300px; overflow-y: auto;">
                         {% for cid, cdata in classes.items() %}
                         <div class="class-row">
                             <span style="font-weight: 600;">{{ cdata.get('name', cid) }}</span>
@@ -116,27 +523,36 @@
                     </div>
                 </div>
 
-                <!--ISLAND D: BROADCAST CENTER-->
-                <div class="island broadcast-island">
-                    <h3>Broadcast Center</h3>
-                    <form method="POST" action="{{ url_for('broadcast_message') }}">
+                <!-- Broadcast Center -->
+                <div class="island" style="grid-column: span 2;">
+                    <div class="island-header">
+                        <h3 class="island-title">
+                            <span class="material-symbols-outlined" style="color: var(--accent);">campaign</span>
+                            Broadcast Center
+                        </h3>
+                        <button id="inviteBtn" class="btn btn-primary btn-small">
+                            <span class="material-symbols-outlined" style="font-size: 0.9rem;">person_add</span>
+                            Generate Invite
+                        </button>
+                    </div>
+                    <form method="POST" action="{{ url_for('broadcast_message') }}" style="margin-top:12px;">
                         <div style="margin-bottom: 12px;">
-                            <label
-                                style="font-size: 12px; color: var(--text-muted); display: block; margin-bottom: 4px;">Target
-                                Recipients</label>
-                            <select name="class_id"
-                                style="width: 100%; background: var(--bg-tertiary); color: var(--text-primary); border: 1px solid var(--border); padding: 8px; border-radius: 6px; font-family: inherit;">
+                            <label class="form-label">Target Recipients</label>
+                            <select name="class_id" class="form-input">
                                 <option value="">All Students (Global)</option>
                                 {% for cid, cdata in classes.items() %}
                                 <option value="{{ cid }}">{{ cdata.get('name', cid) }}</option>
                                 {% endfor %}
                             </select>
                         </div>
-                        <textarea name="message" placeholder="Type your announcement here..." required></textarea>
-                        <button type="submit" class="btn-secondary" style="width: 100%;">Send Announcement</button>
+                        <textarea name="message" placeholder="Type your announcement here..." required
+                            class="form-input" style="height:100px; margin-bottom:12px; resize: vertical;"></textarea>
+                        <button type="submit" class="btn btn-secondary" style="width: 100%;">
+                            <span class="material-symbols-outlined" style="font-size: 0.9rem; margin-right: 0.5rem;">send</span>
+                            Send Announcement
+                        </button>
                     </form>
                 </div>
-
             </div>
         </main>
     </div>

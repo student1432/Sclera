@@ -5,6 +5,228 @@
     <meta charset="UTF-8">
     <title>All Students | StudyOS</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet" />
+    <style>
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 1.5rem;
+            padding: 2rem;
+        }
+        
+        .island {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 1.5rem;
+            padding: 1.5rem;
+            backdrop-filter: blur(12px);
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .island:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+        }
+        
+        .island-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 1.5rem;
+        }
+        
+        .island-title {
+            font-size: 1.3rem;
+            font-weight: 700;
+            margin: 0;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .students-table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
+            background: var(--bg-secondary);
+            border-radius: 1rem;
+            overflow: hidden;
+        }
+        
+        .students-table thead {
+            background: var(--bg-tertiary);
+        }
+        
+        .students-table th {
+            padding: 1rem;
+            text-align: left;
+            font-weight: 600;
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .students-table tbody tr {
+            border-bottom: 1px solid var(--border);
+            transition: all 0.2s ease;
+        }
+        
+        .students-table tbody tr:hover {
+            background: var(--bg-tertiary);
+            transform: translateX(4px);
+        }
+        
+        .students-table tbody tr:last-child {
+            border-bottom: none;
+        }
+        
+        .students-table td {
+            padding: 1rem;
+            font-size: 0.9rem;
+        }
+        
+        .progress-bar-mini {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            background: var(--bg-tertiary);
+            border-radius: 0.5rem;
+            padding: 0.25rem;
+            min-width: 120px;
+        }
+        
+        .progress-fill-mini {
+            height: 6px;
+            background: var(--accent);
+            border-radius: 0.25rem;
+            transition: width 0.3s ease;
+        }
+        
+        .progress-text-mini {
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: var(--text-muted);
+        }
+        
+        .btn {
+            padding: 0.4rem 0.8rem;
+            border-radius: 0.5rem;
+            border: none;
+            font-size: 0.75rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .btn-primary {
+            background: var(--accent);
+            color: var(--bg-secondary);
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+        }
+        
+        .btn-secondary {
+            background: var(--bg-tertiary);
+            color: var(--text-primary);
+            border: 1px solid var(--border);
+        }
+        
+        .btn-secondary:hover {
+            background: var(--bg-secondary);
+            border-color: var(--accent);
+        }
+        
+        .text-success {
+            color: #34d399;
+            font-weight: 600;
+        }
+        
+        .text-warning {
+            color: #f59e0b;
+            font-weight: 600;
+        }
+        
+        .text-muted {
+            color: var(--text-muted);
+        }
+        
+        .text-center {
+            text-align: center;
+        }
+        
+        .empty-state {
+            text-align: center;
+            padding: 3rem;
+            opacity: 0.6;
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+        
+        .stat-card {
+            background: var(--bg-tertiary);
+            border-radius: 1rem;
+            padding: 1.5rem;
+            text-align: center;
+            transition: all 0.2s ease;
+        }
+        
+        .stat-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+        }
+        
+        .stat-number {
+            font-size: 2rem;
+            font-weight: 800;
+            color: var(--accent);
+            margin-bottom: 0.5rem;
+        }
+        
+        .stat-label {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+        }
+        
+        @media (max-width: 768px) {
+            .dashboard-grid {
+                padding: 1rem;
+            }
+            
+            .students-table {
+                font-size: 0.8rem;
+            }
+            
+            .students-table th,
+            .students-table td {
+                padding: 0.75rem 0.5rem;
+            }
+            
+            .island-header {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 1rem;
+            }
+        }
+    </style>
 </head>
 
 <body>
@@ -15,63 +237,102 @@
     {% endif %}
 
     <div class="dashboard-layout">
-        <main class="main-content">
-            <span class="header-row">
-                <h1>All Students ({{ total_students }})
-                <a href="{{ url_for('institution_join') }}" class="btn-secondary" style="margin-left: 35em; font-size: 18px;">+ Add Student</a>
-                </h1>
-            </span>
+        <main class="main-content" style="margin-left: 0;">
+            <div class="content-header" style="padding: 2rem 2rem 1rem;">
+                <h1 style="font-size: 2.5rem; font-weight: 800; margin-bottom: 0.5rem;">All Students</h1>
+                <p style="opacity: 0.7; font-size: 1.1rem;">Managing {{ total_students }} students across {{ classes|length if classes else 0 }} classes</p>
+            </div>
 
-            <div class="students-table-container">
-                <table class="students-table">
-                    <thead>
-                        <tr>
-                            <th>Name</th>
-                            <th>Email</th>
-                            <th>Classes</th>
-                            <th>Progress</th>
-                            <th>Last Active</th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for student in students %}
-                        <tr>
-                            <td><strong>{{ student.get('name', 'Unknown') }}</strong></td>
-                            <td>{{ student.get('email', 'N/A') }}</td>
-                            <td>{{ student.get('class_names', 'No class') }}</td>
-                            <td>
-                                <div class="progress-bar-mini">
-                                    <div class="progress-fill-mini"
-                                        style="width: {{ student.get('progress_overall', 0) }}%"></div>
-                                    <span class="progress-text-mini">{{ student.get('progress_overall', 0) }}%</span>
-                                </div>
-                            </td>
-                            <td>
-                                {% set days = student.get('days_inactive', 999) %}
-                                {% if days == 999 %}
-                                <span class="text-muted">Never</span>
-                                {% elif days == 0 %}
-                                <span class="text-success">Today</span>
-                                {% elif days == 1 %}
-                                <span>Yesterday</span>
-                                {% elif days <= 7 %} <span>{{ days }} days ago</span>
-                                    {% else %}
-                                    <span class="text-warning">{{ days }} days ago</span>
-                                    {% endif %}
-                            </td>
-                            <td>
-                                <a href="{{ url_for('student_detail', student_uid=student.uid) }}"
-                                    class="btn-small">View</a>
-                            </td>
-                        </tr>
-                        {% else %}
-                        <tr>
-                            <td colspan="6" class="text-center text-muted">No students found.</td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
+            <div class="dashboard-grid">
+                <!-- Stats Overview -->
+                <div class="island">
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <div class="stat-number">{{ total_students }}</div>
+                            <div class="stat-label">Total Students</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-number">{{ students|map(attribute='class_ids')|map('length')|select('greaterthan', 0)|list|length if students else 0 }}</div>
+                            <div class="stat-label">Classes</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-number">{{ (students|map(attribute='progress_overall')|sum / students|length)|round(0) if students else 0 }}%</div>
+                            <div class="stat-label">Avg Progress</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-number">{{ (students|selectattr('days_inactive', 'le', 7)|list|length) if students else 0 }}</div>
+                            <div class="stat-label">Active This Week</div>
+                        </div>
+
+                    </div>
+                </div>
+
+                <!-- Students Table -->
+                <div class="island">
+                    <div class="island-header">
+                        <h3 class="island-title">
+                            <span class="material-symbols-outlined" style="color: var(--accent);">groups</span>
+                            Student Directory
+                        </h3>
+                    </div>
+                    
+                    <div class="students-table-container" style="overflow-x: auto; border-radius: 1rem;">
+                        <table class="students-table">
+                            <thead>
+                                <tr>
+                                    <th>Name</th>
+                                    <th>Email</th>
+                                    <th>Classes</th>
+                                    <th>Progress</th>
+                                    <th>Last Active</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for student in students %}
+                                <tr>
+                                    <td><strong>{{ student.get('name', 'Unknown') }}</strong></td>
+                                    <td>{{ student.get('email', 'N/A') }}</td>
+                                    <td>{{ student.get('class_names', 'No class') }}</td>
+                                    <td>
+                                        <div class="progress-bar-mini">
+                                            <div class="progress-fill-mini"
+                                                style="width: {{ student.get('progress_overall', 0) }}%;"></div>
+                                            <span class="progress-text-mini">{{ student.get('progress_overall', 0) }}%</span>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        {% set days = student.get('days_inactive', 999) %}
+                                        {% if days == 999 %}
+                                        <span class="text-muted">Never</span>
+                                        {% elif days == 0 %}
+                                        <span class="text-success">Today</span>
+                                        {% elif days == 1 %}
+                                        <span>Yesterday</span>
+                                        {% elif days <= 7 %} <span>{{ days }} days ago</span>
+                                            {% else %}
+                                            <span class="text-warning">{{ days }} days ago</span>
+                                            {% endif %}
+                                    </td>
+                                    <td>
+                                        <a href="{{ url_for('student_detail', student_uid=student.uid) }}"
+                                            class="btn btn-primary">View</a>
+                                    </td>
+                                </tr>
+                                {% else %}
+                                <tr>
+                                    <td colspan="6" class="text-center text-muted">
+                                        <div class="empty-state">
+                                            <span class="material-symbols-outlined" style="font-size: 3rem; opacity: 0.3; display: block; margin-bottom: 1rem;">group_off</span>
+                                            No students found.
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
             </div>
         </main>
     </div>

@@ -33,22 +33,55 @@
                             <h3>Class Details</h3>
                         </div>
 
-                        <form method="POST" action="{{ url_for('institution_teacher_create_class') }}">
+                        <form method="POST" action="{{ url_for('institution_teacher_create_class') }}" id="createClassForm">
                             <div class="form-group">
                                 <label for="name">Class Name *</label>
                                 <input type="text" id="name" name="name" required>
                             </div>
                             <div class="form-group">
-                                <label for="board">Board</label>
-                                <input type="text" id="board" name="board" placeholder="e.g. CBSE, ICSE, State">
+                                <label for="purpose">Purpose *</label>
+                                <select id="purpose" name="purpose" required onchange="updateSyllabusPreview()">
+                                    <option value="">Select Purpose</option>
+                                    <option value="school">School Studies</option>
+                                    <option value="exam">Exam Preparation</option>
+                                </select>
                             </div>
-                            <div class="form-group">
-                                <label for="grade">Grade</label>
-                                <input type="text" id="grade" name="grade" placeholder="e.g. 10, 12">
+                            <div class="form-group" id="boardGroup">
+                                <label for="board">Board *</label>
+                                <select id="board" name="board" onchange="updateGradeOptions()">
+                                    <option value="">Select Board</option>
+                                    <option value="CBSE">CBSE</option>
+                                    <option value="ICSE">ICSE</option>
+                                    <option value="IB">IB</option>
+                                    <option value="IGCSE">IGCSE</option>
+                                    <option value="State">State Board</option>
+                                </select>
                             </div>
-                            <div class="form-group">
-                                <label for="purpose">Purpose</label>
-                                <input type="text" id="purpose" name="purpose" placeholder="e.g. JEE, NEET, Board Prep">
+                            <div class="form-group" id="gradeGroup">
+                                <label for="grade">Grade/Class *</label>
+                                <select id="grade" name="grade" onchange="updatePurposeOptions()">
+                                    <option value="">Select Grade</option>
+                                </select>
+                            </div>
+                            
+                            <div class="form-group" id="subjectCombinationGroup" style="display: none;">
+                                <label for="subject_combination">Subject Combination</label>
+                                <select id="subject_combination" name="subject_combination" onchange="updateSyllabusPreview()">
+                                    <option value="">Select Subject Combination</option>
+                                    <option value="PCM">Physics, Chemistry, Mathematics</option>
+                                    <option value="PCB">Physics, Chemistry, Biology</option>
+                                    <option value="PCMB">Physics, Chemistry, Mathematics, Biology</option>
+                                    <option value="COMMAT">Commerce with Mathematics</option>
+                                    <option value="COM">Commerce without Mathematics</option>
+                                </select>
+                            </div>
+                            <div class="form-group" id="examTypeGroup" style="display: none;">
+                                <label for="exam_type">Exam Type</label>
+                                <select id="exam_type" name="exam_type" onchange="updateSyllabusPreview()">
+                                    <option value="">Select Exam</option>
+                                    <option value="JEE">JEE</option>
+                                    <option value="NEET">NEET</option>
+                                </select>
                             </div>
                             <button type="submit" class="btn btn-primary">Create Class & Generate Invite</button>
                         </form>
@@ -58,12 +91,13 @@
                 <div class="study-tools-panel">
                     <div class="study-island">
                         <div class="study-island-header">
-                            <h3>Invite Code</h3>
+                            <h3>Syllabus Preview</h3>
                         </div>
-                        <p style="color:var(--text-muted); font-size:14px; line-height:1.6;">
-                            After creating the class, a 6-character multi-use invite code will be shown. Share it with
-                            your students so they can join via their student dashboard.
-                        </p>
+                        <div id="syllabusPreview">
+                            <p style="color:var(--text-muted); font-size:14px; line-height:1.6;">
+                                Select board, grade, and purpose to preview the syllabus that will be used for this class.
+                            </p>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -76,6 +110,246 @@
             const savedTheme = localStorage.getItem("sclera-theme");
             if (savedTheme) root.setAttribute("data-theme", savedTheme);
         })();
+
+        // Grade options based on board
+        const gradeOptions = {
+            'CBSE': ['8', '9', '10', '11', '12'],
+            'ICSE': ['8', '9', '10'],
+            'IB': ['8', '9', '10'],
+            'IGCSE': ['8', '9', '10'],
+            'State': ['8', '9', '10', '11', '12']
+        };
+
+        // Syllabus data cache
+        let syllabusCache = {};
+
+        function updateGradeOptions() {
+            const board = document.getElementById('board').value;
+            const gradeSelect = document.getElementById('grade');
+            const purposeSelect = document.getElementById('purpose');
+            
+            // Clear current options
+            gradeSelect.innerHTML = '<option value="">Select Grade</option>';
+            purposeSelect.innerHTML = '<option value="">Select Purpose</option>';
+            
+            if (board) {
+                // Add grade options
+                gradeOptions[board].forEach(grade => {
+                    const option = document.createElement('option');
+                    option.value = grade;
+                    option.textContent = grade === '11' || grade === '12' ? `Class ${grade} (Select Subject Combination)` : `Class ${grade}`;
+                    gradeSelect.appendChild(option);
+                });
+            }
+            
+            // Hide exam type group
+            document.getElementById('examTypeGroup').style.display = 'none';
+            updateSyllabusPreview();
+        }
+
+        function updatePurposeOptions() {
+            const board = document.getElementById('board').value;
+            const grade = document.getElementById('grade').value;
+            const purpose = document.getElementById('purpose').value;
+            const purposeSelect = document.getElementById('purpose');
+            
+            purposeSelect.innerHTML = '<option value="">Select Purpose</option>';
+            
+            // Always show both options for all grades
+            purposeSelect.innerHTML += '<option value="school">School Studies</option>';
+            purposeSelect.innerHTML += '<option value="exam">Exam Preparation</option>';
+            
+            // Hide/show board and grade based on purpose
+            const boardGroup = document.getElementById('boardGroup');
+            const gradeGroup = document.getElementById('gradeGroup');
+            
+            if (purpose === 'exam') {
+                // Hide board and grade for exam purpose
+                boardGroup.style.display = 'none';
+                gradeGroup.style.display = 'none';
+            } else {
+                // Show board and grade for school purpose
+                boardGroup.style.display = 'block';
+                gradeGroup.style.display = 'block';
+            }
+            
+            // Hide conditional groups
+            document.getElementById('subjectCombinationGroup').style.display = 'none';
+            document.getElementById('examTypeGroup').style.display = 'none';
+            updateSyllabusPreview();
+        }
+
+        function updateSyllabusPreview() {
+            const board = document.getElementById('board').value;
+            const grade = document.getElementById('grade').value;
+            const purpose = document.getElementById('purpose').value;
+            const examType = document.getElementById('exam_type').value;
+            const subjectCombination = document.getElementById('subject_combination').value;
+            const previewDiv = document.getElementById('syllabusPreview');
+            
+            // Show/hide conditional groups
+            const subjectCombinationGroup = document.getElementById('subjectCombinationGroup');
+            const examTypeGroup = document.getElementById('examTypeGroup');
+            
+            if (purpose === 'school' && board === 'CBSE' && (grade === '11' || grade === '12')) {
+                subjectCombinationGroup.style.display = 'block';
+            } else {
+                subjectCombinationGroup.style.display = 'none';
+            }
+            
+            if (purpose === 'exam') {
+                examTypeGroup.style.display = 'block';
+            } else {
+                examTypeGroup.style.display = 'none';
+            }
+            
+            // Validation logic - different requirements for exam vs school
+            if (purpose === 'exam') {
+                if (!examType) {
+                    previewDiv.innerHTML = '<p style="color:var(--text-muted); font-size:14px; line-height:1.6;">Select exam type to preview the syllabus.</p>';
+                    return;
+                }
+            } else if (purpose === 'school') {
+                if (!board || !grade) {
+                    previewDiv.innerHTML = '<p style="color:var(--text-muted); font-size:14px; line-height:1.6;">Select board and grade to preview the syllabus.</p>';
+                    return;
+                }
+                if (board === 'CBSE' && (grade === '11' || grade === '12') && !subjectCombination) {
+                    previewDiv.innerHTML = '<p style="color:var(--text-muted); font-size:14px; line-height:1.6;">Select subject combination to preview the syllabus.</p>';
+                    return;
+                }
+            } else {
+                previewDiv.innerHTML = '<p style="color:var(--text-muted); font-size:14px; line-height:1.6;">Select purpose to preview the syllabus.</p>';
+                return;
+            }
+            
+            // Show loading
+            previewDiv.innerHTML = '<p style="color:var(--text-muted); font-size:14px; line-height:1.6;">Loading syllabus...</p>';
+            
+            // Build API URL
+            let apiUrl = `/api/syllabus?purpose=${purpose}`;
+            
+            if (purpose === 'school') {
+                apiUrl += `&board=${board}&grade=${grade}`;
+                if (board === 'CBSE' && (grade === '11' || grade === '12') && subjectCombination) {
+                    apiUrl += `&subject_combination=${subjectCombination}`;
+                }
+            } else if (purpose === 'exam') {
+                apiUrl += `&exam=${examType}`;
+                // Add grade as optional parameter for potential future use
+                if (grade) {
+                    apiUrl += `&grade=${grade}`;
+                }
+            }
+            
+            // Fetch syllabus data
+            const cacheKey = `${purpose}_${purpose === 'exam' ? examType : board}_${grade}_${subjectCombination || ''}`;
+            
+            if (syllabusCache[cacheKey]) {
+                displaySyllabus(syllabusCache[cacheKey]);
+                return;
+            }
+            
+            // Make API call to get syllabus
+            console.log('Fetching syllabus from:', apiUrl);
+            fetch(apiUrl)
+                .then(response => {
+                    console.log('Response status:', response.status);
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    console.log('Syllabus data received:', data);
+                    syllabusCache[cacheKey] = data;
+                    displaySyllabus(data);
+                })
+                .catch(error => {
+                    console.error('Error fetching syllabus:', error);
+                    previewDiv.innerHTML = `<p style="color:var(--error); font-size:14px; line-height:1.6;">Error loading syllabus: ${error.message}. Please try again.</p>`;
+                });
+        }
+
+        function displaySyllabus(syllabus) {
+            const previewDiv = document.getElementById('syllabusPreview');
+            
+            if (!syllabus || Object.keys(syllabus).length === 0) {
+                previewDiv.innerHTML = '<p style="color:var(--text-muted); font-size:14px; line-height:1.6;">No syllabus data available for the selected combination.</p>';
+                return;
+            }
+            
+            let html = '<div style="max-height: 400px; overflow-y: auto;">';
+            
+            for (const [subject, subjectData] of Object.entries(syllabus)) {
+                html += `<details style="margin-bottom: 12px; border: 1px solid var(--border); border-radius: 6px; padding: 8px;">`;
+                html += `<summary style="font-weight: 600; color: var(--text-primary); cursor: pointer;">${subject}</summary>`;
+                
+                if (subjectData.chapters && Object.keys(subjectData.chapters).length > 0) {
+                    html += '<div style="margin-top: 8px; padding-left: 16px;">';
+                    for (const [chapterName, chapterData] of Object.entries(subjectData.chapters)) {
+                        html += `<div style="padding: 4px 0; color: var(--text-secondary); font-size: 13px;">`;
+                        html += `• ${chapterName}`;
+                        if (chapterData.topics && chapterData.topics.length > 0) {
+                            html += `<div style="padding-left: 16px; margin-top: 2px; color: var(--text-muted); font-size: 12px;">`;
+                            html += chapterData.topics.slice(0, 3).join(', ');
+                            if (chapterData.topics.length > 3) {
+                                html += `... (+${chapterData.topics.length - 3} more)`;
+                            }
+                            html += '</div>';
+                        }
+                        html += '</div>';
+                    }
+                    html += '</div>';
+                }
+                
+                html += '</details>';
+            }
+            
+            html += '</div>';
+            html += '<p style="color:var(--text-muted); font-size:12px; margin-top: 12px;">This syllabus will be used for your class. You can manage chapter exclusions after creating the class.</p>';
+            
+            previewDiv.innerHTML = html;
+        }
+
+        // Handle form submission
+        document.getElementById('createClassForm').addEventListener('submit', function(e) {
+            const purpose = document.getElementById('purpose').value;
+            const examType = document.getElementById('exam_type').value;
+            const board = document.getElementById('board').value;
+            const grade = document.getElementById('grade').value;
+            const subjectCombination = document.getElementById('subject_combination').value;
+            
+            if (purpose === 'exam' && !examType) {
+                e.preventDefault();
+                alert('Please select an exam type for exam preparation.');
+                return;
+            }
+            
+            if (purpose === 'school') {
+                if (!board) {
+                    e.preventDefault();
+                    alert('Please select a board for school studies.');
+                    return;
+                }
+                if (!grade) {
+                    e.preventDefault();
+                    alert('Please select a grade for school studies.');
+                    return;
+                }
+                if (board === 'CBSE' && (grade === '11' || grade === '12') && !subjectCombination) {
+                    e.preventDefault();
+                    alert('Please select a subject combination for CBSE Class 11-12.');
+                    return;
+                }
+            }
+            
+            // For exam purpose, clear board and grade values before submission
+            if (purpose === 'exam') {
+                document.getElementById('board').removeAttribute('required');
+                document.getElementById('grade').removeAttribute('required');
+            }
+        });
     </script>
 </body>
 

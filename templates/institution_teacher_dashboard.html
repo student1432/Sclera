@@ -5,8 +5,53 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Teacher Dashboard | StudyOS</title>
-    <link rel="stylesheet" href="/styles.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet" />
     <style>
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1.5rem;
+            padding: 2rem;
+        }
+        
+        .island {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 1.5rem;
+            padding: 1.5rem;
+            backdrop-filter: blur(12px);
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .island:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+        }
+        
+        .island-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 1.5rem;
+        }
+        
+        .island-title {
+            font-size: 1.1rem;
+            font-weight: 700;
+            margin: 0;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .island-clickable {
+            cursor: pointer;
+        }
+        
         .heatmap-grid {
             display: grid;
             gap: 2px;
@@ -14,9 +59,15 @@
 
         .heatmap-cell {
             aspect-ratio: 1;
-            border-radius: 2px;
+            border-radius: 4px;
             background: var(--bg-tertiary);
             margin: 1px;
+            transition: all 0.2s ease;
+        }
+        
+        .heatmap-cell:hover {
+            transform: scale(1.2);
+            z-index: 10;
         }
 
         .heatmap-cell.level-1 {
@@ -41,140 +92,344 @@
         .heatmap-spacer {
             width: 4px;
         }
+        
+        .study-item {
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border);
+            border-radius: 1rem;
+            padding: 1rem;
+            margin-bottom: 0.75rem;
+            transition: all 0.2s ease;
+        }
+        
+        .study-item:hover {
+            transform: translateX(4px);
+            border-color: var(--accent);
+        }
+        
+        .study-item-body {
+            flex: 1;
+        }
+        
+        .study-item-title {
+            font-size: 0.95rem;
+            font-weight: 600;
+            margin-bottom: 0.25rem;
+        }
+        
+        .study-item-meta {
+            font-size: 0.8rem;
+            opacity: 0.7;
+        }
+        
+        .study-item-actions {
+            display: flex;
+            gap: 0.5rem;
+            align-items: center;
+        }
+        
+        .btn {
+            padding: 0.5rem 1rem;
+            border-radius: 0.75rem;
+            border: none;
+            font-size: 0.8rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .btn-primary {
+            background: var(--accent);
+            color: var(--bg-secondary);
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+        }
+        
+        .btn-secondary {
+            background: var(--bg-tertiary);
+            color: var(--text-primary);
+            border: 1px solid var(--border);
+        }
+        
+        .btn-secondary:hover {
+            background: var(--bg-secondary);
+            border-color: var(--accent);
+        }
+        
+        .btn-small {
+            padding: 0.4rem 0.8rem;
+            font-size: 0.75rem;
+        }
+        
+        .empty-state {
+            text-align: center;
+            padding: 2rem;
+            opacity: 0.6;
+        }
+        
+        .risk-list {
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        
+        .alert {
+            padding: 1rem;
+            border-radius: 1rem;
+            margin-bottom: 1rem;
+            border-left: 4px solid;
+        }
+        
+        .alert-success {
+            background: rgba(52, 211, 153, 0.1);
+            border-color: #34d399;
+            color: #34d399;
+        }
+        
+        .alert-error {
+            background: rgba(239, 68, 68, 0.1);
+            border-color: #ef4444;
+            color: #ef4444;
+        }
+        
+        .alert-info {
+            background: rgba(59, 130, 246, 0.1);
+            border-color: #3b82f6;
+            color: #3b82f6;
+        }
+        
+        .form-input {
+            width: 100%;
+            padding: 0.75rem;
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border);
+            border-radius: 0.75rem;
+            color: var(--text-primary);
+            font-family: inherit;
+            font-size: 0.9rem;
+            transition: all 0.2s ease;
+        }
+        
+        .form-input:focus {
+            outline: none;
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.1);
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+        
+        .stat-card {
+            text-align: center;
+            padding: 1rem;
+            background: var(--bg-tertiary);
+            border-radius: 0.75rem;
+        }
+        
+        .stat-number {
+            font-size: 1.8rem;
+            font-weight: 800;
+            color: var(--accent);
+        }
+        
+        .stat-label {
+            font-size: 0.7rem;
+            opacity: 0.7;
+            text-transform: uppercase;
+            font-weight: 600;
+        }
+        
+        @media (max-width: 768px) {
+            .dashboard-grid {
+                grid-template-columns: 1fr;
+                padding: 1rem;
+            }
+        }
     </style>
 </head>
 
 <body>
     {% include '_teacher_topnav.html' %}
     <div class="dashboard-layout">
-
-        <main class="main-content">
-            <div class="content-header">
-                <h1>Teacher Control Tower</h1>
-                <p>Managing {{ classes|length }} classes · ID: {{ institution_id }}</p>
+        <main class="main-content" style="margin-left: 0;">
+            <div class="content-header" style="padding: 2rem 2rem 1rem;">
+                <h1 style="font-size: 2.5rem; font-weight: 800; margin-bottom: 0.5rem;">Teacher Control Tower</h1>
+                <p style="opacity: 0.7; font-size: 1.1rem;">Managing {{ classes|length }} classes · ID: {{ institution_id }}</p>
             </div>
 
             {% with messages = get_flashed_messages(with_categories=true) %}
             {% if messages %}
-            {% for category, message in messages %}
-            <div class="alert alert-{{ category }}">{{ message }}</div>
-            {% endfor %}
+            <div style="padding: 0 2rem;">
+                {% for category, message in messages %}
+                <div class="alert alert-{{ category }}">{{ message }}</div>
+                {% endfor %}
+            </div>
             {% endif %}
             {% endwith %}
 
-            <div class="academic-split">
-                <div class="syllabus-panel">
-                    <!-- Behavioral Heatmap -->
-                    <div class="study-island heatmap-island">
-                        <div class="study-island-header">
-                            <h3>Classroom Behavior Heatmap (Last 30 Days)</h3>
+            <div class="dashboard-grid">
+                <!-- Stats Overview -->
+                <div class="island">
+                    <div class="island-header">
+                        <h3 class="island-title">
+                            <span class="material-symbols-outlined" style="color: var(--accent);">dashboard</span>
+                            Overview
+                        </h3>
+                    </div>
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <div class="stat-number">{{ classes|length }}</div>
+                            <div class="stat-label">Classes</div>
                         </div>
-                        <div id="heatmapContainer" class="heatmap-grid"
-                            style="grid-template-columns: 40px repeat(12, 1fr) 10px repeat(12, 1fr); margin-top:16px;">
-                            <div></div>
-                            {% for h in range(24) %}
-                            <div style="font-size: 8px; text-align: center; color: var(--text-muted);">{{ h }}</div>
-                            {% if h == 11 %} <div></div> {% endif %}
-                            {% endfor %}
-
-                            {% set days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'] %}
-                            {% for d in range(7) %}
-                            <div class="heatmap-label" style="font-size:10px; color:var(--text-muted);">{{ days[d] }}
-                            </div>
-                            {% for h in range(24) %}
-                            {% set key = d|string + "-" + h|string %}
-                            {% set count = heatmap_data.get(key, 0) %}
-                            {% set level = 0 %}
-                            {% if count > 5 %} {% set level = 3 %}
-                            {% elif count > 2 %} {% set level = 2 %}
-                            {% elif count > 0 %} {% set level = 1 %}
-                            {% endif %}
-                            <div class="heatmap-cell level-{{ level }}"
-                                title="{{ days[d] }} {{ h }}:00 - {{ count }} sessions"></div>
-                            {% if h == 11 %} <div class="heatmap-spacer"></div> {% endif %}
-                            {% endfor %}
-                            {% endfor %}
+                        <div class="stat-card">
+                            <div class="stat-number">{{ at_risk_students|length if at_risk_students else 0 }}</div>
+                            <div class="stat-label">At Risk</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-number">30</div>
+                            <div class="stat-label">Days Active</div>
                         </div>
                     </div>
+                </div>
 
-                    <!-- Classes List -->
-                    <div class="study-island">
-                        <div class="study-island-header">
-                            <h3>Active Classes</h3>
-                            <a href="{{ url_for('institution_teacher_create_class') }}"
-                                class="btn btn-primary btn-small">Add New Class</a>
+                <!-- Behavioral Heatmap -->
+                <div class="island" style="grid-column: span 2;">
+                    <div class="island-header">
+                        <h3 class="island-title">
+                            <span class="material-symbols-outlined" style="color: var(--accent);">schedule</span>
+                            Classroom Activity Heatmap
+                        </h3>
+                    </div>
+                    <div id="heatmapContainer" class="heatmap-grid"
+                        style="grid-template-columns: 40px repeat(12, 1fr) 10px repeat(12, 1fr); margin-top:16px;">
+                        <div></div>
+                        {% for h in range(24) %}
+                        <div style="font-size: 8px; text-align: center; color: var(--text-muted);">{{ h }}</div>
+                        {% if h == 11 %} <div></div> {% endif %}
+                        {% endfor %}
+
+                        {% set days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'] %}
+                        {% for d in range(7) %}
+                        <div class="heatmap-label" style="font-size:10px; color:var(--text-muted);">{{ days[d] }}
                         </div>
+                        {% for h in range(24) %}
+                        {% set key = d|string + "-" + h|string %}
+                        {% set count = heatmap_data.get(key, 0) %}
+                        {% set level = 0 %}
+                        {% if count > 5 %} {% set level = 3 %}
+                        {% elif count > 2 %} {% set level = 2 %}
+                        {% elif count > 0 %} {% set level = 1 %}
+                        {% endif %}
+                        <div class="heatmap-cell level-{{ level }}"
+                            title="{{ days[d] }} {{ h }}:00 - {{ count }} sessions"></div>
+                        {% if h == 11 %} <div class="heatmap-spacer"></div> {% endif %}
+                        {% endfor %}
+                        {% endfor %}
+                    </div>
+                </div>
 
-                        {% if classes %}
-                        {% for cls in classes %}
-                        <div class="study-item">
+                <!-- Active Classes -->
+                <div class="island" style="grid-column: span 2;">
+                    <div class="island-header">
+                        <h3 class="island-title">
+                            <span class="material-symbols-outlined" style="color: var(--accent);">class</span>
+                            Active Classes
+                        </h3>
+                        <a href="{{ url_for('institution_teacher_create_class') }}"
+                            class="btn btn-primary btn-small">
+                            <span class="material-symbols-outlined" style="font-size: 0.9rem;">add</span>
+                            Add New
+                        </a>
+                    </div>
+
+                    {% if classes %}
+                    {% for cls in classes %}
+                    <div class="study-item" style="display: flex; align-items: center; justify-content: space-between;">
+                        <div class="study-item-body">
+                            <div class="study-item-title">{{ cls.get('name', 'Class') }}</div>
+                            <div class="study-item-meta">{{ cls.get('board', '') }} · Grade {{ cls.get('grade', '') }} · Code: <strong>{{ cls.get('invite_code', 'N/A') }}</strong></div>
+                        </div>
+                        <div class="study-item-actions">
+                            <a href="{{ url_for('institution_teacher_upload_file', class_id=cls.id) }}" class="btn btn-small btn-primary">Upload Files</a>
+                            <a href="{{ url_for('manage_class_syllabus', class_id=cls.id) }}"
+                                class="btn btn-small btn-secondary">Syllabus</a>
+                        </div>
+                    </div>
+                    {% endfor %}
+                    {% else %}
+                    <div class="empty-state">
+                        <span class="material-symbols-outlined" style="font-size: 3rem; opacity: 0.3; display: block; margin-bottom: 1rem;">class</span>
+                        <p>No classes found. Create one to get started.</p>
+                    </div>
+                    {% endif %}
+                </div>
+
+                <!-- Students at Risk -->
+                <div class="island">
+                    <div class="island-header">
+                        <h3 class="island-title">
+                            <span class="material-symbols-outlined" style="color: #ef4444;">warning</span>
+                            Students at Risk (AI)
+                        </h3>
+                    </div>
+                    <div class="risk-list">
+                        {% if at_risk_students %}
+                        {% for student in at_risk_students %}
+                        <div class="study-item" style="border-left: 4px solid #ef4444; display: flex; align-items: center; justify-content: space-between;">
                             <div class="study-item-body">
-                                <div class="study-item-title">{{ cls.get('name', 'Class') }}</div>
-                                <div class="study-item-meta">{{ cls.get('board', '') }} · Grade {{ cls.get('grade', '')
-                                    }} · Code: <strong>{{ cls.get('invite_code', 'N/A') }}</strong></div>
+                                <div class="study-item-title">{{ student.name }}</div>
+                                <div class="study-item-meta">{{ student.class }} · {{ student.status.title() }}</div>
                             </div>
                             <div class="study-item-actions">
-                                <a href="{{ url_for('institution_teacher_upload_file', class_id=cls.id) }}" class="btn btn-small btn-primary">Upload Files</a>
-                                <a href="{{ url_for('manage_class_syllabus', class_id=cls.id) }}"
-                                    class="btn btn-small btn-secondary">Syllabus</a>
+                                <button class="btn btn-small btn-primary nudge-btn"
+                                    data-uid="{{ student.uid }}">
+                                    <span class="material-symbols-outlined" style="font-size: 0.9rem;">notifications</span>
+                                    Nudge
+                                </button>
                             </div>
                         </div>
                         {% endfor %}
                         {% else %}
                         <div class="empty-state">
-                            <p>No classes found. Create one to get started.</p>
+                            <span class="material-symbols-outlined" style="font-size: 3rem; opacity: 0.3; color: var(--accent); display: block; margin-bottom: 1rem;">check_circle</span>
+                            <p style="color:var(--text-muted); font-size:14px;">Great performance! No students are currently at risk.</p>
                         </div>
                         {% endif %}
                     </div>
                 </div>
 
-                <div class="study-tools-panel">
-                    <!-- Students at Risk -->
-                    <div class="study-island">
-                        <div class="study-island-header">
-                            <h3>Students at Risk (AI)</h3>
-                        </div>
-                        <div class="risk-list" style="margin-top:16px;">
-                            {% if at_risk_students %}
-                            {% for student in at_risk_students %}
-                            <div class="study-item" style="border-left: 4px solid var(--accent-red);">
-                                <div class="study-item-body">
-                                    <div class="study-item-title">{{ student.name }}</div>
-                                    <div class="study-item-meta">{{ student.class }} · {{ student.status.title() }}
-                                    </div>
-                                </div>
-                                <div class="study-item-actions">
-                                    <button class="btn btn-small btn-primary nudge-btn"
-                                        data-uid="{{ student.uid }}">Nudge</button>
-                                </div>
-                            </div>
+                <!-- Broadcast -->
+                <div class="island" style="grid-column: span 2;">
+                    <div class="island-header">
+                        <h3 class="island-title">
+                            <span class="material-symbols-outlined" style="color: var(--accent);">campaign</span>
+                            Class Broadcast
+                        </h3>
+                    </div>
+                    <form method="POST" action="{{ url_for('broadcast_message') }}" style="margin-top:12px;">
+                        <select name="class_id" class="form-input" style="margin-bottom:12px;">
+                            <option value="">Select a Class (Optional)</option>
+                            {% for cls in classes %}
+                            <option value="{{ cls.id }}">{{ cls.name }}</option>
                             {% endfor %}
-                            {% else %}
-                            <p style="color:var(--text-muted); font-size:14px;">Great performance! No students are
-                                currently at risk.</p>
-                            {% endif %}
-                        </div>
-                    </div>
-
-                    <!-- Broadcast -->
-                    <div class="study-island">
-                        <div class="study-island-header">
-                            <h3>Class Broadcast</h3>
-                        </div>
-                        <form method="POST" action="{{ url_for('broadcast_message') }}" style="margin-top:12px;">
-                            <select name="class_id"
-                                style="width:100%; padding:8px; background:var(--bg-secondary); border:1px solid var(--border); color:var(--text-primary); border-radius:6px; margin-bottom:12px; font-family:inherit;">
-                                <option value="">Select a Class (Optional)</option>
-                                {% for cls in classes %}
-                                <option value="{{ cls.id }}">{{ cls.name }}</option>
-                                {% endfor %}
-                            </select>
-                            <textarea name="message" placeholder="Type message for your students..." required
-                                style="width:100%; height:80px; background:var(--bg-secondary); border:1px solid var(--border); color:var(--text-primary); border-radius:8px; padding:12px; margin-bottom:12px; font-family:inherit;"></textarea>
-                            <button type="submit" class="btn btn-secondary" style="width:100%;">Send to
-                                Students</button>
-                        </form>
-                    </div>
+                        </select>
+                        <textarea name="message" placeholder="Type message for your students..." required
+                            class="form-input" style="height:80px; margin-bottom:12px; resize: vertical;"></textarea>
+                        <button type="submit" class="btn btn-secondary" style="width: 100%;">
+                            <span class="material-symbols-outlined" style="font-size: 0.9rem; margin-right: 0.5rem;">send</span>
+                            Send to Students
+                        </button>
+                    </form>
                 </div>
             </div>
         </main>
