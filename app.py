@@ -435,6 +435,11 @@ def index():
 @app.route('/landing')
 def landing():
     return render_template('landing.html')
+
+@app.route('/institution/gateway')
+def institution_gateway():
+    """Gateway page for institution users to select their role (Teacher/Admin)"""
+    return render_template('institution_gateway.html')
 @app.route('/signup', methods=['GET', 'POST'])
 @limiter.limit(config[env].RATE_LIMIT_SIGNUP)
 def signup():

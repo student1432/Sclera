@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sign Up - Sclera</title>
+    <title>Institution Gateway - Sclera</title>
     <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Newsreader:ital,opsz,wght@0,6..72,200..800;1,6..72,200..800&display=swap" rel="stylesheet"/>
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
@@ -29,7 +29,6 @@
     </script>
     <style type="text/tailwindcss">
         /* ===== CUSTOMIZATION GUIDE ===== */
-        /* Primary Colors: Change these to rebrand */
         :root {
             --primary-gradient-start: #6b7280;
             --primary-gradient-end: #374151;
@@ -37,8 +36,8 @@
             --accent-dark: #111111;
         }
 
-        /* Light Theme Colors */
-        html[data-theme="light"] {
+        /* ===== THEME VARIABLES ===== */
+        html {
             --bg-primary: #ffffff;
             --bg-secondary: #fafafa;
             --text-primary: #000000;
@@ -47,8 +46,7 @@
             --accent-primary: #000000;
             --text-muted: rgba(0, 0, 0, 0.6);
         }
-
-        /* Dark Theme Colors */
+        
         html[data-theme="dark"] {
             --bg-primary: #0a0a0a;
             --bg-secondary: #1a1a1a;
@@ -58,27 +56,10 @@
             --accent-primary: #111111;
             --text-muted: rgba(255, 255, 255, 0.7);
         }
-        /* ===== END THEME VARIABLES ===== */
 
+        html { scroll-behavior: smooth; }
+        
         @layer base {
-            html[data-theme="light"] {
-                --bg-primary: #ffffff;
-                --bg-secondary: #fafafa;
-                --text-primary: #000000;
-                --text-secondary: rgba(0, 0, 0, 0.7);
-                --border-color: rgba(0, 0, 0, 0.1);
-                --accent-primary: #008A00;
-            }
-            
-            html[data-theme="dark"] {
-                --bg-primary: #0a0a0a;
-                --bg-secondary: #1a1a1a;
-                --text-primary: #ffffff;
-                --text-secondary: rgba(255, 255, 255, 0.7);
-                --border-color: rgba(255, 255, 255, 0.1);
-                --accent-primary: #06402B;
-            }
-            
             body {
                 font-family: Inter, sans-serif;
                 background: linear-gradient(135deg, var(--primary-gradient-start) 0%, var(--primary-gradient-end) 100%);
@@ -86,10 +67,6 @@
                 overflow-x: hidden;
                 -webkit-font-smoothing: antialiased;
                 min-height: 100vh;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                padding: 2rem;
             }
         }
         
@@ -105,101 +82,160 @@
             border: 1px solid rgba(255, 255, 255, 0.1);
             box-shadow: 0 20px 50px rgba(255, 255, 255, 0.05);
         }
-        .gradient-bg {
-            background: linear-gradient(135deg, var(--primary-gradient-start) 0%, var(--primary-gradient-end) 100%);
+        
+        .glass-card:hover {
+            background: rgba(255, 255, 255, 0.6);
+            box-shadow: 0 30px 60px rgba(0, 0, 0, 0.04);
+            transform: translateY(-8px);
         }
+        html[data-theme="dark"] .glass-card:hover {
+            background: rgba(0, 0, 0, 0.6);
+            box-shadow: 0 30px 60px rgba(255, 255, 255, 0.04);
+        }
+        
         .btn-premium {
             @apply relative overflow-hidden px-12 py-6 rounded-full text-[11px] font-bold uppercase tracking-[0.3em] transition-all duration-500 ease-out;
         }
+        html[data-theme="light"] .btn-premium {
+            background: rgba(0, 0, 0, 0.9);
+            color: white;
+            border: 1px solid rgba(0, 0, 0, 0.1);
+        }
         html[data-theme="dark"] .btn-premium {
-            background: rgba(255, 255, 255, 0.1);
-            border: 1px solid var(--border-color);
+            background: rgba(255, 255, 255, 0.15);
+            border: 1px solid rgba(255, 255, 255, 0.2);
             color: white;
         }
-        html[data-theme="dark"] .btn-premium:hover {
-            background: rgba(255, 255, 255, 0.2);
-            border: 1px solid var(--border-color);
+        html[data-theme="light"] .btn-premium:hover {
+            background: rgba(0, 0, 0, 1);
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
         }
-        
+        html[data-theme="dark"] .btn-premium:hover {
+            background: rgba(255, 255, 255, 0.25);
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(255, 255, 255, 0.1);
+        }
+
         /* Theme-aware text colors */
         .theme-text-primary { color: var(--text-primary); }
         .theme-text-secondary { color: var(--text-secondary); }
-    </style>
+        
+        /* Fallback background */
+        .fallback-gradient {
+            background: linear-gradient(-45deg, #ffffff, #f0f0f0, #e2e8f0, #ffffff);
+            background-size: 400% 400%;
+            animation: gradientShift 15s ease infinite;
+        }
+        
+        html[data-theme="dark"] .fallback-gradient {
+            background: linear-gradient(-45deg, #4a5566, #6b7280, #8b9dc3, #4a5566);
+            background-size: 400% 400%;
+            animation: gradientShift 15s ease infinite;
+        }
+        
+        @keyframes gradientShift {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
     </style>
 </head>
+
 <body>
+<!-- Grainient WebGL background -->
 <div id="grainient-container" style="width: 100%; height: 100vh; position: fixed; top: 0; left: 0; z-index: -1;"></div>
 <div class="fallback-gradient fixed inset-0 -z-20" id="fallback-bg"></div>
-<div class="gradient-bg fixed inset-0 opacity-10"></div>
-<div class="min-h-screen flex items-center justify-center px-12 py-12">
-<div class="glass-card rounded-[3rem] p-16 max-w-lg w-full relative">
-<div class="absolute top-8 right-8">
-<button class="w-10 h-10 rounded-full border border-black/5 flex items-center justify-center hover:bg-black hover:text-white transition-all group" id="themeToggle">
-<span class="material-symbols-outlined text-[18px] group-hover:rotate-90 transition-transform duration-500">light_mode</span>
-</button>
-</div>
-<div class="text-center mb-12">
-<h1 class="font-serif text-4xl mb-4">Create Account</h1>
-<p class="theme-text-secondary">Join Sclera and start your academic journey</p>
-</div>
-            
-            {% with messages = get_flashed_messages(with_categories=true) %}
-                {% if messages %}
-                    {% for category, message in messages %}
-                        <div class="alert alert-{{ category }}">{{ message }}</div>
-                    {% endfor %}
-                {% endif %}
-            {% endwith %}
-            
-            <form method="POST" action="{{ url_for('signup') }}" class="space-y-6">
-                <div>
-                    <label for="name" class="block text-sm font-medium mb-2">Full Name</label>
-                    <input type="text" id="name" name="name" required 
-                           class="w-full px-4 py-3 rounded-lg border border-black/10 bg-white/50 backdrop-blur focus:outline-none focus:ring-2 focus:ring-black/20">
+
+<!-- Navigation -->
+<nav class="fixed top-0 left-0 w-full z-50 pointer-events-none">
+    <div class="max-w-6xl mx-auto px-6 sm:px-12 py-6 flex justify-between items-center pointer-events-auto">
+        <a href="{{ url_for('landing') }}" class="flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.4em] theme-text-secondary hover:theme-text-primary transition-colors">
+            <span class="material-symbols-outlined text-[18px]">arrow_back</span>
+            Back to Landing
+        </a>
+        
+        <button class="w-10 h-10 rounded-full border border-black/5 flex items-center justify-center hover:bg-black hover:text-white transition-all group" id="themeToggle">
+            <span class="material-symbols-outlined text-[18px] group-hover:rotate-90 transition-transform duration-500">light_mode</span>
+        </button>
+    </div>
+</nav>
+
+<!-- Main Content -->
+<div class="min-h-screen flex items-center justify-center px-12 pt-24">
+    <div class="max-w-4xl w-full">
+        <!-- Header -->
+        <div class="text-center mb-16">
+            <h1 class="font-serif text-5xl md:text-7xl mb-6 theme-text-primary">Institution Gateway</h1>
+            <p class="text-xl theme-text-secondary max-w-2xl mx-auto leading-relaxed">
+                Choose your role to access the institutional portal. Teachers and Administrators have different access levels and features.
+            </p>
+        </div>
+
+        <!-- Role Selection Cards -->
+        <div class="grid md:grid-cols-2 gap-8 mb-12">
+            <!-- Teacher Card -->
+            <div class="glass-card rounded-[3rem] p-12 text-center group cursor-pointer">
+                <div class="w-20 h-20 rounded-full bg-black/10 flex items-center justify-center mx-auto mb-8 group-hover:bg-black/20 transition-colors">
+                    <span class="material-symbols-outlined text-[36px] theme-text-primary">school</span>
                 </div>
                 
-                <div>
-                    <label for="age" class="block text-sm font-medium mb-2">Age</label>
-                    <input type="number" id="age" name="age" min="10" max="100" required 
-                           class="w-full px-4 py-3 rounded-lg border border-black/10 bg-white/50 backdrop-blur focus:outline-none focus:ring-2 focus:ring-black/20">
+                <h2 class="font-serif text-3xl mb-4 theme-text-primary">Teacher</h2>
+                <p class="theme-text-secondary mb-8 leading-relaxed">
+                    Manage classes, create assignments, track student progress, and communicate with your educational community.
+                </p>
+                
+                <div class="space-y-4">
+                    <a href="{{ url_for('login_teacher') }}" class="btn-premium w-full block">
+                        Teacher Login
+                    </a>
+                    <a href="{{ url_for('signup_teacher') }}" class="w-full block text-center theme-text-secondary hover:theme-text-primary transition-colors">
+                        No account? Create one
+                    </a>
+                </div>
+            </div>
+
+            <!-- Admin Card -->
+            <div class="glass-card rounded-[3rem] p-12 text-center group cursor-pointer">
+                <div class="w-20 h-20 rounded-full bg-black/10 flex items-center justify-center mx-auto mb-8 group-hover:bg-black/20 transition-colors">
+                    <span class="material-symbols-outlined text-[36px] theme-text-primary">admin_panel_settings</span>
                 </div>
                 
-                <div>
-                    <label for="email" class="block text-sm font-medium mb-2">Email</label>
-                    <input type="email" id="email" name="email" required 
-                           class="w-full px-4 py-3 rounded-lg border border-black/10 bg-white/50 backdrop-blur focus:outline-none focus:ring-2 focus:ring-black/20">
-                </div>
+                <h2 class="font-serif text-3xl mb-4 theme-text-primary">Administrator</h2>
+                <p class="theme-text-secondary mb-8 leading-relaxed">
+                    Oversee institutional operations, manage user accounts, configure system settings, and access comprehensive analytics.
+                </p>
                 
-                <div>
-                    <label for="password" class="block text-sm font-medium mb-2">Password</label>
-                    <input type="password" id="password" name="password" minlength="6" required 
-                           class="w-full px-4 py-3 rounded-lg border border-black/10 bg-white/50 backdrop-blur focus:outline-none focus:ring-2 focus:ring-black/20">
+                <div class="space-y-4">
+                    <a href="{{ url_for('login_admin') }}" class="btn-premium w-full block">
+                        Admin Login
+                    </a>
+                    <a href="{{ url_for('signup_admin') }}" class="w-full block text-center theme-text-secondary hover:theme-text-primary transition-colors">
+                        No account? Create one
+                    </a>
                 </div>
-                
-                <div>
-                    <label for="purpose" class="block text-sm font-medium mb-2">I am a student:</label>
-                    <select id="purpose" name="purpose" required 
-                           class="w-full px-4 py-3 rounded-lg border border-black/10 bg-white/50 backdrop-blur focus:outline-none focus:ring-2 focus:ring-black/20">
-                        <option value="">Select your purpose</option>
-                        <option value="school">Currently in School</option>
-                        <option value="exam_prep">Preparing for Competitive Exam</option>
-                    </select>
-                </div>
-                
-                <button type="submit" class="btn-premium bg-black text-white w-full hover:shadow-2xl hover:scale-105">
-Create Account
-</button>
-            </form>
-            
-            <p class="text-center mt-8 theme-text-secondary">
-Already have an account? 
-<a href="{{ url_for('login') }}" class="theme-text-primary hover:underline font-medium">Sign in here</a>
-</p>
-<div class="text-center mt-6 space-y-4">
-<a href="{{ url_for('landing') }}" class="theme-text-secondary hover:theme-text-primary text-sm block">← Back to landing</a>
+            </div>
+        </div>
+
+        <!-- Help Section -->
+        <div class="text-center">
+            <p class="theme-text-secondary mb-4">
+                Not sure which role to choose?
+            </p>
+            <div class="flex flex-col sm:flex-row gap-4 justify-center text-sm">
+                <a href="#" class="theme-text-secondary hover:theme-text-primary transition-colors">
+                    <span class="material-symbols-outlined text-[16px] align-middle mr-1">help_outline</span>
+                    Role Comparison
+                </a>
+                <a href="#" class="theme-text-secondary hover:theme-text-primary transition-colors">
+                    <span class="material-symbols-outlined text-[16px] align-middle mr-1">support_agent</span>
+                    Contact Support
+                </a>
+            </div>
+        </div>
+    </div>
 </div>
-</div>
-</div>
+
 <script>
         // Grainient Background Effect - Same as landing page
         const hexToRgb = hex => {
@@ -216,103 +252,92 @@ Already have an account?
         `;
 
         const fragmentShaderSource = `
-            precision highp float;
-            uniform vec2 u_resolution;
-            uniform float u_time;
-            uniform float u_timeSpeed;
-            uniform float u_colorBalance;
-            uniform float u_warpStrength;
-            uniform float u_warpFrequency;
-            uniform float u_warpSpeed;
-            uniform float u_warpAmplitude;
-            uniform float u_blendAngle;
-            uniform float u_blendSoftness;
-            uniform float u_rotationAmount;
-            uniform float u_noiseScale;
-            uniform float u_grainAmount;
-            uniform float u_grainScale;
-            uniform float u_grainAnimated;
-            uniform float u_contrast;
-            uniform float u_gamma;
-            uniform float u_saturation;
-            uniform vec2 u_centerOffset;
-            uniform float u_zoom;
-            uniform vec3 u_color1;
-            uniform vec3 u_color2;
-            uniform vec3 u_color3;
-            
-            #define S(a,b,t) smoothstep(a,b,t)
-            
-            mat2 Rot(float a){
-                float s=sin(a),c=cos(a);
-                return mat2(c,-s,s,c);
-            } 
-            
-            vec2 hash(vec2 p){
-                p=vec2(dot(p,vec2(2127.1,81.17)),dot(p,vec2(1269.5,283.37)));
-                return fract(sin(p)*43758.5453);
-            } 
-            
-            float noise(vec2 p){
-                vec2 i=floor(p),f=fract(p),u=f*f*(3.0-2.0*f);
-                float n=mix(
-                    mix(dot(-1.0+2.0*hash(i+vec2(0.0,0.0)),f-vec2(0.0,0.0)),
-                        dot(-1.0+2.0*hash(i+vec2(1.0,0.0)),f-vec2(1.0,0.0)),u.x),
-                    mix(dot(-1.0+2.0*hash(i+vec2(0.0,1.0)),f-vec2(0.0,1.0)),
-                        dot(-1.0+2.0*hash(i+vec2(1.0,1.0)),f-vec2(1.0,1.0)),u.x),u.y);
-                return 0.5+0.5*n;
-            }
-            
-            void main() {
-                float t = u_time * u_timeSpeed;
-                vec2 uv = gl_FragCoord.xy / u_resolution.xy;
-                float ratio = u_resolution.x / u_resolution.y;
-                vec2 tuv = uv - 0.5 + u_centerOffset;
-                tuv /= max(u_zoom, 0.001);
-
-                float degree = noise(vec2(t * 0.1, tuv.x * tuv.y) * u_noiseScale);
-                tuv.y *= 1.0 / ratio;
-                tuv *= Rot(radians((degree - 0.5) * u_rotationAmount + 180.0));
-                tuv.y *= ratio;
-
-                float frequency = u_warpFrequency;
-                float ws = max(u_warpStrength, 0.001);
-                float amplitude = u_warpAmplitude / ws;
-                float warpTime = t * u_warpSpeed;
-                tuv.x += sin(tuv.y * frequency + warpTime) / amplitude;
-                tuv.y += sin(tuv.x * (frequency * 1.5) + warpTime) / (amplitude * 0.5);
-
-                vec3 colLav = u_color1;
-                vec3 colOrg = u_color2;
-                vec3 colDark = u_color3;
-                float b = u_colorBalance;
-                float s = max(u_blendSoftness, 0.0);
-                mat2 blendRot = Rot(radians(u_blendAngle));
-                float blendX = (tuv * blendRot).x;
-                float edge0 = -0.3 - b - s;
-                float edge1 = 0.2 - b + s;
-                float v0 = 0.5 - b + s;
-                float v1 = -0.3 - b - s;
-                vec3 layer1 = mix(colDark, colOrg, S(edge0, edge1, blendX));
-                vec3 layer2 = mix(colOrg, colLav, S(edge0, edge1, blendX));
-                vec3 col = mix(layer1, layer2, S(v0, v1, tuv.y));
-
-                vec2 grainUv = uv * max(u_grainScale, 0.001);
-                if(u_grainAnimated > 0.5){
-                    grainUv += vec2(u_time * 0.05);
-                } 
-                float grain = fract(sin(dot(grainUv, vec2(12.9898, 78.233))) * 43758.5453);
-                col += (grain - 0.5) * u_grainAmount;
-
-                col = (col - 0.5) * u_contrast + 0.5;
-                float luma = dot(col, vec3(0.2126, 0.7152, 0.0722));
-                col = mix(vec3(luma), col, u_saturation);
-                col = pow(max(col, 0.0), vec3(1.0 / max(u_gamma, 0.001)));
-                col = clamp(col, 0.0, 1.0);
-
-                gl_FragColor = vec4(col, 1.0);
-            }
-        `;
+        precision highp float;
+        uniform vec2 u_resolution;
+        uniform float u_time;
+        uniform float u_timeSpeed;
+        uniform float u_colorBalance;
+        uniform float u_warpStrength;
+        uniform float u_warpFrequency;
+        uniform float u_warpSpeed;
+        uniform float u_warpAmplitude;
+        uniform float u_blendAngle;
+        uniform float u_blendSoftness;
+        uniform float u_rotationAmount;
+        uniform float u_noiseScale;
+        uniform float u_grainAmount;
+        uniform float u_grainScale;
+        uniform float u_grainAnimated;
+        uniform float u_contrast;
+        uniform float u_gamma;
+        uniform float u_saturation;
+        uniform vec2 u_centerOffset;
+        uniform float u_zoom;
+        uniform vec3 u_color1;
+        uniform vec3 u_color2;
+        uniform vec3 u_color3;
+        
+        #define S(a,b,t) smoothstep(a,b,t)
+        
+        mat2 Rot(float a){ float s=sin(a),c=cos(a); return mat2(c,-s,s,c); }
+        
+        vec2 hash(vec2 p){
+            p=vec2(dot(p,vec2(2127.1,81.17)),dot(p,vec2(1269.5,283.37)));
+            return fract(sin(p)*43758.5453);
+        }
+        
+        float noise(vec2 p){
+            vec2 i=floor(p),f=fract(p),u=f*f*(3.0-2.0*f);
+            float n=mix(
+                mix(dot(-1.0+2.0*hash(i+vec2(0.0,0.0)),f-vec2(0.0,0.0)),
+                    dot(-1.0+2.0*hash(i+vec2(1.0,0.0)),f-vec2(1.0,0.0)),u.x),
+                mix(dot(-1.0+2.0*hash(i+vec2(0.0,1.0)),f-vec2(0.0,1.0)),
+                    dot(-1.0+2.0*hash(i+vec2(1.0,1.0)),f-vec2(1.0,1.0)),u.x),u.y);
+            return 0.5+0.5*n;
+        }
+        
+        void main() {
+            float t = u_time * u_timeSpeed;
+            vec2 uv = gl_FragCoord.xy / u_resolution.xy;
+            float ratio = u_resolution.x / u_resolution.y;
+            vec2 tuv = uv - 0.5 + u_centerOffset;
+            tuv /= max(u_zoom, 0.001);
+            float degree = noise(vec2(t * 0.1, tuv.x * tuv.y) * u_noiseScale);
+            tuv.y *= 1.0 / ratio;
+            tuv *= Rot(radians((degree - 0.5) * u_rotationAmount + 180.0));
+            tuv.y *= ratio;
+            float frequency = u_warpFrequency;
+            float ws = max(u_warpStrength, 0.001);
+            float amplitude = u_warpAmplitude / ws;
+            float warpTime = t * u_warpSpeed;
+            tuv.x += sin(tuv.y * frequency + warpTime) / amplitude;
+            tuv.y += sin(tuv.x * (frequency * 1.5) + warpTime) / (amplitude * 0.5);
+            vec3 colLav = u_color1;
+            vec3 colOrg = u_color2;
+            vec3 colDark = u_color3;
+            float b = u_colorBalance;
+            float s = max(u_blendSoftness, 0.0);
+            mat2 blendRot = Rot(radians(u_blendAngle));
+            float blendX = (tuv * blendRot).x;
+            float edge0 = -0.3 - b - s;
+            float edge1 = 0.2 - b + s;
+            float v0 = 0.5 - b + s;
+            float v1 = -0.3 - b - s;
+            vec3 layer1 = mix(colDark, colOrg, S(edge0, edge1, blendX));
+            vec3 layer2 = mix(colOrg, colLav, S(edge0, edge1, blendX));
+            vec3 col = mix(layer1, layer2, S(v0, v1, tuv.y));
+            vec2 grainUv = uv * max(u_grainScale, 0.001);
+            if(u_grainAnimated > 0.5){ grainUv += vec2(u_time * 0.05); }
+            float grain = fract(sin(dot(grainUv, vec2(12.9898, 78.233))) * 43758.5453);
+            col += (grain - 0.5) * u_grainAmount;
+            col = (col - 0.5) * u_contrast + 0.5;
+            float luma = dot(col, vec3(0.2126, 0.7152, 0.0722));
+            col = mix(vec3(luma), col, u_saturation);
+            col = pow(max(col, 0.0), vec3(1.0 / max(u_gamma, 0.001)));
+            col = clamp(col, 0.0, 1.0);
+            gl_FragColor = vec4(col, 1.0);
+        }
+    `;
 
         function initGrainient() {
             console.log('Initializing Grainient with Vanilla WebGL...');
@@ -338,10 +363,20 @@ Already have an account?
                 const vertexShader = gl.createShader(gl.VERTEX_SHADER);
                 gl.shaderSource(vertexShader, vertexShaderSource);
                 gl.compileShader(vertexShader);
+                
+                if (!gl.getShaderParameter(vertexShader, gl.COMPILE_STATUS)) {
+                    const error = gl.getShaderInfoLog(vertexShader);
+                    throw new Error('Vertex shader compilation failed: ' + error);
+                }
 
                 const fragmentShader = gl.createShader(gl.FRAGMENT_SHADER);
                 gl.shaderSource(fragmentShader, fragmentShaderSource);
                 gl.compileShader(fragmentShader);
+                
+                if (!gl.getShaderParameter(fragmentShader, gl.COMPILE_STATUS)) {
+                    const error = gl.getShaderInfoLog(fragmentShader);
+                    throw new Error('Fragment shader compilation failed: ' + error);
+                }
 
                 // Create program
                 const program = gl.createProgram();
@@ -350,7 +385,8 @@ Already have an account?
                 gl.linkProgram(program);
 
                 if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
-                    throw new Error('Failed to link shader program');
+                    const error = gl.getProgramInfoLog(program);
+                    throw new Error('Failed to link shader program: ' + error);
                 }
 
                 // Set up geometry (full screen triangle)
@@ -489,5 +525,7 @@ Already have an account?
             themeIcon.className = 'material-symbols-outlined text-[20px] group-hover:rotate-90 transition-transform duration-500';
         }
     </script>
+
 </body>
+
 </html>

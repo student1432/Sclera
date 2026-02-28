@@ -736,8 +736,7 @@
 
             <!-- Nav links -->
             <a class="notch-nav-link hidden lg:flex" href="#features">Features</a>
-            <a class="notch-nav-link hidden lg:flex" href="#institutions">Institutions</a>
-            <a class="notch-nav-link hidden lg:flex" href="#enterprise">Enterprise</a>
+            <a class="notch-nav-link hidden lg:flex" href="#enterprise">Institution</a>
         </div>
 
         <!-- Actions pill: theme + login + signup -->
@@ -917,8 +916,8 @@
         </div>
     </section>
 
-    <!-- Enterprise section -->
-    <section class="section-spacing px-12" id="enterprise">
+    <!-- Institution section -->
+    <section class="section-spacing px-12" id="institution">
         <div class="max-w-7xl mx-auto glass-card rounded-[5rem] p-24 lg:p-40 relative overflow-hidden">
             <div class="absolute inset-0 bg-gradient-to-br from-black/[0.01] to-transparent pointer-events-none"></div>
             <div class="relative z-10 text-center">
@@ -951,7 +950,7 @@
                     </div>
                 </div>
                 <div class="flex flex-col sm:flex-row gap-8 justify-center items-center">
-                    <a href="{{ url_for('login') }}" class="btn-premium bg-black text-white px-20 py-6 text-sm hover:scale-105 transition-transform">Request Institutional Access</a>
+                    <a href="{{ url_for('institution_gateway') }}" class="btn-premium bg-black text-white px-20 py-6 text-sm hover:scale-105 transition-transform">Go to Institution Gateway</a>
                     <a href="#features" class="btn-premium border border-black/10 px-20 py-6 text-sm hover:scale-105 transition-transform">See All Features</a>
                 </div>
             </div>

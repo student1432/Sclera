@@ -32,10 +32,10 @@
         /* ===== CUSTOMIZATION GUIDE ===== */
         /* Primary Colors: Change these to rebrand */
         :root {
-            --primary-gradient-start: #6b7280; /* Slate grey */
-            --primary-gradient-end: #374151; /* Dark slate */
-            --accent-color: #008A00; /* Vibrant Emerald */
-            --accent-dark: #06402B; /* Deep Forest */
+            --primary-gradient-start: #6b7280;
+            --primary-gradient-end: #374151;
+            --accent-color: #000000;
+            --accent-dark: #111111;
         }
 
         /* Light Theme Colors */
@@ -43,9 +43,10 @@
             --bg-primary: #ffffff;
             --bg-secondary: #fafafa;
             --text-primary: #000000;
-            --text-secondary: rgba(0, 0, 0, 0.7);
-            --border-color: rgba(0, 0, 0, 0.1);
-            --accent-primary: #008A00;
+            --text-secondary: rgba(0, 0, 0, 0.8);
+            --border-color: rgba(0, 0, 0, 0.15);
+            --accent-primary: #000000;
+            --text-muted: rgba(0, 0, 0, 0.6);
         }
 
         /* Dark Theme Colors */
@@ -53,9 +54,10 @@
             --bg-primary: #0a0a0a;
             --bg-secondary: #1a1a1a;
             --text-primary: #ffffff;
-            --text-secondary: rgba(255, 255, 255, 0.7);
-            --border-color: rgba(255, 255, 255, 0.1);
-            --accent-primary: #06402B;
+            --text-secondary: rgba(255, 255, 255, 0.9);
+            --border-color: rgba(255, 255, 255, 0.2);
+            --accent-primary: #111111;
+            --text-muted: rgba(255, 255, 255, 0.7);
         }
         /* ===== END THEME VARIABLES ===== */
 
@@ -206,10 +208,9 @@ Create Institution
 </form>
 
 <div class="text-center mt-8 space-y-4">
-<p class="theme-text-secondary">Already have an admin account? <a href="{{ url_for('login_admin') }}" class="text-black hover:underline font-medium">Login here</a></p>
-<p class="theme-text-secondary">Teacher? <a href="{{ url_for('signup_teacher') }}" class="text-black hover:underline font-medium">Teacher signup</a></p>
-<p class="theme-text-secondary">Student? <a href="{{ url_for('signup') }}" class="text-black hover:underline font-medium">Student signup</a></p>
-<a href="{{ url_for('landing') }}" class="theme-text-secondary hover:text-black text-sm block">← Back to landing</a>
+    <p class="theme-text-secondary">Already have an admin account? <a href="{{ url_for('login_admin') }}" class="theme-text-primary hover:underline font-medium">Login here</a></p>
+    <p class="theme-text-secondary">Wrong role? <a href="{{ url_for('institution_gateway') }}" class="theme-text-primary hover:underline font-medium">Back to gateway</a></p>
+    <a href="{{ url_for('landing') }}" class="theme-text-secondary hover:theme-text-primary text-sm block">← Back to landing</a>
 </div>
 </div>
 </div>
@@ -395,13 +396,13 @@ Create Institution
                     // Set theme-specific colors
                     let color1, color2, color3;
                     if (currentTheme === 'dark') {
-                        color1 = hexToRgb('#4a5566');  // Dark grey
-                        color2 = hexToRgb('#6b7280');  // Medium dark
-                        color3 = hexToRgb('#8b9dc3');  // Lighter dark
+                        color1 = hexToRgb('#000000');  // Pure black
+                        color2 = hexToRgb('#374151');  // Medium dark
+                        color3 = hexToRgb('#6b7280');  // Dark grey
                     } else {
                         color1 = hexToRgb('#ffffff');  // Pure white
-                        color2 = hexToRgb('#d1d5db');  // Medium grey
-                        color3 = hexToRgb('#94a3b8');  // Darker grey for contrast
+                        color2 = hexToRgb('#9ca3af');  // Medium grey
+                        color3 = hexToRgb('#e5e7eb');  // Light grey
                     }
                     
                     // Set all your parameters
@@ -409,15 +410,15 @@ Create Institution
                     gl.uniform1f(gl.getUniformLocation(program, 'u_colorBalance'), 0.0);
                     gl.uniform1f(gl.getUniformLocation(program, 'u_warpStrength'), 1.5);
                     gl.uniform1f(gl.getUniformLocation(program, 'u_warpFrequency'), 3.0);
-                    gl.uniform1f(gl.getUniformLocation(program, 'u_warpSpeed'), 3.0);
+                    gl.uniform1f(gl.getUniformLocation(program, 'u_warpSpeed'), 6.0);
                     gl.uniform1f(gl.getUniformLocation(program, 'u_warpAmplitude'), 30.0);
                     gl.uniform1f(gl.getUniformLocation(program, 'u_blendAngle'), 0.0);
-                    gl.uniform1f(gl.getUniformLocation(program, 'u_blendSoftness'), 0.05);
+                    gl.uniform1f(gl.getUniformLocation(program, 'u_blendSoftness'), 0.8);
                     gl.uniform1f(gl.getUniformLocation(program, 'u_rotationAmount'), 300.0);
                     gl.uniform1f(gl.getUniformLocation(program, 'u_noiseScale'), 1.5);
                     gl.uniform1f(gl.getUniformLocation(program, 'u_grainAmount'), 0.25);
                     gl.uniform1f(gl.getUniformLocation(program, 'u_grainScale'), 3.0);
-                    gl.uniform1f(gl.getUniformLocation(program, 'u_grainAnimated'), 0.0);
+                    gl.uniform1f(gl.getUniformLocation(program, 'u_grainAnimated'), 0.01);
                     gl.uniform1f(gl.getUniformLocation(program, 'u_contrast'), 1.2);
                     gl.uniform1f(gl.getUniformLocation(program, 'u_gamma'), 1.0);
                     gl.uniform1f(gl.getUniformLocation(program, 'u_saturation'), 1.0);

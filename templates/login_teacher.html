@@ -32,10 +32,10 @@
         /* ===== CUSTOMIZATION GUIDE ===== */
         /* Primary Colors: Change these to rebrand */
         :root {
-            --primary-gradient-start: #6b7280; /* Slate grey */
-            --primary-gradient-end: #374151; /* Dark slate */
-            --accent-color: #008A00; /* Vibrant Emerald */
-            --accent-dark: #06402B; /* Deep Forest */
+            --primary-gradient-start: #6b7280;
+            --primary-gradient-end: #374151;
+            --accent-color: #000000;
+            --accent-dark: #111111;
         }
 
         /* Light Theme Colors */
@@ -43,9 +43,10 @@
             --bg-primary: #ffffff;
             --bg-secondary: #fafafa;
             --text-primary: #000000;
-            --text-secondary: rgba(0, 0, 0, 0.7);
-            --border-color: rgba(0, 0, 0, 0.1);
-            --accent-primary: #008A00;
+            --text-secondary: rgba(0, 0, 0, 0.8);
+            --border-color: rgba(0, 0, 0, 0.15);
+            --accent-primary: #000000;
+            --text-muted: rgba(0, 0, 0, 0.6);
         }
 
         /* Dark Theme Colors */
@@ -53,9 +54,10 @@
             --bg-primary: #0a0a0a;
             --bg-secondary: #1a1a1a;
             --text-primary: #ffffff;
-            --text-secondary: rgba(255, 255, 255, 0.7);
-            --border-color: rgba(255, 255, 255, 0.1);
-            --accent-primary: #06402B;
+            --text-secondary: rgba(255, 255, 255, 0.9);
+            --border-color: rgba(255, 255, 255, 0.2);
+            --accent-primary: #111111;
+            --text-muted: rgba(255, 255, 255, 0.7);
         }
         /* ===== END THEME VARIABLES ===== */
 
@@ -64,18 +66,20 @@
                 --bg-primary: #ffffff;
                 --bg-secondary: #fafafa;
                 --text-primary: #000000;
-                --text-secondary: rgba(0, 0, 0, 0.7);
-                --border-color: rgba(0, 0, 0, 0.1);
-                --accent-primary: #008A00;
+                --text-secondary: rgba(0, 0, 0, 0.8);
+                --border-color: rgba(0, 0, 0, 0.15);
+                --accent-primary: #000000;
+                --text-muted: rgba(0, 0, 0, 0.6);
             }
             
             html[data-theme="dark"] {
                 --bg-primary: #0a0a0a;
                 --bg-secondary: #1a1a1a;
                 --text-primary: #ffffff;
-                --text-secondary: rgba(255, 255, 255, 0.7);
-                --border-color: rgba(255, 255, 255, 0.1);
-                --accent-primary: #06402B;
+                --text-secondary: rgba(255, 255, 255, 0.9);
+                --border-color: rgba(255, 255, 255, 0.2);
+                --accent-primary: #111111;
+                --text-muted: rgba(255, 255, 255, 0.7);
             }
             
             body {
@@ -187,10 +191,9 @@ Login
 </form>
 
 <div class="text-center mt-8 space-y-4">
-<p class="theme-text-secondary">No teacher account? <a href="{{ url_for('signup_teacher') }}" class="text-black hover:underline font-medium">Create one</a></p>
-<p class="theme-text-secondary">Admin? <a href="{{ url_for('login_admin') }}" class="text-black hover:underline font-medium">Admin login</a></p>
-<p class="theme-text-secondary">Student? <a href="{{ url_for('login') }}" class="text-black hover:underline font-medium">Student login</a></p>
-<a href="{{ url_for('landing') }}" class="theme-text-secondary hover:text-black text-sm block">← Back to landing</a>
+    <p class="theme-text-secondary">No teacher account? <a href="{{ url_for('signup_teacher') }}" class="theme-text-primary hover:underline font-medium">Create one</a></p>
+    <p class="theme-text-secondary">Wrong role? <a href="{{ url_for('institution_gateway') }}" class="theme-text-primary hover:underline font-medium">Back to gateway</a></p>
+    <a href="{{ url_for('landing') }}" class="theme-text-secondary hover:theme-text-primary text-sm block">← Back to landing</a>
 </div>
 </div>
 </div>
@@ -211,102 +214,92 @@ Login
         `;
 
         const fragmentShaderSource = `
-            precision highp float;
-            uniform vec2 u_resolution;
-            uniform float u_time;
-            uniform float u_timeSpeed;
-            uniform float u_colorBalance;
-            uniform float u_warpStrength;
-            uniform float u_warpFrequency;
-            uniform float u_warpSpeed;
-            uniform float u_warpAmplitude;
-            uniform float u_blendAngle;
-            uniform float u_blendSoftness;
-            uniform float u_rotationAmount;
-            uniform float u_noiseScale;
-            uniform float u_grainAmount;
-            uniform float u_grainScale;
-            uniform float u_grainAnimated;
-            uniform float u_contrast;
-            uniform float u_gamma;
-            uniform float u_saturation;
-            uniform vec2 u_centerOffset;
-            uniform float u_zoom;
-            uniform vec3 u_color1;
-            uniform vec3 u_color2;
-            uniform vec3 u_color3;
-            
-            #define S(a,b,t) smoothstep(a,b,t)
-            
-            mat2 Rot(float a){
-                float s=sin(a),c=cos(a);
-                return mat2(c,-s,s,c);
-            } 
-            
-            vec2 hash(vec2 p){
-                p=vec2(dot(p,vec2(2127.1,81.17)),dot(p,vec2(1269.5,283.37)));
-                return fract(sin(p)*43758.5453);
-            } 
-            
-            float noise(vec2 p){
-                vec2 i=floor(p),f=fract(p),u=f*f*(3.0-2.0*f);
-                float n=mix(
-                    mix(dot(-1.0+2.0*hash(i+vec2(0.0,0.0)),f-vec2(0.0,0.0)),
-                        dot(-1.0+2.0*hash(i+vec2(1.0,0.0)),f-vec2(1.0,0.0)),u.x),
-                    mix(dot(-1.0+2.0*hash(i+vec2(0.0,1.0)),f-vec2(1.0,1.0)),u.x),u.y);
-                return 0.5+0.5*n;
-            }
-            
-            void main() {
-                float t = u_time * u_timeSpeed;
-                vec2 uv = gl_FragCoord.xy / u_resolution.xy;
-                float ratio = u_resolution.x / u_resolution.y;
-                vec2 tuv = uv - 0.5 + u_centerOffset;
-                tuv /= max(u_zoom, 0.001);
-
-                float degree = noise(vec2(t * 0.1, tuv.x * tuv.y) * u_noiseScale);
-                tuv.y *= 1.0 / ratio;
-                tuv *= Rot(radians((degree - 0.5) * u_rotationAmount + 180.0));
-                tuv.y *= ratio;
-
-                float frequency = u_warpFrequency;
-                float ws = max(u_warpStrength, 0.001);
-                float amplitude = u_warpAmplitude / ws;
-                float warpTime = t * u_warpSpeed;
-                tuv.x += sin(tuv.y * frequency + warpTime) / amplitude;
-                tuv.y += sin(tuv.x * (frequency * 1.5) + warpTime) / (amplitude * 0.5);
-
-                vec3 colLav = u_color1;
-                vec3 colOrg = u_color2;
-                vec3 colDark = u_color3;
-                float b = u_colorBalance;
-                float s = max(u_blendSoftness, 0.0);
-                mat2 blendRot = Rot(radians(u_blendAngle));
-                float blendX = (tuv * blendRot).x;
-                float edge0 = -0.3 - b - s;
-                float edge1 = 0.2 - b + s;
-                float v0 = 0.5 - b + s;
-                float v1 = -0.3 - b - s;
-                vec3 layer1 = mix(colDark, colOrg, S(edge0, edge1, blendX));
-                vec3 layer2 = mix(colOrg, colLav, S(edge0, edge1, blendX));
-                vec3 col = mix(layer1, layer2, S(v0, v1, tuv.y));
-
-                vec2 grainUv = uv * max(u_grainScale, 0.001);
-                if(u_grainAnimated > 0.5){
-                    grainUv += vec2(u_time * 0.05);
-                } 
-                float grain = fract(sin(dot(grainUv, vec2(12.9898, 78.233))) * 43758.5453);
-                col += (grain - 0.5) * u_grainAmount;
-
-                col = (col - 0.5) * u_contrast + 0.5;
-                float luma = dot(col, vec3(0.2126, 0.7152, 0.0722));
-                col = mix(vec3(luma), col, u_saturation);
-                col = pow(max(col, 0.0), vec3(1.0 / max(u_gamma, 0.001)));
-                col = clamp(col, 0.0, 1.0);
-
-                gl_FragColor = vec4(col, 1.0);
-            }
-        `;
+        precision highp float;
+        uniform vec2 u_resolution;
+        uniform float u_time;
+        uniform float u_timeSpeed;
+        uniform float u_colorBalance;
+        uniform float u_warpStrength;
+        uniform float u_warpFrequency;
+        uniform float u_warpSpeed;
+        uniform float u_warpAmplitude;
+        uniform float u_blendAngle;
+        uniform float u_blendSoftness;
+        uniform float u_rotationAmount;
+        uniform float u_noiseScale;
+        uniform float u_grainAmount;
+        uniform float u_grainScale;
+        uniform float u_grainAnimated;
+        uniform float u_contrast;
+        uniform float u_gamma;
+        uniform float u_saturation;
+        uniform vec2 u_centerOffset;
+        uniform float u_zoom;
+        uniform vec3 u_color1;
+        uniform vec3 u_color2;
+        uniform vec3 u_color3;
+        
+        #define S(a,b,t) smoothstep(a,b,t)
+        
+        mat2 Rot(float a){ float s=sin(a),c=cos(a); return mat2(c,-s,s,c); }
+        
+        vec2 hash(vec2 p){
+            p=vec2(dot(p,vec2(2127.1,81.17)),dot(p,vec2(1269.5,283.37)));
+            return fract(sin(p)*43758.5453);
+        }
+        
+        float noise(vec2 p){
+            vec2 i=floor(p),f=fract(p),u=f*f*(3.0-2.0*f);
+            float n=mix(
+                mix(dot(-1.0+2.0*hash(i+vec2(0.0,0.0)),f-vec2(0.0,0.0)),
+                    dot(-1.0+2.0*hash(i+vec2(1.0,0.0)),f-vec2(1.0,0.0)),u.x),
+                mix(dot(-1.0+2.0*hash(i+vec2(0.0,1.0)),f-vec2(0.0,1.0)),
+                    dot(-1.0+2.0*hash(i+vec2(1.0,1.0)),f-vec2(1.0,1.0)),u.x),u.y);
+            return 0.5+0.5*n;
+        }
+        
+        void main() {
+            float t = u_time * u_timeSpeed;
+            vec2 uv = gl_FragCoord.xy / u_resolution.xy;
+            float ratio = u_resolution.x / u_resolution.y;
+            vec2 tuv = uv - 0.5 + u_centerOffset;
+            tuv /= max(u_zoom, 0.001);
+            float degree = noise(vec2(t * 0.1, tuv.x * tuv.y) * u_noiseScale);
+            tuv.y *= 1.0 / ratio;
+            tuv *= Rot(radians((degree - 0.5) * u_rotationAmount + 180.0));
+            tuv.y *= ratio;
+            float frequency = u_warpFrequency;
+            float ws = max(u_warpStrength, 0.001);
+            float amplitude = u_warpAmplitude / ws;
+            float warpTime = t * u_warpSpeed;
+            tuv.x += sin(tuv.y * frequency + warpTime) / amplitude;
+            tuv.y += sin(tuv.x * (frequency * 1.5) + warpTime) / (amplitude * 0.5);
+            vec3 colLav = u_color1;
+            vec3 colOrg = u_color2;
+            vec3 colDark = u_color3;
+            float b = u_colorBalance;
+            float s = max(u_blendSoftness, 0.0);
+            mat2 blendRot = Rot(radians(u_blendAngle));
+            float blendX = (tuv * blendRot).x;
+            float edge0 = -0.3 - b - s;
+            float edge1 = 0.2 - b + s;
+            float v0 = 0.5 - b + s;
+            float v1 = -0.3 - b - s;
+            vec3 layer1 = mix(colDark, colOrg, S(edge0, edge1, blendX));
+            vec3 layer2 = mix(colOrg, colLav, S(edge0, edge1, blendX));
+            vec3 col = mix(layer1, layer2, S(v0, v1, tuv.y));
+            vec2 grainUv = uv * max(u_grainScale, 0.001);
+            if(u_grainAnimated > 0.5){ grainUv += vec2(u_time * 0.05); }
+            float grain = fract(sin(dot(grainUv, vec2(12.9898, 78.233))) * 43758.5453);
+            col += (grain - 0.5) * u_grainAmount;
+            col = (col - 0.5) * u_contrast + 0.5;
+            float luma = dot(col, vec3(0.2126, 0.7152, 0.0722));
+            col = mix(vec3(luma), col, u_saturation);
+            col = pow(max(col, 0.0), vec3(1.0 / max(u_gamma, 0.001)));
+            col = clamp(col, 0.0, 1.0);
+            gl_FragColor = vec4(col, 1.0);
+        }
+    `;
 
         function initGrainient() {
             console.log('Initializing Grainient with Vanilla WebGL...');
@@ -332,10 +325,20 @@ Login
                 const vertexShader = gl.createShader(gl.VERTEX_SHADER);
                 gl.shaderSource(vertexShader, vertexShaderSource);
                 gl.compileShader(vertexShader);
+                
+                if (!gl.getShaderParameter(vertexShader, gl.COMPILE_STATUS)) {
+                    const error = gl.getShaderInfoLog(vertexShader);
+                    throw new Error('Vertex shader compilation failed: ' + error);
+                }
 
                 const fragmentShader = gl.createShader(gl.FRAGMENT_SHADER);
                 gl.shaderSource(fragmentShader, fragmentShaderSource);
                 gl.compileShader(fragmentShader);
+                
+                if (!gl.getShaderParameter(fragmentShader, gl.COMPILE_STATUS)) {
+                    const error = gl.getShaderInfoLog(fragmentShader);
+                    throw new Error('Fragment shader compilation failed: ' + error);
+                }
 
                 // Create program
                 const program = gl.createProgram();
@@ -344,7 +347,8 @@ Login
                 gl.linkProgram(program);
 
                 if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
-                    throw new Error('Failed to link shader program');
+                    const error = gl.getProgramInfoLog(program);
+                    throw new Error('Failed to link shader program: ' + error);
                 }
 
                 // Set up geometry (full screen triangle)
@@ -375,38 +379,38 @@ Login
                     // Set theme-specific colors
                     let color1, color2, color3;
                     if (currentTheme === 'dark') {
-                        color1 = hexToRgb('#4a5566');  // Dark grey
-                        color2 = hexToRgb('#6b7280');  // Medium dark
-                        color3 = hexToRgb('#8b9dc3');  // Lighter dark
+                        color1 = hexToRgb('#000000');  // Pure black
+                        color2 = hexToRgb('#374151');  // Medium dark
+                        color3 = hexToRgb('#6b7280');  // Dark grey
                     } else {
                         color1 = hexToRgb('#ffffff');  // Pure white
-                        color2 = hexToRgb('#d1d5db');  // Medium grey
-                        color3 = hexToRgb('#94a3b8');  // Darker grey for contrast
+                        color2 = hexToRgb('#9ca3af');  // Medium grey
+                        color3 = hexToRgb('#e5e7eb');  // Light grey
                     }
                     
                     // Set all your parameters
-                    gl.uniform1f(gl.getUniformLocation(program, 'u_timeSpeed'), 0.5);
-                    gl.uniform1f(gl.getUniformLocation(program, 'u_colorBalance'), 0.0);
-                    gl.uniform1f(gl.getUniformLocation(program, 'u_warpStrength'), 1.5);
-                    gl.uniform1f(gl.getUniformLocation(program, 'u_warpFrequency'), 3.0);
-                    gl.uniform1f(gl.getUniformLocation(program, 'u_warpSpeed'), 3.0);
-                    gl.uniform1f(gl.getUniformLocation(program, 'u_warpAmplitude'), 30.0);
-                    gl.uniform1f(gl.getUniformLocation(program, 'u_blendAngle'), 0.0);
-                    gl.uniform1f(gl.getUniformLocation(program, 'u_blendSoftness'), 0.05);
-                    gl.uniform1f(gl.getUniformLocation(program, 'u_rotationAmount'), 300.0);
-                    gl.uniform1f(gl.getUniformLocation(program, 'u_noiseScale'), 1.5);
-                    gl.uniform1f(gl.getUniformLocation(program, 'u_grainAmount'), 0.25);
-                    gl.uniform1f(gl.getUniformLocation(program, 'u_grainScale'), 3.0);
-                    gl.uniform1f(gl.getUniformLocation(program, 'u_grainAnimated'), 0.0);
-                    gl.uniform1f(gl.getUniformLocation(program, 'u_contrast'), 1.2);
-                    gl.uniform1f(gl.getUniformLocation(program, 'u_gamma'), 1.0);
-                    gl.uniform1f(gl.getUniformLocation(program, 'u_saturation'), 1.0);
-                    gl.uniform2f(gl.getUniformLocation(program, 'u_centerOffset'), 0.0, 0.0);
-                    gl.uniform1f(gl.getUniformLocation(program, 'u_zoom'), 0.8);
+                    gl.uniform1f(gl.getUniformLocation(program,'u_timeSpeed'),0.5);
+                    gl.uniform1f(gl.getUniformLocation(program,'u_colorBalance'),0.0);
+                    gl.uniform1f(gl.getUniformLocation(program,'u_warpStrength'),1.5);
+                    gl.uniform1f(gl.getUniformLocation(program,'u_warpFrequency'),3.0);
+                    gl.uniform1f(gl.getUniformLocation(program,'u_warpSpeed'),6.0);
+                    gl.uniform1f(gl.getUniformLocation(program,'u_warpAmplitude'),30.0);
+                    gl.uniform1f(gl.getUniformLocation(program,'u_blendAngle'),0.0);
+                    gl.uniform1f(gl.getUniformLocation(program,'u_blendSoftness'),0.8);
+                    gl.uniform1f(gl.getUniformLocation(program,'u_rotationAmount'),300.0);
+                    gl.uniform1f(gl.getUniformLocation(program,'u_noiseScale'),1.5);
+                    gl.uniform1f(gl.getUniformLocation(program,'u_grainAmount'),0.25);
+                    gl.uniform1f(gl.getUniformLocation(program,'u_grainScale'),3.0);
+                    gl.uniform1f(gl.getUniformLocation(program,'u_grainAnimated'),0.01);
+                    gl.uniform1f(gl.getUniformLocation(program,'u_contrast'),1.2);
+                    gl.uniform1f(gl.getUniformLocation(program,'u_gamma'),1.0);
+                    gl.uniform1f(gl.getUniformLocation(program,'u_saturation'),1.0);
+                    gl.uniform2f(gl.getUniformLocation(program,'u_centerOffset'),0.0,0.0);
+                    gl.uniform1f(gl.getUniformLocation(program,'u_zoom'),0.8);
                     
-                    gl.uniform3fv(gl.getUniformLocation(program, 'u_color1'), color1);
-                    gl.uniform3fv(gl.getUniformLocation(program, 'u_color2'), color2);
-                    gl.uniform3fv(gl.getUniformLocation(program, 'u_color3'), color3);
+                    gl.uniform3fv(gl.getUniformLocation(program,'u_color1'),color1);
+                    gl.uniform3fv(gl.getUniformLocation(program,'u_color2'),color2);
+                    gl.uniform3fv(gl.getUniformLocation(program,'u_color3'),color3);
                 };
 
                 // Resize function
