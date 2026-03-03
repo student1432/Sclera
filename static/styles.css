@@ -5761,6 +5761,11 @@ textarea {
     background: var(--accent);
     color: var(--bg-primary) !important;
 }
+/* Dark mode specific calendar styling */
+[data-theme="dark"] .mini-calendar-day.today {
+    background: var(--bg-hover); /* Darker gray for dark mode */
+    color: #ffffff !important;
+}
 
 .mini-calendar-day.has-event::after {
     content: '';
