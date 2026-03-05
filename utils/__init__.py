@@ -1,7 +1,10 @@
 """
 Utility modules for StudyOS
 """
-from .security import PasswordManager, RateLimiter, TokenManager, login_rate_limiter
+from .security import (
+    PasswordManager, RateLimiter, TokenManager, login_rate_limiter,
+    message_validator, bubble_rate_limiter, file_upload_security
+)
 from .validators import (
     user_registration_schema, user_login_schema, chapter_progress_schema,
     goal_schema, task_schema, study_session_schema, test_result_schema,
@@ -16,6 +19,9 @@ __all__ = [
     'RateLimiter',
     'TokenManager',
     'login_rate_limiter',
+    'message_validator',
+    'bubble_rate_limiter',
+    'file_upload_security',
     'user_registration_schema',
     'user_login_schema',
     'chapter_progress_schema',
