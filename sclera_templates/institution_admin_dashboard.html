@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard | StudyOS</title>
+    <link rel="stylesheet" href="/styles.css">
+    <style>
+        .heatmap-grid {
+            display: grid;
+            gap: 2px;
+        }
+
+        .heatmap-cell {
+            aspect-ratio: 1;
+            border-radius: 2px;
+            background: var(--bg-tertiary);
+            margin: 1px;
+        }
+
+        .heatmap-cell.level-1 {
+            background: rgba(52, 211, 153, 0.3);
+        }
+
+        .heatmap-cell.level-2 {
+            background: rgba(52, 211, 153, 0.6);
+        }
+
+        .heatmap-cell.level-3 {
+            background: #34d399;
+        }
+
+        .heatmap-label {
+            font-size: 10px;
+            color: var(--text-muted);
+            text-align: right;
+            padding-right: 4px;
+        }
+
+        .heatmap-spacer {
+            width: 4px;
+        }
+    </style>
+</head>
+
+<body>
+   
+    <div class="dashboard-layout">
+        {% include '_admin_topnav.html' %}
+        <main class="main-content">
+            <div class="content-header">
+                <h1>Institution Control Tower</h1>
+                <p>{{ institution.get('name', 'Institution') }} · ID: {{ institution_id }}</p>
+            </div>
+
+            {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+            {% for category, message in messages %}
+            <div class="alert alert-{{ category }}">{{ message }}</div>
+            {% endfor %}
+            {% endif %}
+            {% endwith %}
+
+            <div class="academic-split">
+                <div class="syllabus-panel">
+                    <!-- Behavioral Heatmap -->
+                    <div class="study-island heatmap-island">
+                        <div class="study-island-header">
+                            <h3>Institutional Behavior Heatmap</h3>
+                        </div>
+                        <div id="heatmapContainer" class="heatmap-grid"
+                            style="grid-template-columns: 40px repeat(12, 1fr) 10px repeat(12, 1fr); margin-top:16px;">
+                            <div></div>
+                            {% for h in range(24) %}
+                            <div style="font-size: 8px; text-align: center; color: var(--text-muted);">{{ h }}</div>
+                            {% if h == 11 %} <div></div> {% endif %}
+                            {% endfor %}
+
+                            {% set days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'] %}
+                            {% for d in range(7) %}
+                            <div class="heatmap-label" style="font-size:10px; color:var(--text-muted);">{{ days[d] }}
+                            </div>
+                            {% for h in range(24) %}
+                            {% set key = d|string + "-" + h|string %}
+                            {% set count = heatmap_data.get(key, 0) %}
+                            {% set level = 0 %}
+                            {% if count > 10 %} {% set level = 3 %}
+                            {% elif count > 5 %} {% set level = 2 %}
+                            {% elif count > 0 %} {% set level = 1 %}
+                            {% endif %}
+                            <div class="heatmap-cell level-{{ level }}"
+                                title="{{ days[d] }} {{ h }}:00 - {{ count }} sessions"></div>
+                            {% if h == 11 %} <div class="heatmap-spacer"></div> {% endif %}
+                            {% endfor %}
+                            {% endfor %}
+                        </div>
+                    </div>
+
+                    <!-- Teacher Management -->
+                    <div class="study-island">
+                        <div class="study-island-header">
+                            <h3>Teacher Management</h3>
+                            <form method="POST" action="{{ url_for('institution_admin_create_teacher_invite') }}">
+                                <button type="submit" class="btn btn-primary btn-small">Generate Teacher Invite</button>
+                            </form>
+                        </div>
+
+                        {% if teachers %}
+                        {% for t in teachers %}
+                        <div class="study-item">
+                            <div class="study-item-body">
+                                <div class="study-item-title">{{ t.get('name', 'Teacher') }}</div>
+                                <div class="study-item-meta">{{ t.get('email', '') }} · Status: {{ t.get('status',
+                                    'unknown') }}</div>
+                            </div>
+                            <div class="study-item-actions">
+                                <form method="POST"
+                                    action="{{ url_for('institution_admin_disable_teacher', teacher_uid=t.get('uid')) }}"
+                                    style="display:inline;">
+                                    <button type="submit" class="btn btn-small btn-secondary">Disable</button>
+                                </form>
+                            </div>
+                        </div>
+                        {% endfor %}
+                        {% else %}
+                        <div class="empty-state">
+                            <p>No teachers registered yet.</p>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div class="study-tools-panel">
+                    <!-- Risk Analytics -->
+                    <div class="study-island">
+                        <div class="study-island-header">
+                            <h3>Predictive Risk Center</h3>
+                        </div>
+                        <div class="risk-list" style="margin-top:16px;">
+                            {% if at_risk_students %}
+                            {% for student in at_risk_students %}
+                            <div class="study-item" style="border-left: 4px solid var(--accent-red);">
+                                <div class="study-item-body">
+                                    <div class="study-item-title">{{ student.name }}</div>
+                                    <div class="study-item-meta">{{ student.class }} · {{ student.status.title() }}
+                                    </div>
+                                </div>
+                                <div class="study-item-actions">
+                                    <button class="btn btn-small btn-primary nudge-btn"
+                                        data-uid="{{ student.uid }}">Nudge</button>
+                                </div>
+                            </div>
+                            {% endfor %}
+                            {% else %}
+                            <p style="color:var(--text-muted); font-size:14px;">All students are tracking well.</p>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <!-- Broadcast -->
+                    <div class="study-island">
+                        <div class="study-island-header">
+                            <h3>Global Broadcast</h3>
+                        </div>
+                        <form method="POST" action="{{ url_for('broadcast_message') }}" style="margin-top:12px;">
+                            <textarea name="message" placeholder="Type announcement for all students..." required
+                                style="width:100%; height:80px; background:var(--bg-secondary); border:1px solid var(--border); color:var(--text-primary); border-radius:8px; padding:12px; margin-bottom:12px; font-family:inherit;"></textarea>
+                            <button type="submit" class="btn btn-secondary" style="width:100%;">Broadcast to
+                                Institution</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        (function () {
+            const root = document.documentElement;
+            const savedTheme = localStorage.getItem("sclera-theme");
+            if (savedTheme) root.setAttribute("data-theme", savedTheme);
+        })();
+
+        document.querySelectorAll('.nudge-btn').forEach(btn => {
+            btn.onclick = async () => {
+                const studentUid = btn.dataset.uid;
+                const message = prompt("Enter nudge message:", "Your mentor has noticed a slight dip. Can we help with anything?");
+                if (message === null) return;
+
+                const res = await fetch('/institution/nudge', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ student_uid: studentUid, message: message })
+                });
+
+                const data = await res.json();
+                if (data.success) {
+                    btn.textContent = "Sent!";
+                    btn.disabled = true;
+                }
+            };
+        });
+    </script>
+    
+</body>
+
+</html>

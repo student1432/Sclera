@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>School Setup - Student Platform</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <style>
+        .hidden {
+            display: none;
+        }
+        .checkbox-group {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 10px;
+            margin-top: 10px;
+        }
+        .checkbox-group label {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="form-card">
+            <h1>School Setup</h1>
+            <p class="subtitle">Tell us about your school education</p>
+            
+            <form method="POST" action="{{ url_for('setup_highschool') }}">
+                <div class="form-group">
+                    <label for="board">Education Board</label>
+                    <select id="board" name="board" required>
+                        <option value="">Select your board</option>
+                        <option value="CBSE" {% if prefill_board == 'CBSE' %}selected{% endif %}>CBSE</option>
+                        <option value="ICSE" {% if prefill_board == 'ICSE' %}selected{% endif %}>ICSE</option>
+                        <option value="State Board" {% if prefill_board == 'State Board' %}selected{% endif %}>State Board</option>
+                        <option value="IB" {% if prefill_board == 'IB' %}selected{% endif %}>International Baccalaureate (IB)</option>
+                        <option value="Other" {% if prefill_board == 'Other' %}selected{% endif %}>Other</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label for="grade">Current Grade</label>
+                    <select id="grade" name="grade" required>
+                        <option value="">Select your grade</option>
+                        <option value="8" {% if prefill_grade == '8' %}selected{% endif %}>Grade 8</option>
+                        <option value="9" {% if prefill_grade == '9' %}selected{% endif %}>Grade 9</option>
+                        <option value="10" {% if prefill_grade == '10' %}selected{% endif %}>Grade 10</option>
+                        <option value="11" {% if prefill_grade == '11' %}selected{% endif %}>Grade 11</option>
+                        <option value="12" {% if prefill_grade == '12' %}selected{% endif %}>Grade 12</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label for="subject_combination" class="hidden" id="subject_combination_group">Subject Combination (for Grades 11-12)</label>
+                    <select id="subject_combination" name="subject_combination">
+                        <option value="">Select your subject combination</option>
+                        <option value="PCM">Physics, Chemistry, Mathematics</option>
+                        <option value="PCB">Physics, Chemistry, Biology</option>
+                        <option value="PCMB">Physics, Chemistry, Mathematics, Biology</option>
+                        <option value="Commerce">Accountancy, Business Studies, Economics</option>
+                        <option value="COM">Computer Applications, Informatics Practices</option>
+                    </select>
+                </div>
+                
+                <button type="submit" class="btn btn-primary">Complete Setup</button>
+            </form>
+        </div>
+    </div>
+    
+    <script>
+        document.getElementById('grade').addEventListener('change', function() {
+            const grade = this.value;
+            const subjectCombinationGroup = document.getElementById('subject_combination_group');
+            const customSubjectsGroup = document.getElementById('custom_subjects_group');
+            
+            // Show subject combination for grades 11 and 12
+            if (grade === '11' || grade === '12') {
+                subjectCombinationGroup.classList.remove('hidden');
+            } else {
+                subjectCombinationGroup.classList.add('hidden');
+                customSubjectsGroup.classList.add('hidden');
+            }
+        });
+        
+        document.getElementById('subject_combination').addEventListener('change', function() {
+            const combination = this.value;
+            const customSubjectsGroup = document.getElementById('custom_subjects_group');
+            
+            // Show custom subjects only when "Custom" is selected
+            if (combination === 'Custom') {
+                customSubjectsGroup.classList.remove('hidden');
+            } else {
+                customSubjectsGroup.classList.add('hidden');
+            }
+        });
+    </script>
+</body>
+</html>

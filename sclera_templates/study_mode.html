@@ -1,0 +1,563 @@
+<!DOCTYPE html>
+<html class="dark h-screen overflow-hidden" lang="en">
+<head>
+    <meta charset="utf-8"/>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <title>Study Mode - Sclera</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Serif+Display:ital,wght@0,300;0,400;0,600;0,700;1,400&family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    
+    <script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#ffffff",
+                        "background-light": "#f6f6f8",
+                        "background-dark": "#0a0c10",
+                    },
+                    fontFamily: {
+                        "display": ["Inter", "sans-serif"],
+                        "serif": ["Noto Serif Display", "serif"]
+                    },
+                    borderRadius: {
+                        "DEFAULT": "1rem",
+                        "lg": "2rem",
+                        "xl": "3rem",
+                        "full": "9999px"
+                    },
+                },
+            },
+        }
+    </script>
+    
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
+        }
+        .serif-text {
+            font-family: 'Noto Serif Display', serif;
+        }
+        .glass-panel {
+            background: var(--bg-secondary);
+            backdrop-filter: blur(16px);
+            border: 1px solid var(--border);
+        }
+        .floating-notch {
+            background: var(--bg-elevated);
+            backdrop-filter: blur(24px);
+            border: 1px solid var(--border);
+        }
+        .hide-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .hide-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+        
+        /* Study mode specific classes using root variables */
+        .study-container {
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
+        }
+        .study-text {
+            color: var(--text-primary);
+        }
+        .study-text-secondary {
+            color: var(--text-secondary);
+        }
+        .study-text-muted {
+            color: var(--text-muted);
+        }
+        .study-border {
+            border-color: var(--border);
+        }
+        .study-border-t {
+            border-top-color: var(--border);
+        }
+        .study-border-subtle {
+            border-color: var(--border-subtle);
+        }
+        .study-bg-secondary {
+            background-color: var(--bg-secondary);
+        }
+        .study-bg-tertiary {
+            background-color: var(--bg-tertiary);
+        }
+        .study-bg-hover {
+            background-color: var(--bg-hover);
+        }
+        .study-bg-secondary-40 {
+            background-color: var(--bg-secondary);
+            opacity: 0.4;
+        }
+        .study-accent {
+            background-color: var(--accent);
+            color: var(--bg-primary);
+        }
+        .study-accent-hover {
+            background-color: var(--accent-hover);
+            color: var(--bg-primary);
+        }
+        .study-success {
+            color: var(--success);
+        }
+        .study-warning {
+            color: var(--warning);
+        }
+        .study-error {
+            color: var(--error);
+        }
+        .study-success-bg {
+            background-color: var(--success-bg);
+        }
+        .study-warning-bg {
+            background-color: var(--warning-bg);
+        }
+        .study-error-bg {
+            background-color: var(--error-bg);
+        }
+
+        /* Large timer styles */
+        .timer-large {
+            font-size: clamp(3.125rem, calc(25vw * 0.25 + 2rem), 6.25rem);
+            font-weight: 700;
+            line-height: 1;
+            text-align: center;
+            width: 100%;
+        }
+
+        .donut-large {
+            width: min(clamp(200px, 40vw, 400px), clamp(200px, 60vh, 400px));
+            height: min(clamp(200px, 40vw, 400px), clamp(200px, 60vh, 400px));
+            flex-shrink: 0;
+        }
+
+        .timer-wrapper {
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .donut-center-time {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-weight: 700;
+            text-align: center;
+            width: 100%;
+            pointer-events: none;
+        }
+
+        /* Button layout fixes */
+        .timer-controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.75rem;
+            justify-content: center;
+            align-items: center;
+            max-width: 500px;
+            margin: 0 auto;
+        }
+
+        .timer-controls button {
+            flex-shrink: 0;
+        }
+
+        /* Responsive adjustments */
+        @media (max-width: 768px) {
+            .timer-controls {
+                gap: 0.5rem;
+                flex-wrap: wrap;
+                justify-content: center;
+            }
+            
+            .timer-controls button {
+                min-width: 100px;
+                flex: 1 1 auto;
+            }
+        }
+
+        /* Fullscreen styles */
+        .fullscreen-mode {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            z-index: 9999;
+            background: var(--bg-primary);
+        }
+
+        .fullscreen-mode .timer-large {
+            font-size: clamp(6rem, 20vw, 12rem);
+        }
+
+        .fullscreen-mode .donut-large {
+            width: clamp(300px, 60vw, 600px);
+            height: clamp(300px, 60vw, 600px);
+        }
+
+        /* Fix for form elements in dark mode */
+        .study-bg-tertiary input,
+        .study-bg-tertiary select,
+        .study-bg-tertiary textarea {
+            background-color: var(--bg-tertiary) !important;
+            color: var(--text-primary) !important;
+        }
+        
+        .study-bg-tertiary input::placeholder,
+        .study-bg-tertiary textarea::placeholder {
+            color: var(--text-muted) !important;
+        }
+        
+        .study-bg-tertiary select option {
+            background-color: var(--bg-tertiary) !important;
+            color: var(--text-primary) !important;
+        }
+    </style>
+</head>
+
+<body class="study-container study-text h-screen overflow-hidden flex flex-col">
+    
+    <!-- Use existing topnav -->
+    {% include '_topnav.html' %}
+
+    <!-- Main Content Area -->
+    <main class="flex-1 flex mt-24 mb-8 gap-6 overflow-hidden" id="mainContent">
+        
+        <!-- Timer Section (2/3 width) -->
+        <section class="flex-1 flex flex-col gap-4">
+            <div class="glass-panel rounded-xl flex-1 py-16 px-8 mx-4 flex flex-col items-center justify-center relative">
+              
+
+                <!-- Large Timer Display -->
+                <div class="timer-wrapper relative flex items-center justify-center">
+                    <svg class="donut donut-large" viewBox="0 0 36 36">
+                        <path class="donut-bg" stroke="var(--border)" stroke-width="3" fill="none"
+                              d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                        <path class="donut-progress" stroke="var(--accent)" stroke-width="3" fill="none"
+                              stroke-dasharray="100, 100" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                    </svg>
+                    <div class="donut-center-time timer-large study-text absolute flex items-center justify-center" id="timeDisplay">25:00</div>
+                </div>
+
+                <!-- Timer Controls - Inline -->
+                <div class="flex gap-3 justify-center items-center mt-8 flex-nowrap">
+                    <button id="startBtn" class="study-accent font-bold text-sm py-3 px-6 rounded-full study-accent-hover transition-all flex items-center gap-2">
+                        <span class="material-symbols-outlined text-sm">play_arrow</span>
+                        Start
+                    </button>
+                    <button id="pauseBtn" class="study-border study-text font-bold text-sm py-3 px-6 rounded-full hover:study-bg-hover transition-all flex items-center gap-2">
+                        <span class="material-symbols-outlined text-sm">pause</span>
+                        Pause
+                    </button>
+                    <button id="add5Btn" class="study-border study-text font-bold text-sm py-3 px-4 rounded-full hover:study-bg-hover transition-all">
+                        +5 min
+                    </button>
+                    <button id="add15Btn" class="study-border study-text font-bold text-sm py-3 px-4 rounded-full hover:study-bg-hover transition-all">
+                        +15 min
+                    </button>
+                    <button id="resetBtn" class="study-error-bg study-error font-bold text-sm py-3 px-6 rounded-full hover:opacity-80 transition-all flex items-center gap-2">
+                        <span class="material-symbols-outlined text-sm">refresh</span>
+                        Reset
+                    </button>
+                </div>
+
+                <!-- Session Control - Below -->
+                <div class="mt-6">
+                    <button id="sessionBtn" class="study-accent font-bold text-sm py-3 px-8 rounded-full study-accent-hover transition-all">
+                        Start Session
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- Todo Section (1/3 width) -->
+        <aside class="w-96 flex flex-col gap-4">
+            <div class="glass-panel rounded-xl p-6 mx-4 flex flex-col gap-6">
+                <div class="flex items-center justify-between">
+                    <h3 class="text-lg font-bold study-text">Study Tasks</h3>
+                    <span class="material-symbols-outlined study-text-secondary text-lg">task_alt</span>
+                </div>
+
+                <!-- Add Todo Form -->
+                <form id="todoForm" class="flex gap-2">
+                    <input type="text" id="todoInput" placeholder="Add a study task…" required
+                           class="flex-1 study-bg-tertiary study-border rounded-lg px-4 py-2 text-sm study-text placeholder:study-text-muted focus:outline-none focus:ring-1 focus:ring-accent/50 transition-all">
+                    <button type="submit" class="study-accent font-bold text-sm px-4 py-2 rounded-full study-accent-hover transition-all">
+                        <span class="material-symbols-outlined text-sm">add</span>
+                    </button>
+                </form>
+
+                <!-- Todo List -->
+                <div class="flex-1 overflow-y-auto hide-scrollbar space-y-2">
+                    {% for todo in todos %}
+                    <div class="flex items-center gap-3 p-3 study-bg-secondary rounded-lg
+                        {% if todo.done %}study-success-bg{% endif %}
+                    ">
+                        <span class="flex-1 study-text {% if todo.done %}line-through opacity-60{% endif %}">{{ todo.text }}</span>
+                        <div class="flex gap-2">
+                            <button class="finish-btn study-success-bg study-success rounded-full p-2 hover:opacity-80 transition-all" data-id="{{ todo.id }}" title="Mark as complete">
+                                <span class="material-symbols-outlined text-sm">check</span>
+                            </button>
+                            <button class="delete-btn study-error-bg study-error rounded-full p-2 hover:opacity-80 transition-all" data-id="{{ todo.id }}" title="Delete">
+                                <span class="material-symbols-outlined text-sm">close</span>
+                            </button>
+                        </div>
+                    </div>
+                    {% endfor %}
+                    
+                    {% if not todos %}
+                    <div class="text-center study-text-muted py-8">
+                        <span class="material-symbols-outlined text-4xl mb-2">task_alt</span>
+                        <p>No study tasks yet. Add one to get started!</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </aside>
+    </main>
+
+    <script>
+        let totalSeconds = 25 * 60;
+        let remaining = totalSeconds;
+        let interval = null;
+        let running = false;
+        let sessionActive = false;
+
+        const display = document.getElementById('timeDisplay');
+        const progress = document.querySelector('.donut-progress');
+        const sessionBtn = document.getElementById('sessionBtn');
+        const mainContent = document.getElementById('mainContent');
+
+        // Fullscreen functionality - create button if it doesn't exist
+        let isFullscreen = false;
+        let fullscreenBtn = document.getElementById('fullscreenBtn');
+        
+        // Create fullscreen button if it doesn't exist
+        if (!fullscreenBtn) {
+            fullscreenBtn = document.createElement('button');
+            fullscreenBtn.id = 'fullscreenBtn';
+            fullscreenBtn.className = 'study-border study-text rounded-full p-2 hover:study-bg-hover transition-all';
+            fullscreenBtn.innerHTML = '<span class="material-symbols-outlined study-text-secondary">fullscreen</span>';
+            fullscreenBtn.title = 'Toggle Fullscreen';
+            
+            // Add it to the timer controls
+            const timerControls = document.querySelector('.flex.gap-3.justify-center.items-center.mt-8');
+            if (timerControls) {
+                timerControls.appendChild(fullscreenBtn);
+            }
+        }
+
+        fullscreenBtn.onclick = () => {
+            if (!isFullscreen) {
+                // Enter fullscreen
+                if (document.documentElement.requestFullscreen) {
+                    document.documentElement.requestFullscreen().then(() => {
+                        isFullscreen = true;
+                        fullscreenBtn.innerHTML = '<span class="material-symbols-outlined study-text-secondary">fullscreen_exit</span>';
+                        mainContent.classList.add('fullscreen-mode');
+                    }).catch(err => {
+                        console.error('Error attempting to enable fullscreen:', err);
+                    });
+                } else if (document.documentElement.webkitRequestFullscreen) { // Safari
+                    document.documentElement.webkitRequestFullscreen();
+                    isFullscreen = true;
+                    fullscreenBtn.innerHTML = '<span class="material-symbols-outlined study-text-secondary">fullscreen_exit</span>';
+                    mainContent.classList.add('fullscreen-mode');
+                } else if (document.documentElement.msRequestFullscreen) { // IE/Edge
+                    document.documentElement.msRequestFullscreen();
+                    isFullscreen = true;
+                    fullscreenBtn.innerHTML = '<span class="material-symbols-outlined study-text-secondary">fullscreen_exit</span>';
+                    mainContent.classList.add('fullscreen-mode');
+                }
+            } else {
+                // Exit fullscreen
+                if (document.exitFullscreen) {
+                    document.exitFullscreen().then(() => {
+                        isFullscreen = false;
+                        fullscreenBtn.innerHTML = '<span class="material-symbols-outlined study-text-secondary">fullscreen</span>';
+                        mainContent.classList.remove('fullscreen-mode');
+                    }).catch(err => {
+                        console.error('Error attempting to exit fullscreen:', err);
+                    });
+                } else if (document.webkitExitFullscreen) { // Safari
+                    document.webkitExitFullscreen();
+                    isFullscreen = false;
+                    fullscreenBtn.innerHTML = '<span class="material-symbols-outlined study-text-secondary">fullscreen</span>';
+                    mainContent.classList.remove('fullscreen-mode');
+                } else if (document.msExitFullscreen) { // IE/Edge
+                    document.msExitFullscreen();
+                    isFullscreen = false;
+                    fullscreenBtn.innerHTML = '<span class="material-symbols-outlined study-text-secondary">fullscreen</span>';
+                    mainContent.classList.remove('fullscreen-mode');
+                }
+            }
+        };
+
+        // Listen for fullscreen changes (e.g., ESC key)
+        document.addEventListener('fullscreenchange', () => {
+            isFullscreen = !!document.fullscreenElement;
+            if (!isFullscreen) {
+                fullscreenBtn.innerHTML = '<span class="material-symbols-outlined study-text-secondary">fullscreen</span>';
+                mainContent.classList.remove('fullscreen-mode');
+            }
+        });
+
+        // Safari fullscreen change
+        document.addEventListener('webkitfullscreenchange', () => {
+            isFullscreen = !!document.webkitFullscreenElement;
+            if (!isFullscreen) {
+                fullscreenBtn.innerHTML = '<span class="material-symbols-outlined study-text-secondary">fullscreen</span>';
+                mainContent.classList.remove('fullscreen-mode');
+            }
+        });
+
+        // IE/Edge fullscreen change
+        document.addEventListener('MSFullscreenChange', () => {
+            isFullscreen = !!document.msFullscreenElement;
+            if (!isFullscreen) {
+                fullscreenBtn.innerHTML = '<span class="material-symbols-outlined study-text-secondary">fullscreen</span>';
+                mainContent.classList.remove('fullscreen-mode');
+            }
+        });
+
+        function format(sec) {
+            const m = Math.floor(sec / 60);
+            const s = sec % 60;
+            return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+        }
+
+        function render() {
+            display.textContent = format(remaining);
+            const pct = (remaining / totalSeconds) * 100;
+            progress.style.strokeDasharray = `${pct}, 100`;
+        }
+
+        function startTimer() {
+            if (running) return;
+            running = true;
+
+            interval = setInterval(() => {
+                remaining--;
+                render();
+
+                // Only log study time if session is active
+                if (sessionActive) {
+                    const now = new Date();
+                    const localHour = now.getHours();
+                    const localWeekday = (now.getDay() + 6) % 7; // ISO: 0=Mon, 6=Sun
+
+                    fetch('/study-mode/time', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            seconds: 1,
+                            local_hour: localHour,
+                            local_weekday: localWeekday
+                        })
+                    });
+                }
+
+                if (remaining <= 0) {
+                    clearInterval(interval);
+                    running = false;
+                }
+            }, 1000);
+        }
+
+        document.getElementById('startBtn').onclick = startTimer;
+
+        document.getElementById('pauseBtn').onclick = () => {
+            clearInterval(interval);
+            running = false;
+        };
+
+        document.getElementById('resetBtn').onclick = () => {
+            clearInterval(interval);
+            running = false;
+            totalSeconds = 25 * 60;
+            remaining = totalSeconds;
+            render();
+        };
+
+        // Session button logic
+        sessionBtn.onclick = () => {
+            if (sessionActive) {
+                // End session
+                sessionActive = false;
+                sessionBtn.textContent = 'Start Session';
+                sessionBtn.className = 'study-accent font-bold text-sm py-3 px-8 rounded-full study-accent-hover transition-all';
+            } else {
+                // Start session
+                sessionActive = true;
+                sessionBtn.textContent = 'End Session';
+                sessionBtn.className = 'study-error-bg study-error font-bold text-sm py-3 px-8 rounded-full hover:opacity-80 transition-all';
+            }
+        };
+
+        document.getElementById('add5Btn').onclick = () => {
+            totalSeconds += 300;
+            remaining += 300;
+            render();
+        };
+
+        document.getElementById('add15Btn').onclick = () => {
+            totalSeconds += 900;
+            remaining += 900;
+            render();
+        };
+
+        render();
+
+        // Handle window resize for responsive timer
+        window.addEventListener('resize', () => {
+            // Force re-render on resize to update clamp() values
+            render();
+        });
+
+        /* TODO ACTIONS */
+        document.querySelectorAll('.finish-btn').forEach(btn => {
+            btn.onclick = () => fetch(`/study-mode/todo/${btn.dataset.id}/toggle`, { method: 'POST' })
+                .then(() => location.reload());
+        });
+
+        document.querySelectorAll('.delete-btn').forEach(btn => {
+            btn.onclick = () => fetch(`/study-mode/todo/${btn.dataset.id}/delete`, { method: 'POST' })
+                .then(() => location.reload());
+        });
+
+        document.getElementById('todoForm').onsubmit = e => {
+            e.preventDefault();
+            fetch('/study-mode/todo/add', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ text: todoInput.value })
+            }).then(() => location.reload());
+        };
+
+        /* NOTIFICATION ACTIONS */
+        document.querySelectorAll('.notification-dismiss').forEach(btn => {
+            btn.onclick = () => {
+                const notifId = btn.dataset.id;
+                fetch(`/notifications/${notifId}/dismiss`, { method: 'POST' })
+                    .then(() => {
+                        btn.closest('.notification-item').style.opacity = '0.5';
+                        btn.disabled = true;
+                        btn.textContent = '✓';
+                    });
+            };
+        });
+    </script>
+    {% include 'notifications_snippet.html' %}
+</body>
+
+</html>

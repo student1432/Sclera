@@ -1,0 +1,88 @@
+<!-- Notification Tray (Inject into end of body) -->
+<div class="notification-tray" id="notifTray">
+    <div class="notif-bell" id="notifBell">
+        <span class="icon">🔔</span>
+        <span class="notif-badge" id="notifBadge" style="display:none;">0</span>
+    </div>
+
+    <div class="notif-panel" id="notifPanel">
+        <div class="notif-header">
+            <span>Notifications</span>
+            <button class="notification-close" id="closeNotif">×</button>
+        </div>
+        <div class="notif-list" id="notifList">
+            <div class="text-center p-4 text-muted" id="noNotifs">No new notifications</div>
+        </div>
+        <div class="notif-footer" style="padding: 10px; text-align: center; border-top: 1px solid var(--border);">
+            <button id="markAllRead" class="btn-small" style="width: 100%;">Clear All</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    (function () {
+        const bell = document.getElementById('notifBell');
+        const panel = document.getElementById('notifPanel');
+        const badge = document.getElementById('notifBadge');
+        const list = document.getElementById('notifList');
+        const noNotifs = document.getElementById('noNotifs');
+        const closeBtn = document.getElementById('closeNotif');
+        const markBtn = document.getElementById('markAllRead');
+
+        bell.onclick = () => panel.classList.toggle('active');
+        closeBtn.onclick = () => panel.classList.remove('active');
+
+        async function fetchNotifs() {
+            try {
+                const res = await fetch('/api/notifications');
+                const data = await res.json();
+
+                if (data.notifications && data.notifications.length > 0) {
+                    badge.textContent = data.notifications.length;
+                    badge.style.display = 'block';
+                    noNotifs.style.display = 'none';
+
+                    // Clear and repopulate
+                    list.innerHTML = '';
+                    data.notifications.forEach(n => {
+                        const item = document.createElement('div');
+                        item.className = 'notif-item unread';
+                        item.innerHTML = `
+                        <span class="sender">${n.sender_name}</span>
+                        <div class="msg">${n.message}</div>
+                        ${n.type === 'nudge' ? '<button class="small-btn" style="margin-top:8px;">Acknowledge Reminder</button>' : ''}
+                        <span class="time">${n.created_at}</span>
+                    `;
+                        item.onclick = () => markRead(n.id, item);
+                        list.appendChild(item);
+                    });
+                } else {
+                    badge.style.display = 'none';
+                    list.innerHTML = '<div class="text-center p-4 text-muted">No new notifications</div>';
+                }
+            } catch (e) {
+                console.error("Notif error", e);
+            }
+        }
+
+        async function markRead(id, element) {
+            await fetch(`/api/notifications/${id}/mark_read`, { method: 'POST' });
+            element.classList.remove('unread');
+            fetchNotifs(); // Refresh
+        }
+
+        markBtn.onclick = async () => {
+            // Bulk clear is simple: fetch all and loop or add endpoint
+            const unread = document.querySelectorAll('.notif-item.unread');
+            for (let item of unread) {
+                // Usually we'd have a bulk endpoint, but this works for Phase 2
+                item.click();
+            }
+            panel.classList.remove('active');
+        };
+
+        // Poll every 30s
+        fetchNotifs();
+        setInterval(fetchNotifs, 30000);
+    })();
+</script>

@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <title>Statistics</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        .stats-hero {
+            border-radius: 16px;
+            padding: 32px;
+            margin-bottom: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: var(--shadow-lg);
+        }
+        [data-theme="dark"] .stats-hero {
+            background: linear-gradient(135deg, #1f1f1f 0%, #27272a 100%);
+            color: #fafafa;
+        }
+        [data-theme="light"] .stats-hero {
+            background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+            color: #0f172a;
+        }
+        .stats-hero h1 {
+            margin: 0;
+            font-size: 2.5rem;
+            font-weight: 700;
+        }
+        .stats-hero .hero-streak {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            font-size: 1.5rem;
+        }
+        .stats-hero .hero-streak .material-symbols-outlined {
+            font-size: 2rem;
+        }
+        .stats-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 32px;
+            margin-bottom: 32px;
+        }
+        .top-row {
+            display: grid;
+            grid-template-columns: 1fr 2fr 2fr;
+            gap: 24px;
+        }
+        .stats-card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 24px;
+            transition: all var(--transition) ease;
+            box-shadow: var(--shadow);
+        }
+        .stats-card:hover {
+            transform: translateY(-4px);
+            box-shadow: var(--shadow-lg);
+            border-color: var(--border-focus);
+        }
+        .stats-card-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+        .stats-card-header .material-symbols-outlined {
+            font-size: 1.5rem;
+            color: var(--accent);
+        }
+        .stats-card h3 {
+            margin: 0;
+            font-size: 1.25rem;
+            font-weight: 600;
+        }
+        .progress-container {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+        .progress-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+        .progress-item span:first-child {
+            font-weight: 600;
+            font-size: 0.875rem;
+        }
+        .progress-item span:last-child {
+            color: var(--text-muted);
+            font-size: 0.8125rem;
+        }
+        .progress-bar-track {
+            height: 8px;
+            border-radius: 4px;
+            background: var(--bg-tertiary);
+            overflow: hidden;
+        }
+        .progress-bar-fill {
+            height: 100%;
+            border-radius: 4px;
+            background: var(--tick-color);
+            transition: width 0.5s ease;
+        }
+        .chart-card {
+            min-height: 500px;
+        }
+        .chart-container {
+            position: relative;
+            width: 100%;
+            height: 400px;
+            margin-top: 16px;
+        }
+        .subject-card {
+            grid-column: 1 / -1;
+            min-height: 500px;
+        }
+        .subject-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        .subject-header h3 {
+            margin: 0;
+        }
+        .subject-select {
+            padding: 8px 12px;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            background: var(--bg-tertiary);
+            color: var(--text-primary);
+            font-size: 0.875rem;
+        }
+        .no-data {
+            text-align: center;
+            padding: 40px;
+            color: var(--text-muted);
+            font-size: 1rem;
+        }
+        @media (max-width: 768px) {
+            .stats-hero {
+                flex-direction: column;
+                text-align: center;
+                gap: 16px;
+            }
+            .stats-hero h1 {
+                font-size: 2rem;
+            }
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    {% block content %}
+
+    <div class="dashboard-layout">
+        <!-- TOPNAV -->
+        {% include '_topnav.html' %}
+
+
+        <main class="main-content">
+            <!-- Hero Section -->
+            <div class="stats-hero">
+                <h1>Statistics Dashboard</h1>
+                <div class="hero-streak">
+                    <span class="material-symbols-outlined">local_fire_department</span>
+                    <span>{{ streak }} Days Streak</span>
+                </div>
+            </div>
+
+            <!-- Stats Grid -->
+            <div class="stats-grid">
+                <!-- Top Row: Daily Progress and Graphs -->
+                <div class="top-row">
+                    <!-- Daily Progress Card (Combined Streak and Productivity) -->
+                    <div class="stats-card">
+                        <div class="stats-card-header">
+                            <span class="material-symbols-outlined">today</span>
+                            <h3>Daily Progress</h3>
+                        </div>
+                        <div class="daily-progress-content" style="display: flex; flex-direction: column; gap: 24px;">
+                            <!-- Daily Streak Section -->
+                            <div class="progress-section">
+                                <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px;">
+                                    <span class="material-symbols-outlined" style="font-size: 1.2rem; color: var(--accent);">local_fire_department</span>
+                                    <span style="font-weight: 600; font-size: 0.9rem; color: var(--text-secondary);">Daily Streak</span>
+                                </div>
+                                <div class="streak-box" style="font-size: 2.5em; font-weight: 700; color: var(--accent);">{{ streak }}</div>
+                                <span style="color: var(--text-muted); font-size: 0.8rem;">Days</span>
+                            </div>
+
+                            <!-- Productivity Overview Section -->
+                            <div class="progress-section">
+                                <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px;">
+                                    <span class="material-symbols-outlined" style="font-size: 1.2rem; color: var(--accent);">trending_up</span>
+                                    <span style="font-weight: 600; font-size: 0.9rem; color: var(--text-secondary);">Productivity Overview</span>
+                                </div>
+                                <div class="progress-container">
+                                    <!-- Goals -->
+                                    <div>
+                                        <div class="progress-item">
+                                            <span>Goals</span>
+                                            <span>{{ productivity.goals.completed }}/{{ productivity.goals.total }}</span>
+                                        </div>
+                                        <div class="progress-bar-track">
+                                            <div class="progress-bar-fill" style="width: {{ productivity.goals.pct }}%;"></div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Tasks -->
+                                    <div>
+                                        <div class="progress-item">
+                                            <span>Tasks</span>
+                                            <span>{{ productivity.tasks.completed }}/{{ productivity.tasks.total }}</span>
+                                        </div>
+                                        <div class="progress-bar-track">
+                                            <div class="progress-bar-fill" style="width: {{ productivity.tasks.pct }}%;"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Exam Performance Card -->
+                    <div class="stats-card chart-card">
+                        <div class="stats-card-header">
+                            <span class="material-symbols-outlined">bar_chart</span>
+                            <h3>Exam Performance (Average)</h3>
+                        </div>
+                        <div class="chart-container">
+                            <canvas id="barChart"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- Exam Progress Over Time Card -->
+                    <div class="stats-card chart-card">
+                        <div class="stats-card-header">
+                            <span class="material-symbols-outlined">show_chart</span>
+                            <h3>Exam Progress (Overall)</h3>
+                        </div>
+                        <div class="chart-container">
+                            <canvas id="lineChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Subject Analytics Card -->
+                <div class="stats-card subject-card">
+                    <div class="subject-header">
+                        <div class="stats-card-header" style="margin-bottom: 0;">
+                            <span class="material-symbols-outlined">analytics</span>
+                            <h3>Subject-wise Performance</h3>
+                        </div>
+                        <select id="subjectSelect" class="subject-select">
+                            {% for subj in subjects %}
+                            <option value="{{ subj }}">{{ subj }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="chart-container">
+                        <canvas id="subjectChart"></canvas>
+                    </div>
+                    {% if not subjects %}
+                    <div class="no-data">No subject data available yet. Add exam results to see analytics.</div>
+                    {% endif %}
+                </div>
+            </div>
+        </main>
+    </div>
+</body>
+
+</body>
+
+<script>
+    // Simple chart initialization
+    document.addEventListener('DOMContentLoaded', function() {
+        // Data from server
+        const examAvgData = JSON.parse('{{ exam_avg | tojson | safe }}');
+        const timelineData = JSON.parse('{{ timeline | tojson | safe }}');
+        const subjectPerformance = JSON.parse('{{ subject_performance | tojson | safe }}');
+        
+        // Bar Chart
+        const barCtx = document.getElementById('barChart');
+        if (barCtx) {
+            const barLabels = Object.keys(examAvgData);
+            const barData = Object.values(examAvgData);
+            
+            new Chart(barCtx, {
+                type: 'bar',
+                data: {
+                    labels: barLabels,
+                    datasets: [{
+                        label: "Average %",
+                        data: barData,
+                        backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                        borderColor: 'rgba(75, 192, 192, 1)',
+                        borderWidth: 1,
+                        borderRadius: 4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false }
+                    },
+                    scales: {
+                        y: { beginAtZero: true, max: 100 }
+                    }
+                }
+            });
+        }
+
+        // Line Chart - Exam Progress Over Time
+        const lineCtx = document.getElementById('lineChart');
+        if (lineCtx) {
+            const labels = timelineData.map(d => d.date);
+            const data = timelineData.map(d => d.percentage);
+            
+            new Chart(lineCtx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Exam Progress %',
+                        data: data,
+                        borderColor: 'rgba(153, 102, 255, 1)',
+                        backgroundColor: 'rgba(153, 102, 255, 0.2)',
+                        borderWidth: 2,
+                        tension: 0.4,
+                        fill: true
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false }
+                    },
+                    scales: {
+                        y: { beginAtZero: true, max: 100 }
+                    }
+                }
+            });
+        }
+
+        // Subject Chart
+        const subjectSelect = document.getElementById('subjectSelect');
+        const subjectCtx = document.getElementById('subjectChart');
+        
+        function updateSubjectChart() {
+            if (!subjectSelect || !subjectCtx) return;
+            
+            const subjectName = subjectSelect.value;
+            const dataPoints = subjectPerformance[subjectName] || [];
+            const labels = dataPoints.map(d => d.date);
+            const values = dataPoints.map(d => d.percentage);
+
+            // Destroy existing chart if it exists
+            if (window.subjectChart && typeof window.subjectChart.destroy === 'function') {
+                window.subjectChart.destroy();
+            }
+
+            window.subjectChart = new Chart(subjectCtx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: subjectName + ' Performance (%)',
+                        data: values,
+                        borderColor: '#8b5cf6',
+                        backgroundColor: 'rgba(139, 92, 246, 0.1)',
+                        fill: true,
+                        tension: 0.3
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: { beginAtZero: true, max: 100 }
+                    }
+                }
+            });
+        }
+
+        // Initial render and event listener
+        if (subjectSelect && subjectCtx) {
+            updateSubjectChart();
+            subjectSelect.addEventListener('change', updateSubjectChart);
+        }
+    });
+</script>
+
+</html>
+
+{% endblock %}

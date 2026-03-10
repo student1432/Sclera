@@ -1,0 +1,808 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="utf-8"/>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <title>Library — Sclera</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Serif+Display:ital,wght@0,300;0,400;0,600;0,700;1,400&family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    
+    <script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#ffffff",
+                        "background-light": "#f6f6f8",
+                        "background-dark": "#0a0c10",
+                    },
+                    fontFamily: {
+                        "display": ["Inter", "sans-serif"],
+                        "serif": ["Noto Serif Display", "serif"]
+                    },
+                    borderRadius: {
+                        "DEFAULT": "1rem",
+                        "lg": "2rem",
+                        "xl": "3rem",
+                        "full": "9999px"
+                    },
+                },
+            },
+        }
+    </script>
+    
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
+        }
+        .serif-text {
+            font-family: 'Noto Serif Display', serif;
+        }
+        .glass-panel {
+            background: var(--bg-secondary);
+            backdrop-filter: blur(16px);
+            border: 1px solid var(--border);
+        }
+        .floating-notch {
+            background: var(--bg-elevated);
+            backdrop-filter: blur(24px);
+            border: 1px solid var(--border);
+        }
+        .hide-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .hide-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+        
+        /* Library specific classes using root variables */
+        .library-container {
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
+        }
+        .library-text {
+            color: var(--text-primary);
+        }
+        .library-text-secondary {
+            color: var(--text-secondary);
+        }
+        .library-text-muted {
+            color: var(--text-muted);
+        }
+        .library-border {
+            border-color: var(--border);
+        }
+        .library-border-t {
+            border-top-color: var(--border);
+        }
+        .library-border-subtle {
+            border-color: var(--border-subtle);
+        }
+        .library-bg-secondary {
+            background-color: var(--bg-secondary);
+        }
+        .library-bg-tertiary {
+            background-color: var(--bg-tertiary);
+        }
+        .library-bg-hover {
+            background-color: var(--bg-hover);
+        }
+        .library-bg-secondary-40 {
+            background-color: var(--bg-secondary);
+            opacity: 0.4;
+        }
+        .library-accent {
+            background-color: var(--accent);
+            color: var(--bg-primary);
+        }
+        .library-accent-hover {
+            background-color: var(--accent-hover);
+            color: var(--bg-primary);
+        }
+        .library-success {
+            color: var(--success);
+        }
+        .library-warning {
+            color: var(--warning);
+        }
+        .library-error {
+            color: var(--error);
+        }
+        .library-success-bg {
+            background-color: var(--success-bg);
+        }
+        .library-warning-bg {
+            background-color: var(--warning-bg);
+        }
+        .library-error-bg {
+            background-color: var(--error-bg);
+        }
+
+        /* Fix for form elements in dark mode */
+        .library-bg-tertiary input,
+        .library-bg-tertiary select,
+        .library-bg-tertiary textarea {
+            background-color: var(--bg-tertiary) !important;
+            color: var(--text-primary) !important;
+        }
+        
+        .library-bg-tertiary input::placeholder,
+        .library-bg-tertiary textarea::placeholder {
+            color: var(--text-muted) !important;
+        }
+        
+        .library-bg-tertiary select option {
+            background-color: var(--bg-tertiary) !important;
+            color: var(--text-primary) !important;
+        }
+
+        /* Search container styles - Complete Fix */
+        .search-container {
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            background: var(--bg-primary);
+            padding: 1.5rem 0;
+            margin-bottom: 2rem;
+        }
+
+        .search-input-wrapper {
+            position: relative;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        .search-input-wrapper .material-symbols-outlined {
+            position: absolute;
+            left: 1rem;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-muted) !important;
+            pointer-events: none;
+            z-index: 10;
+            font-size: 1.25rem;
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+
+        /* Maximum specificity for search input */
+        .search-container .search-input-wrapper .search-input {
+            width: 100% !important;
+            padding: 1rem 1rem 1rem 3.25rem !important;
+            border: 2px solid var(--border) !important;
+            border-radius: 0.75rem !important;
+            background: var(--bg-tertiary) !important;
+            color: var(--text-primary) !important;
+            font-size: 1rem !important;
+            font-family: 'Inter', sans-serif !important;
+            font-weight: 500 !important;
+            transition: all 0.2s ease !important;
+            outline: none !important;
+            box-sizing: border-box !important;
+            height: 3rem !important;
+            display: block !important;
+            -webkit-appearance: none !important;
+            -moz-appearance: none !important;
+            appearance: none !important;
+        }
+
+        .search-container .search-input-wrapper .search-input:focus {
+            border-color: var(--accent) !important;
+            background: var(--bg-secondary) !important;
+            box-shadow: 0 0 0 3px var(--accent) !important;
+        }
+
+        .search-container .search-input-wrapper .search-input::placeholder {
+            color: var(--text-muted) !important;
+            opacity: 0.7 !important;
+        }
+
+        .search-container .search-input-wrapper .search-input:hover {
+            border-color: var(--accent) !important;
+            background: var(--bg-secondary) !important;
+        }
+
+        /* Library section styles */
+        .library-section {
+            display: none;
+        }
+
+        .library-section.active {
+            display: block;
+        }
+
+        .library-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .library-card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 1rem;
+            padding: 1.5rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .library-card:hover {
+            transform: translateY(-2px);
+            border-color: var(--accent);
+            box-shadow: 0 8px 25px var(--shadow);
+        }
+
+        .board-tag {
+            display: inline-block;
+            padding: 0.375rem 0.75rem;
+            background: var(--bg-tertiary);
+            border-radius: 0.5rem;
+            font-size: 0.75rem;
+            font-weight: 600;
+            margin-bottom: 0.75rem;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.025em;
+        }
+
+        .library-item-title {
+            font-size: 1.125rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            color: var(--text-primary);
+            line-height: 1.4;
+        }
+
+        .subject-name {
+            font-size: 0.875rem;
+            font-weight: 500;
+            margin-bottom: 0.25rem;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.025em;
+        }
+
+        .library-item-meta {
+            font-size: 0.875rem;
+            color: var(--text-muted);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .library-item-meta .material-symbols-outlined {
+            font-size: 1rem;
+        }
+
+        .topics-grid {
+            display: block;
+            width: 100%;
+        }
+
+        .topics-section {
+            margin-top: 1rem;
+        }
+
+        .no-topics {
+            text-align: center;
+            padding: 2rem;
+            color: var(--text-muted);
+        }
+
+        .library-modal {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(8px);
+            z-index: 1000;
+            overflow-y: auto;
+            padding: 2rem;
+        }
+
+        .modal-content {
+            background: var(--bg-secondary);
+            max-width: 1200px;
+            width: 90vw;
+            margin: 0 auto;
+            border-radius: 1.5rem;
+            border: 1px solid var(--border);
+            padding: 2.5rem;
+            position: relative;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+            max-height: 85vh;
+            overflow-y: auto;
+        }
+
+        .close-modal {
+            position: absolute;
+            top: 1.5rem;
+            right: 1.5rem;
+            width: 2.5rem;
+            height: 2.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            color: var(--text-muted);
+            border-radius: 0.5rem;
+            transition: all 0.2s;
+        }
+
+        .close-modal:hover {
+            background: var(--bg-tertiary);
+            color: var(--text-primary);
+        }
+
+        .collapsible-header {
+            padding: 1rem;
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border);
+            border-radius: 0.75rem;
+            margin-bottom: 0.5rem;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: all 0.2s;
+        }
+
+        .collapsible-header:hover {
+            background: var(--bg-hover);
+            border-color: var(--accent);
+        }
+
+        .collapsible-content {
+            padding: 0 1rem;
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease-out;
+        }
+
+        .collapsible-content.expanded {
+            max-height: 2000px;
+            padding: 1rem;
+        }
+
+        .topic-item {
+            padding: 2rem 1.5rem;
+            border-left: 4px solid var(--accent);
+            margin-bottom: 2rem;
+            background: var(--bg-tertiary);
+            border-radius: 0 1rem 1rem 0;
+            transition: all 0.2s;
+            width: 100%;
+        }
+
+        .topic-item:hover {
+            background: var(--bg-hover);
+            border-left-color: var(--accent-hover);
+        }
+
+        .topic-name {
+            font-weight: 700;
+            font-size: 1.25rem;
+            margin-bottom: 1rem;
+            color: var(--text-primary);
+            line-height: 1.3;
+        }
+
+        .topic-overview {
+            font-size: 1rem;
+            color: var(--text-secondary);
+            line-height: 1.6;
+            margin-bottom: 1rem;
+        }
+
+        .no-results {
+            text-align: center;
+            padding: 4rem 2rem;
+            color: var(--text-muted);
+            display: none;
+        }
+
+        .no-results .material-symbols-outlined {
+            font-size: 4rem;
+            margin-bottom: 1rem;
+            opacity: 0.5;
+        }
+
+        .no-results h3 {
+            font-size: 1.25rem;
+            margin-bottom: 0.5rem;
+            color: var(--text-secondary);
+        }
+
+        .no-results p {
+            font-size: 0.875rem;
+            color: var(--text-muted);
+        }
+
+        .filter-pill-container {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 1.5rem;
+            flex-wrap: wrap;
+        }
+
+        .filter-pill {
+            padding: 0.5rem 1rem;
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border);
+            border-radius: 2rem;
+            font-size: 0.875rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            color: var(--text-secondary);
+        }
+
+        .filter-pill:hover {
+            background: var(--bg-hover);
+            border-color: var(--accent);
+            color: var(--text-primary);
+        }
+
+        .filter-pill.active {
+            background: var(--accent);
+            color: var(--bg-primary);
+            border-color: var(--accent);
+        }
+    </style>
+</head>
+
+<body class="library-container library-text min-h-screen">
+    
+    <!-- Use existing topnav -->
+    {% include '_topnav.html' %}
+
+    <!-- Main Content Area -->
+    <main class="flex mt-24 mb-8 px-6 gap-6 max-w-[1600px] mx-auto">
+        
+        <!-- Left Sidebar: Library Navigation -->
+        <aside class="w-72 flex flex-col gap-4">
+            <div class="glass-panel rounded-xl flex-1 p-6 flex flex-col gap-6 overflow-y-auto hide-scrollbar">
+                
+                <div class="mb-6">
+                    <h2 class="text-xl font-bold library-text mb-2">Academic Library</h2>
+                    <p class="text-sm library-text-muted">Browse comprehensive academic content</p>
+                </div>
+                
+                <!-- Navigation Section -->
+                <div class="space-y-2">
+                    <h3 class="text-[10px] uppercase tracking-[0.2em] library-text-muted font-bold px-2">Sections</h3>
+                    <button id="highschoolNav" class="w-full library-bg-tertiary library-border library-text font-bold text-sm py-3 rounded-full hover:library-bg-hover transition-all flex items-center justify-center gap-2" onclick="showLibrarySection('highschool')">
+                        <span class="material-symbols-outlined text-sm">school</span>
+                        High School
+                    </button>
+                    <button id="examsNav" class="w-full library-border library-text font-bold text-sm py-3 rounded-full hover:library-bg-hover transition-all flex items-center justify-center gap-2" onclick="showLibrarySection('exams')">
+                        <span class="material-symbols-outlined text-sm">quiz</span>
+                        Competitive Exams
+                    </button>
+                </div>
+                
+                <!-- Grade Filter (only shown for highschool) -->
+                <div id="gradeFilterSection" class="space-y-2">
+                    <h3 class="text-[10px] uppercase tracking-[0.2em] library-text-muted font-bold px-2">Filter by Grade</h3>
+                    <div class="space-y-2">
+                        <button class="grade-filter-btn w-full library-bg-tertiary library-border library-text font-bold text-sm py-3 rounded-full hover:library-bg-hover transition-all" data-grade="all" onclick="filterByGrade('all')">
+                            All Grades
+                        </button>
+                        <button class="grade-filter-btn w-full library-border library-text font-bold text-sm py-3 rounded-full hover:library-bg-hover transition-all" data-grade="9" onclick="filterByGrade('9')">
+                            Grade 9
+                        </button>
+                        <button class="grade-filter-btn w-full library-border library-text font-bold text-sm py-3 rounded-full hover:library-bg-hover transition-all" data-grade="10" onclick="filterByGrade('10')">
+                            Grade 10
+                        </button>
+                        <button class="grade-filter-btn w-full library-border library-text font-bold text-sm py-3 rounded-full hover:library-bg-hover transition-all" data-grade="11" onclick="filterByGrade('11')">
+                            Grade 11
+                        </button>
+                        <button class="grade-filter-btn w-full library-border library-text font-bold text-sm py-3 rounded-full hover:library-bg-hover transition-all" data-grade="12" onclick="filterByGrade('12')">
+                            Grade 12
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Quick Actions -->
+                <div class="mt-auto space-y-2">
+                    <h3 class="text-[10px] uppercase tracking-[0.2em] library-text-muted font-bold px-2">Quick Actions</h3>
+                    <a href="{{ url_for('profile_dashboard') }}" class="w-full library-border library-text font-bold text-sm py-3 rounded-full hover:library-bg-hover transition-all flex items-center justify-center">
+                        <span class="material-symbols-outlined text-sm mr-2">arrow_back</span>
+                        Back to Dashboard
+                    </a>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Central Library Content Area -->
+        <div class="flex-1 glass-panel rounded-xl overflow-y-auto relative">
+            <div class="p-6 min-h-full">
+                <!-- Search Container -->
+                <div class="search-container mb-8">
+                    <div class="search-input-wrapper">
+                        <span class="material-symbols-outlined">search</span>
+                        <input type="text" id="librarySearch" class="search-input" placeholder="Search for subjects, chapters or topics...">
+                    </div>
+                </div>
+
+                <!-- High School Section -->
+                <div id="highschool" class="library-section active">
+                    <div class="library-grid" id="highschoolGrid">
+                        <!-- Cards will be populated by JS -->
+                    </div>
+                </div>
+
+                <!-- Exams Section -->
+                <div id="exams" class="library-section">
+                    <div class="library-grid" id="examsGrid">
+                        <!-- Exam cards will be populated by JS -->
+                    </div>
+                </div>
+
+                <!-- No Results State -->
+                <div id="noResults" class="no-results">
+                    <span class="material-symbols-outlined">search_off</span>
+                    <h3>No results found</h3>
+                    <p>Try adjusting your search or filters to find what you're looking for.</p>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Drill-down Modal -->
+    <div id="libraryModal" class="library-modal">
+        <div class="modal-content">
+            <button class="close-modal" onclick="closeModal()">
+                <span class="material-symbols-outlined">close</span>
+            </button>
+            <div id="modalBody">
+                <!-- Content injected by JS -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const libraryData = {{ library_data | tojson }};
+        let currentSection = 'highschool';
+        let currentGradeFilter = 'all';
+
+        function showLibrarySection(sectionId) {
+            currentSection = sectionId;
+            
+            // Update section visibility
+            elements.highschoolSection.classList.toggle('active', sectionId === 'highschool');
+            elements.examsSection.classList.toggle('active', sectionId === 'exams');
+
+            // Update navigation button styles
+            if (sectionId === 'highschool') {
+                elements.highschoolNav.className = 'w-full library-bg-tertiary library-border library-text font-bold text-sm py-3 rounded-full hover:library-bg-hover transition-all flex items-center justify-center gap-2';
+                elements.examsNav.className = 'w-full library-border library-text font-bold text-sm py-3 rounded-full hover:library-bg-hover transition-all flex items-center justify-center gap-2';
+                elements.gradeFilterSection.style.display = 'block';
+            } else {
+                elements.examsNav.className = 'w-full library-bg-tertiary library-border library-text font-bold text-sm py-3 rounded-full hover:library-bg-hover transition-all flex items-center justify-center gap-2';
+                elements.highschoolNav.className = 'w-full library-border library-text font-bold text-sm py-3 rounded-full hover:library-bg-hover transition-all flex items-center justify-center gap-2';
+                elements.gradeFilterSection.style.display = 'none';
+            }
+
+            renderLibrary();
+        }
+
+        function filterByGrade(grade) {
+            currentGradeFilter = grade;
+            
+            // Update grade filter button styles
+            elements.gradeFilterButtons.forEach(btn => {
+                if (btn.getAttribute('data-grade') === grade) {
+                    btn.className = 'grade-filter-btn w-full library-bg-tertiary library-border library-text font-bold text-sm py-3 rounded-full hover:library-bg-hover transition-all';
+                } else {
+                    btn.className = 'grade-filter-btn w-full library-border library-text font-bold text-sm py-3 rounded-full hover:library-bg-hover transition-all';
+                }
+            });
+            
+            renderLibrary();
+        }
+
+        // Performance: Debounce search function
+        let searchTimeout;
+        const debouncedSearch = () => {
+            clearTimeout(searchTimeout);
+            searchTimeout = setTimeout(renderLibrary, 300);
+        };
+
+        // Performance: Cache DOM elements
+        const elements = {
+            hsGrid: document.getElementById('highschoolGrid'),
+            examsGrid: document.getElementById('examsGrid'),
+            searchInput: document.getElementById('librarySearch'),
+            noResults: document.getElementById('noResults'),
+            highschoolSection: document.getElementById('highschool'),
+            examsSection: document.getElementById('exams'),
+            highschoolNav: document.getElementById('highschoolNav'),
+            examsNav: document.getElementById('examsNav'),
+            gradeFilterSection: document.getElementById('gradeFilterSection'),
+            gradeFilterButtons: document.querySelectorAll('.grade-filter-btn')
+        };
+
+        function renderLibrary() {
+            const searchTerm = elements.searchInput.value.toLowerCase();
+
+            // Clear grids efficiently
+            elements.hsGrid.innerHTML = '';
+            elements.examsGrid.innerHTML = '';
+
+            let hasAnyVisible = false;
+            const fragment = document.createDocumentFragment();
+
+            // Render Highschool Chapters
+            if (libraryData.highschool) {
+                for (const [board, grades] of Object.entries(libraryData.highschool)) {
+                    for (const [grade, subjects] of Object.entries(grades)) {
+                        if (currentGradeFilter !== 'all' && grade !== currentGradeFilter) continue;
+
+                        for (const [subjectName, subjectData] of Object.entries(subjects)) {
+                            const chapters = subjectData.chapters || {};
+                            
+                            for (const [chapterName, chapterData] of Object.entries(chapters)) {
+                                // Search filter across all metadata
+                                const matchesSearch = !searchTerm || 
+                                    subjectName.toLowerCase().includes(searchTerm) ||
+                                    board.toLowerCase().includes(searchTerm) ||
+                                    grade.toLowerCase().includes(searchTerm) ||
+                                    chapterName.toLowerCase().includes(searchTerm) ||
+                                    (chapterData.topics && chapterData.topics.some(t => t.name && t.name.toLowerCase().includes(searchTerm)));
+
+                                if (!matchesSearch) continue;
+
+                                const card = createChapterCard('highschool', board, grade, subjectName, chapterName, chapterData);
+                                fragment.appendChild(card);
+                                hasAnyVisible = true;
+                            }
+                        }
+                    }
+                }
+            }
+            elements.hsGrid.appendChild(fragment);
+
+            // Clear fragment for exams
+            fragment.innerHTML = '';
+
+            // Render Exam Chapters
+            if (libraryData.exams) {
+                for (const [examName, subjects] of Object.entries(libraryData.exams)) {
+                    for (const [subjectName, subjectData] of Object.entries(subjects)) {
+                        const chapters = subjectData.chapters || {};
+                        
+                        for (const [chapterName, chapterData] of Object.entries(chapters)) {
+                            // Search filter across all metadata
+                            const matchesSearch = !searchTerm ||
+                                subjectName.toLowerCase().includes(searchTerm) ||
+                                examName.toLowerCase().includes(searchTerm) ||
+                                chapterName.toLowerCase().includes(searchTerm) ||
+                                (chapterData.topics && chapterData.topics.some(t => t.name && t.name.toLowerCase().includes(searchTerm)));
+
+                            if (!matchesSearch) continue;
+
+                            const card = createChapterCard('exams', examName, null, subjectName, chapterName, chapterData);
+                            fragment.appendChild(card);
+                            hasAnyVisible = true;
+                        }
+                    }
+                }
+            }
+            elements.examsGrid.appendChild(fragment);
+
+            elements.noResults.style.display = hasAnyVisible ? 'none' : 'block';
+        }
+
+        // Performance: Extract chapter card creation to separate function
+        function createChapterCard(category, boardOrExam, grade, subjectName, chapterName, chapterData) {
+            const card = document.createElement('div');
+            card.className = 'library-card';
+            card.onclick = () => showChapterModal(category, boardOrExam, grade, subjectName, chapterName, chapterData);
+            
+            const tagText = grade ? `${boardOrExam} • Grade ${grade}` : boardOrExam;
+            const topicCount = chapterData.topics ? chapterData.topics.length : 0;
+            
+            card.innerHTML = `
+                <div class="board-tag">${tagText}</div>
+                <div class="subject-name">${subjectName}</div>
+                <div class="library-item-title">${chapterName}</div>
+                <div class="library-item-meta">
+                    <span class="material-symbols-outlined">bookmark</span>
+                    ${topicCount} Topics
+                </div>
+            `;
+            
+            return card;
+        }
+
+        function showChapterModal(category, boardOrExam, grade, subjectName, chapterName, chapterData) {
+            const modal = document.getElementById('libraryModal');
+            const body = document.getElementById('modalBody');
+
+            const topics = chapterData.topics || [];
+            const tagText = grade ? `${boardOrExam} • Grade ${grade}` : boardOrExam;
+
+            let html = `
+                <div class="board-tag">${tagText}</div>
+                <div class="subject-name">${subjectName}</div>
+                <h1 class="text-2xl font-bold library-text mb-6">${chapterName}</h1>
+                <div class="chapter-content space-y-4">
+            `;
+
+            if (topics.length > 0) {
+                html += `
+                    <div class="topics-section">
+                        <h2 class="text-lg font-semibold library-text mb-4">Chapter Topics</h2>
+                        <div class="topics-grid">
+                            ${topics.map(topic => `
+                                <div class="topic-item">
+                                    <div class="topic-name">${topic.name || 'Untitled Topic'}</div>
+                                    <div class="topic-overview">${topic.overview || 'Detailed topic content and learning objectives.'}</div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                `;
+            } else {
+                html += `
+                    <div class="no-topics">
+                        <p class="library-text-muted">No specific topics listed for this chapter.</p>
+                    </div>
+                `;
+            }
+
+            html += `</div>`;
+            body.innerHTML = html;
+            modal.style.display = 'block';
+            document.body.style.overflow = 'hidden';
+        }
+
+        function toggleCollapsible(header) {
+            const content = header.nextElementSibling;
+            const chevron = header.querySelector('.chevron');
+            content.classList.toggle('expanded');
+            chevron.textContent = content.classList.contains('expanded') ? '▲' : '▼';
+        }
+
+        function closeModal() {
+            document.getElementById('libraryModal').style.display = 'none';
+            document.body.style.overflow = 'auto';
+        }
+
+        function initSidebarLinks() {
+            // Check hash in URL
+            if (window.location.hash === '#exams') {
+                showLibrarySection('exams');
+            } else {
+                showLibrarySection('highschool');
+            }
+        }
+
+        elements.searchInput.addEventListener('input', debouncedSearch);
+
+        window.onclick = function (event) {
+            const modal = document.getElementById('libraryModal');
+            if (event.target == modal) {
+                closeModal();
+            }
+        }
+
+        // Initialize
+        initSidebarLinks();
+        
+        // Set initial grade filter state
+        filterByGrade('all');
+        
+        // Initial render
+        renderLibrary();
+    </script>
+</body>
+
+</html>
