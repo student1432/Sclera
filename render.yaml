@@ -2,7 +2,7 @@ services:
   - type: web
     name: sclera-academic-platform
     env: python
-    buildCommand: pip install -r requirements_sclera.txt
+    buildCommand: pip install -r requirements.txt
     startCommand: gunicorn --workers 3 --threads 100 --bind 0.0.0.0:$PORT wsgi_sclera:app
     envVars:
       - key: PYTHON_VERSION
