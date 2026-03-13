@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Review Extracted Syllabus | StudyOS</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet" />
+    <style>
+        .form-input {
+            width: 100%; background: var(--bg-tertiary); border: 1px solid var(--border);
+            border-radius: .6rem; color: var(--text-primary); padding: .65rem .85rem;
+            font-size: .9rem; margin-bottom: .75rem;
+        }
+        .form-input:focus { outline: 2px solid var(--accent, #22c55e); border-color: transparent; }
+        .preview-table { width: 100%; border-collapse: collapse; }
+        .preview-table th {
+            background: var(--bg-tertiary); padding: .75rem 1rem; text-align: left;
+            font-size: .8rem; font-weight: 600; color: var(--text-muted); text-transform: uppercase;
+        }
+        .preview-table td { padding: .65rem 1rem; border-bottom: 1px solid var(--border); font-size: .88rem; }
+        .preview-table tr:last-child td { border-bottom: none; }
+        .preview-table tr:hover td { background: var(--bg-tertiary); }
+        .topic-list { font-size: .78rem; color: var(--text-muted); margin-top: .25rem; }
+        .topic-tag {
+            display: inline-block; background: var(--bg-secondary); border: 1px solid var(--border);
+            border-radius: .3rem; padding: .1rem .45rem; margin: .1rem; font-size: .72rem;
+        }
+        .topic-overview {
+            font-size: .75rem; color: var(--text-muted); font-style: italic; margin: .25rem 0;
+            line-height: 1.4; max-width: 400px;
+        }
+        .topic-details {
+            font-size: .7rem; color: var(--text-muted); margin-top: .15rem;
+        }
+        .topic-detail-item {
+            display: inline-block; background: var(--bg-tertiary); border-radius: .2rem;
+            padding: .05rem .3rem; margin: .05rem; font-size: .65rem;
+        }
+        .rich-topic {
+            border-left: 2px solid var(--accent); padding-left: .5rem; margin-bottom: .5rem;
+            cursor: pointer; transition: background .2s;
+        }
+        .rich-topic:hover {
+            background: var(--bg-tertiary);
+        }
+        .rich-topic-name {
+            font-weight: 600; color: var(--text-primary); font-size: .8rem;
+        }
+        .view-full-btn {
+            background: var(--accent); color: white; border: none; border-radius: .3rem;
+            padding: .2rem .5rem; font-size: .65rem; cursor: pointer; margin-left: .5rem;
+        }
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.8); display: none; z-index: 1000;
+        }
+        .modal-content {
+            position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            background: var(--bg-secondary); border: 1px solid var(--border);
+            border-radius: 1rem; padding: 2rem; max-width: 600px; max-height: 80vh;
+            overflow-y: auto; z-index: 1001;
+        }
+        .modal-header {
+            display: flex; justify-content: space-between; align-items: center;
+            margin-bottom: 1.5rem; padding-bottom: 1rem; border-bottom: 1px solid var(--border);
+        }
+        .modal-title {
+            font-size: 1.2rem; font-weight: 700; color: var(--text-primary);
+        }
+        .modal-close {
+            background: none; border: none; color: var(--text-muted); font-size: 1.5rem;
+            cursor: pointer; padding: 0;
+        }
+        .modal-close:hover { color: var(--text-primary); }
+        .modal-section {
+            margin-bottom: 1.5rem;
+        }
+        .modal-section h4 {
+            font-size: .9rem; font-weight: 600; color: var(--text-primary);
+            margin-bottom: .5rem;
+        }
+        .modal-section p, .modal-section li {
+            font-size: .85rem; color: var(--text-muted); line-height: 1.5;
+            margin-bottom: .5rem;
+        }
+        .modal-section ul {
+            padding-left: 1.5rem;
+        }
+        .resource-grid {
+            display: grid; gap: .75rem; margin-top: .5rem;
+        }
+        .resource-item {
+            background: var(--bg-tertiary); border: 1px solid var(--border);
+            border-radius: .5rem; padding: .75rem;
+        }
+        .resource-title {
+            font-weight: 600; color: var(--text-primary); font-size: .8rem;
+            margin-bottom: .25rem;
+        }
+        .resource-desc {
+            font-size: .75rem; color: var(--text-muted); margin-bottom: .5rem;
+        }
+        .resource-link {
+            color: var(--accent); text-decoration: none; font-size: .75rem;
+        }
+        .resource-link:hover { text-decoration: underline; }
+        .btn-primary {
+            background: var(--accent, #22c55e); color: #fff; border: none; border-radius: .6rem;
+            padding: .65rem 1.4rem; font-weight: 700; font-size: .9rem; cursor: pointer;
+            display: inline-flex; align-items: center; gap: .4rem;
+        }
+        .btn-secondary {
+            background: var(--bg-secondary); border: 1px solid var(--border); color: var(--text-primary);
+            border-radius: .6rem; padding: .6rem 1.2rem; font-weight: 600; font-size: .88rem;
+            cursor: pointer; text-decoration: none; display: inline-flex; align-items: center; gap: .4rem;
+        }
+        .checkbox-cell { width: 40px; text-align: center; }
+        .checkbox-cell input[type="checkbox"] { accent-color: var(--accent, #22c55e); width: 16px; height: 16px; }
+        .select-all-btn {
+            background: none; border: none; color: var(--accent, #22c55e); font-size: .8rem;
+            font-weight: 600; cursor: pointer; padding: 0;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="dashboard-layout">
+        {% if profile.get('account_type') == 'admin' %}
+            {% include '_admin_topnav.html' %}
+        {% else %}
+            {% include '_teacher_topnav.html' %}
+        {% endif %}
+
+        <main class="main-content">
+            <div style="padding: 1.5rem 2rem 0;" data-extracted-data="{{ extracted|tojson|replace('"', '&quot;') }}">
+                <div style="display:flex;align-items:center;gap:1rem;margin-bottom:1rem">
+                    <a href="{{ url_for('custom_syllabus_upload', class_id=class_id) }}" class="btn-secondary" style="font-size:.82rem">← Back</a>
+                    <h1 style="margin:0;font-size:1.5rem;font-weight:800">Review Extracted Chapters</h1>
+                </div>
+                <p style="color:var(--text-muted);font-size:.9rem;margin-bottom:1.5rem">
+                    Gemini extracted <strong>{{ extracted|length }}</strong> chapters.
+                    Select the ones you want to add, then choose a subject name.
+                </p>
+
+                {% with messages = get_flashed_messages(with_categories=true) %}
+                    {% if messages %}
+                        {% for cat, msg in messages %}
+                        <div style="margin-bottom:.75rem;padding:.85rem 1rem;border-radius:.75rem;border-left:4px solid;
+                            {% if cat == 'error' %}background:rgba(239,68,68,.1);border-color:#ef4444;color:#ef4444
+                            {% else %}background:rgba(59,130,246,.1);border-color:#3b82f6;color:#3b82f6{% endif %}">
+                            {{ msg }}
+                        </div>
+                        {% endfor %}
+                    {% endif %}
+                {% endwith %}
+
+                <form method="POST" action="{{ url_for('custom_syllabus_preview', class_id=class_id) }}">
+                    <!-- Subject name -->
+                    <div style="background:var(--bg-secondary);border:1px solid var(--border);border-radius:1rem;padding:1.25rem;margin-bottom:1.25rem">
+                        <label style="font-size:.82rem;font-weight:600;color:var(--text-muted);display:block;margin-bottom:.4rem">
+                            Subject Name *
+                        </label>
+                        <input type="text" name="subject_name" class="form-input" required
+                               placeholder="e.g. Physical Education, Computer Science, History…"
+                               style="margin-bottom:0">
+                    </div>
+
+                    <!-- Chapters table -->
+                    <div style="background:var(--bg-secondary);border:1px solid var(--border);border-radius:1rem;overflow:hidden;margin-bottom:1.25rem">
+                        <div style="display:flex;align-items:center;justify-content:space-between;padding:1rem 1.25rem;border-bottom:1px solid var(--border)">
+                            <strong style="font-size:.95rem">Extracted Chapters</strong>
+                            <button type="button" class="select-all-btn" onclick="toggleAll(this)">Select All</button>
+                        </div>
+                        <table class="preview-table">
+                            <thead>
+                                <tr>
+                                    <th class="checkbox-cell">✓</th>
+                                    <th>#</th>
+                                    <th>Chapter</th>
+                                    <th>Topics <span style="font-size:.7rem;color:var(--text-muted);font-weight:400">(Rich content shown)</span></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                            {% for ch in extracted %}
+                            {% set chapter_index = loop.index0 %}
+                            <tr>
+                                <td class="checkbox-cell">
+                                    <input type="checkbox" name="selected_chapters" value="{{ loop.index0 }}" checked>
+                                </td>
+                                <td style="color:var(--text-muted);font-size:.8rem">{{ loop.index }}</td>
+                                <td>
+                                    <strong>{{ ch.chapter }}</strong>
+                                </td>
+                                <td>
+                                    {% if ch.topics %}
+                                    <div class="topic-list">
+                                        {% for t in ch.topics %}
+                                            {% if t is string %}
+                                                <!-- Backward compatibility: simple string topic -->
+                                                <span class="topic-tag">{{ t }}</span>
+                                            {% elif t is mapping and t.name %}
+                                                <!-- New rich topic format -->
+                                                <div class="rich-topic" onclick="openTopicModal({{ chapter_index }}, {{ loop.index0 }})">
+                                                    <div class="rich-topic-name">{{ t.name }}</div>
+                                                    {% if t.overview %}
+                                                    <div class="topic-overview">{{ t.overview }}</div>
+                                                    {% endif %}
+                                                    {% if t.explanations or t.key_points %}
+                                                    <div class="topic-details">
+                                                        {% if t.explanations %}
+                                                            <span class="topic-detail-item">{{ t.explanations|length }} explanation{{ 's' if t.explanations|length != 1 }}</span>
+                                                        {% endif %}
+                                                        {% if t.key_points %}
+                                                            <span class="topic-detail-item">{{ t.key_points|length }} key point{{ 's' if t.key_points|length != 1 }}</span>
+                                                        {% endif %}
+                                                        {% if t.images %}
+                                                            <span class="topic-detail-item">{{ t.images|length }} image{{ 's' if t.images|length != 1 }}</span>
+                                                        {% endif %}
+                                                        {% if t.resources and (t.resources.videos or t.resources.pdfs or t.resources.practice) %}
+                                                            {% set resource_count = (t.resources.videos|length if t.resources.videos else 0) + (t.resources.pdfs|length if t.resources.pdfs else 0) + (t.resources.practice|length if t.resources.practice else 0) %}
+                                                            {% if resource_count > 0 %}
+                                                            <span class="topic-detail-item">{{ resource_count }} resource{{ 's' if resource_count != 1 }}</span>
+                                                            {% endif %}
+                                                        {% endif %}
+                                                        <button class="view-full-btn">View Full</button>
+                                                    </div>
+                                                    {% endif %}
+                                                </div>
+                                            {% else %}
+                                                <!-- Fallback for unknown topic format -->
+                                                <span class="topic-tag">Unknown Topic</span>
+                                            {% endif %}
+                                        {% endfor %}
+                                    </div>
+                                    {% else %}
+                                    <span style="color:var(--text-muted);font-size:.78rem">No topics extracted</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Actions -->
+                    <div style="display:flex;gap:.75rem;align-items:center">
+                        <button type="submit" class="btn-primary">
+                            <span class="material-symbols-outlined" style="font-size:1rem">add_circle</span>
+                            Append Selected to Class
+                        </button>
+                        <a href="{{ url_for('custom_syllabus_upload', class_id=class_id) }}" class="btn-secondary">Cancel</a>
+                        <span style="color:var(--text-muted);font-size:.8rem;margin-left:.5rem" id="selCount"></span>
+                    </div>
+                </form>
+            </div>
+        </main>
+
+        <!-- Topic Detail Modal -->
+        <div class="modal-overlay" id="topicModalOverlay">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3 class="modal-title" id="modalTopicName"></h3>
+                    <button class="modal-close" onclick="closeTopicModal()">&times;</button>
+                </div>
+                <div id="modalTopicContent"></div>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+    // Store extracted data safely from data attribute
+    const mainContainer = document.querySelector('[data-extracted-data]');
+    const extractedData = JSON.parse(mainContainer.getAttribute('data-extracted-data').replace(/&quot;/g, '"'));
+
+    (function () {
+        const saved = localStorage.getItem('sclera-theme');
+        if (saved) document.documentElement.setAttribute('data-theme', saved);
+
+        const boxes = Array.from(document.querySelectorAll('input[name="selected_chapters"]'));
+        const counter = document.getElementById('selCount');
+
+        function updateCount() {
+            const n = boxes.filter(b => b.checked).length;
+            counter.textContent = n + ' chapter' + (n !== 1 ? 's' : '') + ' selected';
+        }
+        boxes.forEach(b => b.addEventListener('change', updateCount));
+        updateCount();
+    })();
+
+    function toggleAll(btn) {
+        const boxes = document.querySelectorAll('input[name="selected_chapters"]');
+        const anyUnchecked = Array.from(boxes).some(b => !b.checked);
+        boxes.forEach(b => b.checked = anyUnchecked);
+        btn.textContent = anyUnchecked ? 'Deselect All' : 'Select All';
+        boxes[0]?.dispatchEvent(new Event('change'));
+    }
+
+    function openTopicModal(chapterIndex, topicIndex) {
+        const chapter = extractedData[chapterIndex];
+        const topic = chapter.topics[topicIndex];
+
+        document.getElementById('modalTopicName').textContent = topic.name;
+        const modalContent = document.getElementById('modalTopicContent');
+        modalContent.innerHTML = ''; // Clear previous content
+
+        // Overview
+        if (topic.overview) {
+            modalContent.innerHTML += `<div class="modal-section"><h4>Overview</h4><p>${topic.overview}</p></div>`;
+        }
+
+        // Explanations
+        if (topic.explanations && topic.explanations.length > 0) {
+            modalContent.innerHTML += `<div class="modal-section"><h4>Explanations</h4><ul>${topic.explanations.map(exp => `<li>${exp}</li>`).join('')}</ul></div>`;
+        }
+
+        // Key Points
+        if (topic.key_points && topic.key_points.length > 0) {
+            modalContent.innerHTML += `<div class="modal-section"><h4>Key Points</h4><ul>${topic.key_points.map(kp => `<li>${kp}</li>`).join('')}</ul></div>`;
+        }
+
+        // Images
+        if (topic.images && topic.images.length > 0) {
+            modalContent.innerHTML += `<div class="modal-section"><h4>Images</h4><div class="resource-grid">${topic.images.map(img => `
+                <div class="resource-item">
+                    <img src="${img.url}" alt="${img.caption}" style="max-width:100%;height:auto;border-radius:.5rem;margin-bottom:.5rem;">
+                    <p class="resource-desc">${img.caption}</p>
+                    <a href="${img.url}" target="_blank" class="resource-link">View Image</a>
+                </div>`).join('')}</div></div>`;
+        }
+
+        // Resources
+        if (topic.resources) {
+            let resourcesHtml = '';
+            if (topic.resources.videos && topic.resources.videos.length > 0) {
+                resourcesHtml += `<h5>Videos</h5><div class="resource-grid">${topic.resources.videos.map(res => `
+                    <div class="resource-item">
+                        <p class="resource-title">${res.title}</p>
+                        <p class="resource-desc">${res.description}</p>
+                        <a href="${res.url}" target="_blank" class="resource-link">Watch Video</a>
+                    </div>`).join('')}</div>`;
+            }
+            if (topic.resources.pdfs && topic.resources.pdfs.length > 0) {
+                resourcesHtml += `<h5>PDFs</h5><div class="resource-grid">${topic.resources.pdfs.map(res => `
+                    <div class="resource-item">
+                        <p class="resource-title">${res.title}</p>
+                        <p class="resource-desc">${res.description}</p>
+                        <a href="${res.url}" target="_blank" class="resource-link">View PDF</a>
+                    </div>`).join('')}</div>`;
+            }
+            if (topic.resources.practice && topic.resources.practice.length > 0) {
+                resourcesHtml += `<h5>Practice</h5><div class="resource-grid">${topic.resources.practice.map(res => `
+                    <div class="resource-item">
+                        <p class="resource-title">${res.title}</p>
+                        <p class="resource-desc">${res.description}</p>
+                        <a href="${res.url}" target="_blank" class="resource-link">Start Practice</a>
+                    </div>`).join('')}</div>`;
+            }
+            if (resourcesHtml) {
+                modalContent.innerHTML += `<div class="modal-section"><h4>Learning Resources</h4>${resourcesHtml}</div>`;
+            }
+        }
+
+        document.getElementById('topicModalOverlay').style.display = 'block';
+    }
+
+    function closeTopicModal() {
+        document.getElementById('topicModalOverlay').style.display = 'none';
+    }
+
+    // Close modal when clicking outside
+    document.getElementById('topicModalOverlay').addEventListener('click', function(e) {
+        if (e.target === this) {
+            closeTopicModal();
+        }
+    });
+    </script>
+</body>
+</html>

@@ -5,6 +5,201 @@
     <meta charset="UTF-8">
     <title>Manage Syllabus | StudyOS</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet" />
+    <style>
+        /* ── Tabs ───────────────────────────────────────────────── */
+        .tab-nav {
+            display: flex;
+            gap: 0;
+            border-bottom: 2px solid var(--border);
+            margin-bottom: 1.5rem;
+        }
+        .tab-btn {
+            background: none;
+            border: none;
+            padding: .65rem 1.25rem;
+            font-size: .9rem;
+            font-weight: 600;
+            color: var(--text-muted);
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+            margin-bottom: -2px;
+            transition: all .2s;
+            display: flex;
+            align-items: center;
+            gap: .4rem;
+        }
+        .tab-btn.active {
+            color: var(--accent, #22c55e);
+            border-bottom-color: var(--accent, #22c55e);
+        }
+        .tab-pane { display: none; }
+        .tab-pane.active { display: block; }
+
+        /* ── Syllabus exclusions (existing styles) ──────────────── */
+        .syllabus-container { display: flex; flex-direction: column; gap: 1rem; }
+        .syllabus-subject {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 1rem;
+            overflow: hidden;
+        }
+        .syllabus-subject summary {
+            display: flex;
+            align-items: center;
+            gap: .75rem;
+            padding: 1rem 1.25rem;
+            cursor: pointer;
+            font-weight: 600;
+            list-style: none;
+        }
+        .syllabus-subject summary::-webkit-details-marker { display: none; }
+        .syllabus-subject summary h4 { margin: 0; font-size: 1rem; }
+        .syllabus-chapters { padding: .75rem 1.25rem 1rem; }
+        .chapter-row {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: .6rem .75rem;
+            border-radius: .5rem;
+            transition: background .2s;
+            flex-wrap: wrap;
+        }
+        .chapter-row:hover { background: var(--bg-tertiary, rgba(255,255,255,.04)); }
+        .chapter-row.excluded { opacity: .5; }
+        .chapter-name { flex: 1; font-size: .9rem; }
+        .topic-count { font-size: .75rem; color: var(--text-muted); }
+        .toggle-btn {
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border);
+            border-radius: .5rem;
+            padding: .3rem .8rem;
+            font-size: .78rem;
+            font-weight: 600;
+            cursor: pointer;
+            color: var(--text-primary);
+            white-space: nowrap;
+        }
+        .toggle-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+        /* ── Custom syllabus cards ──────────────────────────────── */
+        .custom-card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 1rem;
+            padding: 1.25rem;
+            margin-bottom: .75rem;
+        }
+        .custom-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: .5rem;
+        }
+        .custom-card-title { font-weight: 700; font-size: 1rem; margin: 0; }
+        .custom-card-meta { font-size: .78rem; color: var(--text-muted); }
+        .chapter-chip {
+            display: inline-block;
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border);
+            border-radius: .4rem;
+            padding: .2rem .6rem;
+            font-size: .75rem;
+            margin: .2rem;
+        }
+        .btn-danger-sm {
+            background: rgba(239,68,68,.1);
+            border: 1px solid rgba(239,68,68,.25);
+            color: #ef4444;
+            border-radius: .5rem;
+            padding: .3rem .75rem;
+            font-size: .78rem;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        /* ── Upload / manual form ───────────────────────────────── */
+        .form-section {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 1rem;
+            padding: 1.5rem;
+            margin-bottom: 1.25rem;
+        }
+        .form-section h3 {
+            margin: 0 0 1rem;
+            font-size: 1rem;
+            display: flex;
+            align-items: center;
+            gap: .5rem;
+        }
+        .form-input {
+            width: 100%;
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border);
+            border-radius: .6rem;
+            color: var(--text-primary);
+            padding: .65rem .85rem;
+            font-size: .9rem;
+            margin-bottom: .75rem;
+        }
+        .form-input:focus { outline: 2px solid var(--accent, #22c55e); border-color: transparent; }
+        .form-textarea { min-height: 140px; resize: vertical; font-family: inherit; }
+        .btn-primary {
+            background: var(--accent, #22c55e);
+            color: #fff;
+            border: none;
+            border-radius: .6rem;
+            padding: .6rem 1.2rem;
+            font-weight: 700;
+            font-size: .88rem;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: .4rem;
+        }
+        .btn-secondary-sm {
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border);
+            color: var(--text-primary);
+            border-radius: .6rem;
+            padding: .55rem 1rem;
+            font-weight: 600;
+            font-size: .85rem;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: .4rem;
+        }
+        .divider { height: 1px; background: var(--border); margin: 1.25rem 0; }
+        .chapter-entry {
+            display: flex;
+            gap: .5rem;
+            margin-bottom: .5rem;
+            align-items: flex-start;
+        }
+        .chapter-entry input { flex: 1; }
+        .chapter-entry textarea { flex: 2; min-height: 52px; resize: vertical; font-size: .82rem; }
+        .btn-remove-ch {
+            background: rgba(239,68,68,.1);
+            border: 1px solid rgba(239,68,68,.2);
+            color: #ef4444;
+            border-radius: .5rem;
+            padding: .3rem .6rem;
+            cursor: pointer;
+            font-size: .8rem;
+        }
+        .badge-new {
+            display: inline-block;
+            background: rgba(34,197,94,.15);
+            color: #22c55e;
+            font-size: .65rem;
+            font-weight: 700;
+            padding: 1px 6px;
+            border-radius: 4px;
+            vertical-align: middle;
+        }
+    </style>
 </head>
 
 <body>
@@ -16,89 +211,269 @@
         {% endif %}
 
         <main class="main-content">
-            <div class="header-row">
-                <h1>{{ class_data.get('name', 'Class') }} - Syllabus Management</h1>
-                <div class="class-info" style="display: flex; gap: 20px; align-items: center; margin-bottom: 20px;">
-                    <span class="badge" style="background: var(--primary); color: white; padding: 4px 12px; border-radius: 12px; font-size: 12px;">
+            <div class="header-row" style="padding: 1.5rem 2rem 0;">
+                <div style="display:flex;align-items:center;gap:1rem;margin-bottom:.5rem">
+                    <a href="{{ url_for('institution_teacher_classes') }}" style="font-size:.85rem;color:var(--text-muted);text-decoration:none">← Classes</a>
+                    <h1 style="margin:0;font-size:1.6rem;font-weight:800">{{ class_data.get('name', 'Class') }}</h1>
+                </div>
+
+                <!-- Class meta badges -->
+                <div style="display:flex;gap:.5rem;flex-wrap:wrap;margin-bottom:1rem">
+                    <span style="background:var(--bg-secondary);border:1px solid var(--border);border-radius:100px;padding:.2rem .75rem;font-size:.78rem">
                         {% if class_data.get('original_purpose') == 'exam' %}
-                            {{ class_data.get('purpose', 'Exam') }} Preparation
+                            {{ class_data.get('purpose', 'Exam') }} Prep
                         {% else %}
-                            {{ class_data.get('board', 'CBSE') }} Class {{ class_data.get('grade', '10') }}
-                            {% if class_data.get('subject_combination') %}
-                                - {{ class_data.get('subject_combination') }}
-                            {% endif %}
+                            {{ class_data.get('board', 'CBSE') }} · Grade {{ class_data.get('grade', '10') }}
                         {% endif %}
                     </span>
-                    {% if class_data.get('exam_type') %}
-                        <span class="badge" style="background: var(--accent); color: white; padding: 4px 12px; border-radius: 12px; font-size: 12px;">
-                            {{ class_data.get('exam_type') }}
-                        </span>
+                    {% if class_data.get('invite_code') %}
+                    <span style="background:rgba(34,197,94,.12);color:#22c55e;border-radius:100px;padding:.2rem .75rem;font-size:.78rem;font-weight:600">
+                        Code: {{ class_data.invite_code }}
+                    </span>
                     {% endif %}
                 </div>
-                <p class="text-muted">Exclude chapters to hide them from all students in this class</p>
             </div>
 
-            <div class="syllabus-container">
-                {% if syllabus and syllabus.items() %}
-                    {% for subject_name, subject_data in syllabus.items() %}
-                        <details class="syllabus-subject" open>
-                            <summary>
-                                <h4>{{ subject_name }}</h4>
-                                {% if subject_data.get('chapters') %}
-                                    <span style="color: var(--text-muted); font-size: 12px; margin-left: 10px;">
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                <div style="padding: 0 2rem;">
+                    {% for cat, msg in messages %}
+                    <div style="margin-bottom:.75rem;padding:.85rem 1rem;border-radius:.75rem;border-left:4px solid;
+                        {% if cat == 'success' %}background:rgba(52,211,153,.1);border-color:#34d399;color:#34d399
+                        {% elif cat == 'error' %}background:rgba(239,68,68,.1);border-color:#ef4444;color:#ef4444
+                        {% else %}background:rgba(59,130,246,.1);border-color:#3b82f6;color:#3b82f6{% endif %}">
+                        {{ msg }}
+                    </div>
+                    {% endfor %}
+                </div>
+                {% endif %}
+            {% endwith %}
+
+            <!-- ── Tab navigation ─────────────────────────────────────── -->
+            <div style="padding: 0 2rem;">
+                <div class="tab-nav">
+                    <button class="tab-btn active" onclick="switchTab('exclusions', this)">
+                        <span class="material-symbols-outlined" style="font-size:1rem">menu_book</span>
+                        Board Syllabus
+                    </button>
+                    <!-- <button class="tab-btn" onclick="switchTab('custom', this)">
+                        <span class="material-symbols-outlined" style="font-size:1rem">add_circle</span>
+                        Custom Syllabus
+                        <span class="badge-new">New</span>
+                    </button> -->
+                </div>
+
+                <!-- ═══════════════════════════════════════════════════════
+                     TAB 1 — Board Syllabus Exclusions (existing feature)
+                ══════════════════════════════════════════════════════════ -->
+                <div class="tab-pane active" id="tab-exclusions">
+                    <p style="color:var(--text-muted);margin-bottom:1rem;font-size:.9rem">
+                        Exclude chapters to hide them from all students in this class.
+                    </p>
+                    <div class="syllabus-container">
+                        {% if syllabus and syllabus.items() %}
+                            {% for subject_name, subject_data in syllabus.items() %}
+                            <details class="syllabus-subject" open>
+                                <summary>
+                                    <span class="material-symbols-outlined" style="font-size:1.1rem;color:var(--accent,#22c55e)">book</span>
+                                    <h4>{{ subject_name }}</h4>
+                                    {% if subject_data.get('chapters') %}
+                                    <span style="color:var(--text-muted);font-size:.78rem;margin-left:auto">
                                         {{ subject_data.chapters|length }} chapters
                                     </span>
-                                {% endif %}
-                            </summary>
-
-                            <div class="syllabus-chapters">
-                                {% if subject_data.get('chapters') %}
-                                    {% for chapter_name, chapter_data in subject_data.get('chapters', {}).items() %}
-                                        {% set exclusion_key = subject_name + "::" + chapter_name %}
-                                        {% set is_excluded = exclusions.get(exclusion_key, False) %}
-
-                                        <div class="chapter-row {% if is_excluded %}excluded{% endif %}">
-                                            <span class="chapter-name">{{ chapter_name }}</span>
-                                            
-                                            {% if chapter_data.get('topics') %}
-                                                <span class="topic-count" style="color: var(--text-muted); font-size: 11px;">
-                                                    {{ chapter_data.topics|length }} topics
-                                                </span>
-                                            {% endif %}
-
-                                            <form method="POST" style="display:inline;">
-                                                <input type="hidden" name="subject" value="{{ subject_name }}">
-                                                <input type="hidden" name="chapter" value="{{ chapter_name }}">
-                                                <input type="hidden" name="action"
-                                                    value="{% if is_excluded %}include{% else %}exclude{% endif %}">
-                                                <button type="submit" class="toggle-btn">
-                                                    {% if is_excluded %}
-                                                    ↺ Include
-                                                    {% else %}
-                                                    ✕ Exclude
-                                                    {% endif %}
-                                                </button>
-                                            </form>
-                                        </div>
-                                    {% endfor %}
-                                {% else %}
-                                    <p style="color: var(--text-muted); padding: 20px; text-align: center;">
-                                        No chapters available for this subject
-                                    </p>
-                                {% endif %}
-                            </div>
-                        </details>
-                    {% endfor %}
-                {% else %}
-                    <div style="text-align: center; padding: 40px; color: var(--text-muted);">
-                        <h3>No Syllabus Available</h3>
-                        <p>Syllabus data is not available for this class configuration.</p>
-                        <p>Please check your class settings or contact support.</p>
+                                    {% endif %}
+                                </summary>
+                                <div class="syllabus-chapters">
+                                    {% if subject_data.get('chapters') %}
+                                        {% for chapter_name, chapter_data in subject_data.get('chapters', {}).items() %}
+                                            {%- set exclusion_key = subject_name + "::" + chapter_name -%}
+                                            {%- set is_excluded = exclusions.get(exclusion_key, False) -%}
+                                            <div class="chapter-row {% if is_excluded %}excluded{% endif %}">
+                                                <span class="chapter-name">{{ chapter_name }}</span>
+                                                {% if chapter_data.get('topics') %}
+                                                <span class="topic-count">{{ chapter_data.topics|length }} topics</span>
+                                                {% endif %}
+                                                <form method="POST" action="{{ url_for('manage_class_syllabus', class_id=class_id) }}" style="display:inline">
+                                                    <input type="hidden" name="subject" value="{{ subject_name }}">
+                                                    <input type="hidden" name="chapter" value="{{ chapter_name }}">
+                                                    <input type="hidden" name="action" value="{% if is_excluded %}include{% else %}exclude{% endif %}">
+                                                    <button type="submit" class="toggle-btn">
+                                                        {% if is_excluded %}↺ Include{% else %}✕ Exclude{% endif %}
+                                                    </button>
+                                                </form>
+                                            </div>
+                                        {% endfor %}
+                                    {% else %}
+                                    <p style="color:var(--text-muted);padding:1rem 0;font-size:.88rem">No chapters for this subject.</p>
+                                    {% endif %}
+                                </div>
+                            </details>
+                            {% endfor %}
+                        {% else %}
+                        <div style="text-align:center;padding:3rem;color:var(--text-muted)">
+                            <span class="material-symbols-outlined" style="font-size:3rem;opacity:.3;display:block;margin-bottom:1rem">menu_book</span>
+                            <p>No syllabus data available for this class configuration.</p>
+                        </div>
+                        {% endif %}
                     </div>
-                {% endif %}
-            </div>
+                </div>
+
+                <!-- ═══════════════════════════════════════════════════════
+                     TAB 2 — Custom Syllabus (Phase 2 new feature)
+                ══════════════════════════════════════════════════════════ -->
+                <div class="tab-pane" id="tab-custom">
+
+                    <!-- Existing custom syllabi -->
+                    {% if custom_syllabi %}
+                    <h3 style="margin:0 0 .75rem;font-size:1rem;font-weight:700">Added Custom Subjects</h3>
+                    {% for cs in custom_syllabi %}
+                    <div class="custom-card">
+                        <div class="custom-card-header">
+                            <h4 class="custom-card-title">{{ cs.name }}</h4>
+                            <form method="POST" action="{{ url_for('delete_custom_syllabus', class_id=class_id, custom_id=cs.id) }}"
+                                  onsubmit="return confirm('Remove this custom subject?')">
+                                <button type="submit" class="btn-danger-sm">Remove</button>
+                            </form>
+                        </div>
+                        <p class="custom-card-meta">{{ cs.chapters|length }} chapters · Added {{ cs.get('created_at','')[:10] }}</p>
+                        <div style="margin-top:.5rem">
+                            {% for ch in cs.chapters[:6] %}
+                            <span class="chapter-chip">{{ ch.chapter }}</span>
+                            {% endfor %}
+                            {% if cs.chapters|length > 6 %}
+                            <span class="chapter-chip" style="color:var(--text-muted)">+{{ cs.chapters|length - 6 }} more</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                    <div class="divider"></div>
+                    {% endif %}
+
+                    <!-- Option A: Upload PDF / Paste text ──────────────── -->
+                    <div class="form-section">
+                        <h3>
+                            <span class="material-symbols-outlined" style="font-size:1.1rem;color:var(--accent,#22c55e)">upload_file</span>
+                            Extract from PDF or Text
+                        </h3>
+                        <p style="color:var(--text-muted);font-size:.85rem;margin-bottom:1rem">
+                            Upload a PDF syllabus or paste text — Gemini AI will extract chapters and topics for you to review.
+                        </p>
+                        <form method="POST" action="{{ url_for('custom_syllabus_upload', class_id=class_id) }}" enctype="multipart/form-data">
+                            <input type="hidden" name="action" value="extract">
+                            <label style="font-size:.82rem;font-weight:600;color:var(--text-muted);display:block;margin-bottom:.35rem">PDF File (optional)</label>
+                            <input type="file" name="syllabus_pdf" accept=".pdf" class="form-input">
+
+                            <label style="font-size:.82rem;font-weight:600;color:var(--text-muted);display:block;margin-bottom:.35rem">
+                                Or paste syllabus text
+                            </label>
+                            <textarea name="syllabus_text" class="form-input form-textarea"
+                                      placeholder="Paste chapters, topics, unit names…"></textarea>
+
+                            <button type="submit" class="btn-primary">
+                                <span class="material-symbols-outlined" style="font-size:1rem">auto_awesome</span>
+                                Extract with Gemini AI
+                            </button>
+                        </form>
+                    </div>
+
+                    <!-- Option B: Create manually ───────────────────────── -->
+                    <div class="form-section">
+                        <h3>
+                            <span class="material-symbols-outlined" style="font-size:1.1rem;color:#3b82f6">edit_note</span>
+                            Create New Subject Manually
+                        </h3>
+                        <p style="color:var(--text-muted);font-size:.85rem;margin-bottom:1rem">
+                            Build a subject from scratch by entering chapter names and topics.
+                        </p>
+                        <form method="POST" action="{{ url_for('custom_syllabus_upload', class_id=class_id) }}" id="manualForm">
+                            <input type="hidden" name="action" value="manual">
+                            <input type="hidden" name="chapters_json" id="chaptersJson">
+
+                            <label style="font-size:.82rem;font-weight:600;color:var(--text-muted);display:block;margin-bottom:.35rem">Subject Name *</label>
+                            <input type="text" name="subject_name" class="form-input" placeholder="e.g. Environmental Science" required>
+
+                            <label style="font-size:.82rem;font-weight:600;color:var(--text-muted);display:block;margin:.5rem 0 .35rem">
+                                Chapters *
+                            </label>
+                            <div id="chaptersContainer">
+                                <div class="chapter-entry" id="ch-0">
+                                    <input type="text" class="form-input ch-name" placeholder="Chapter name" style="margin-bottom:0">
+                                    <textarea class="form-input ch-topics" placeholder="Topics (one per line)" style="margin-bottom:0"></textarea>
+                                    <button type="button" class="btn-remove-ch" onclick="removeChapter(0)" style="display:none">✕</button>
+                                </div>
+                            </div>
+                            <button type="button" class="btn-secondary-sm" onclick="addChapter()" style="margin-top:.5rem;margin-bottom:1rem">
+                                <span class="material-symbols-outlined" style="font-size:.9rem">add</span>
+                                Add Chapter
+                            </button>
+
+                            <br>
+                            <button type="submit" class="btn-primary" onclick="prepareManual()">
+                                <span class="material-symbols-outlined" style="font-size:1rem">save</span>
+                                Save Custom Subject
+                            </button>
+                        </form>
+                    </div>
+                </div><!--/tab-custom-->
+            </div><!-- /padding wrapper -->
         </main>
     </div>
-</body>
 
+    <script>
+    (function () {
+        // Theme
+        const saved = localStorage.getItem('sclera-theme');
+        if (saved) document.documentElement.setAttribute('data-theme', saved);
+    })();
+
+    // ── Tab switching ─────────────────────────────────────────────────────
+    function switchTab(id, btn) {
+        document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        document.getElementById('tab-' + id).classList.add('active');
+        btn.classList.add('active');
+    }
+
+    // ── Manual chapter builder ────────────────────────────────────────────
+    let chIdx = 1;
+    function addChapter() {
+        const c = document.getElementById('chaptersContainer');
+        const div = document.createElement('div');
+        div.className = 'chapter-entry';
+        div.id = 'ch-' + chIdx;
+        div.innerHTML = `
+            <input type="text" class="form-input ch-name" placeholder="Chapter name" style="margin-bottom:0">
+            <textarea class="form-input ch-topics" placeholder="Topics (one per line)" style="margin-bottom:0"></textarea>
+            <button type="button" class="btn-remove-ch" onclick="removeChapter(${chIdx})">✕</button>
+        `;
+        c.appendChild(div);
+        // Show remove button on first entry too
+        document.querySelector('#ch-0 .btn-remove-ch').style.display = 'inline-block';
+        chIdx++;
+    }
+    function removeChapter(idx) {
+        const el = document.getElementById('ch-' + idx);
+        if (el) el.remove();
+        const entries = document.querySelectorAll('.chapter-entry');
+        if (entries.length === 1) {
+            entries[0].querySelector('.btn-remove-ch').style.display = 'none';
+        }
+    }
+    function prepareManual() {
+        const entries = document.querySelectorAll('.chapter-entry');
+        const chapters = [];
+        entries.forEach(e => {
+            const name = e.querySelector('.ch-name').value.trim();
+            const topicsRaw = e.querySelector('.ch-topics').value.trim();
+            if (name) {
+                chapters.push({
+                    chapter: name,
+                    topics: topicsRaw ? topicsRaw.split('\n').map(t => t.trim()).filter(Boolean) : []
+                });
+            }
+        });
+        document.getElementById('chaptersJson').value = JSON.stringify(chapters);
+    }
+    </script>
+</body>
 </html>

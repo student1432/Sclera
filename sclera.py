@@ -36,6 +36,10 @@ from marshmallow import ValidationError
 import traceback
 # AI Assistant import
 from ai_assistant import get_ai_assistant
+# Gemini Analytics import
+from gemini_analytics import gemini_analytics
+# CLI Commands import
+from gemini_cli import register_cli_commands
 # Chat security utilities
 # Load environment variables from .env file
 from dotenv import load_dotenv
@@ -83,7 +87,13 @@ Talisman(app,
 user_ref = None
 # Initialize Flask-Mail
 mail = Mail(app)
-
+from report_generator import generate_class_report_pdf, generate_student_report_pdf
+import io, json
+try:
+    import pdfplumber
+    PDFPLUMBER_AVAILABLE = True
+except ImportError:
+    PDFPLUMBER_AVAILABLE = False
 # ============================================================================
 # INSTITUTION V2 CONSTANTS / HELPERS
 # ============================================================================
@@ -136,13 +146,15 @@ def _get_any_profile(uid: str) -> dict | None:
     return None
 def _get_institution_analytics(institution_id, class_ids=None):
     """
-    Common logic for real-time heatmap and at-risk predictive analytics.
+    Enhanced analytics with Gemini AI predictions for at-risk detection.
+    Falls back to rule-based logic if AI predictions unavailable.
     If class_ids is provided, filter students by those classes.
     """
     heatmap_data = defaultdict(int)
     at_risk_students = []
     if not institution_id:
         return {'heatmap': {}, 'at_risk': []}
+    
     # 1. Fetch relevant classes
     classes_ref = db.collection(CLASSES_COL).where('institution_id', '==', institution_id)
     classes_docs = list(classes_ref.stream())
@@ -152,6 +164,7 @@ def _get_institution_analytics(institution_id, class_ids=None):
     all_student_ids = set()
     for _, c_data in classes_map.items():
         all_student_ids.update(c_data.get('student_uids', []))
+    
     # 2. Aggregations (Heatmap)
     thirty_days_ago = datetime.utcnow() - timedelta(days=30)
     for sid in all_student_ids:
@@ -162,41 +175,119 @@ def _get_institution_analytics(institution_id, class_ids=None):
             w = s_data.get('local_weekday')
             if h is not None and w is not None:
                 heatmap_data[f"{w}-{h}"] += 1
-    # 3. Risk Analytics
+    
+    # 3. Enhanced Risk Analytics with Gemini predictions
     for sid in all_student_ids:
         s_doc = db.collection('users').document(sid).get()
         if not s_doc.exists: continue
         s_data = s_doc.to_dict()
-        # Simple Risk model
-        last_str = s_data.get('last_login_date')
-        status = 'healthy'
-        if not last_str: status = 'stagnating'
-        else:
-            days = (datetime.utcnow() - datetime.fromisoformat(last_str)).days
-            if days > 7: status = 'stagnating'
-        # Velocity Momentum
-        results = s_data.get('exam_results', [])
-        momentum = 0
-        if len(results) >= 2:
+        
+        # Try to get Gemini predictions first
+        risk_prediction = s_data.get('risk_prediction', {})
+        readiness_prediction = s_data.get('readiness_prediction', {})
+        
+        # Check if we need to generate new AI predictions
+        use_ai_predictions = False
+        needs_prediction_update = False
+        
+        if risk_prediction:
             try:
-                sorted_res = sorted(results, key=lambda x: x.get('date', ''), reverse=True)
-                series = [float(r.get('percentage', r.get('score', 0))) for r in sorted_res[:3]][::-1]
-                momentum = series[-1] - series[0]
-                if momentum < -5: status = 'critical' if status == 'stagnating' else 'declining'
-            except: pass
-        if status != 'healthy':
-            student_class = "Unknown"
-            for cid, cdata in classes_map.items():
-                if sid in cdata.get('student_uids', []):
-                    student_class = cdata.get('name', cid)
-                    break
+                last_updated = risk_prediction.get('last_updated', '')
+                prompt_version = risk_prediction.get('prompt_version', 'v1')
+                if last_updated:
+                    last_date = datetime.fromisoformat(last_updated)
+                    # Use predictions if they're recent (within 7 days) and from v2 prompt
+                    if (datetime.utcnow() - last_date).days <= 7 and prompt_version == 'v2':
+                        use_ai_predictions = True
+                    # Mark for update if predictions are old or from v1 prompt
+                    elif (datetime.utcnow() - last_date).days > 7 or prompt_version != 'v2':
+                        needs_prediction_update = True
+            except:
+                needs_prediction_update = True
+        else:
+            # No predictions exist, need to generate
+            needs_prediction_update = True
+        
+        # Auto-generate AI predictions if needed and available
+        if needs_prediction_update and gemini_analytics.ai_available:
+            try:
+                new_risk_data, new_readiness_data = gemini_analytics.predict_student_risk_and_readiness(sid)
+                if new_risk_data or new_readiness_data:
+                    gemini_analytics.store_student_predictions(sid, new_risk_data, new_readiness_data)
+                    # Use the newly generated predictions
+                    if new_risk_data and new_risk_data.get('risk') == 'at_risk':
+                        risk_prediction = new_risk_data
+                        readiness_prediction = new_readiness_data or {}
+                        use_ai_predictions = True
+                        logger.info(f"Auto-generated AI predictions for student {sid}")
+            except Exception as e:
+                logger.error(f"Failed to auto-generate predictions for {sid}: {e}")
+                # Fall back to rule-based if AI generation fails
+        
+        student_class = "Unknown"
+        for cid, cdata in classes_map.items():
+            if sid in cdata.get('student_uids', []):
+                student_class = cdata.get('name', cid)
+                break
+        
+        if use_ai_predictions and risk_prediction.get('risk') == 'at_risk':
+            # Use AI-predicted at-risk students
             at_risk_students.append({
                 'uid': sid,
                 'name': s_data.get('name', 'Student'),
                 'class': student_class,
-                'status': status,
-                'momentum': round(momentum, 2)
+                'status': 'at_risk_ai',
+                'risk_level': risk_prediction.get('risk', 'at_risk'),
+                'explanation': risk_prediction.get('explanation', 'AI-detected risk'),
+                'confidence': risk_prediction.get('confidence', 0),
+                'key_factors': risk_prediction.get('key_factors', []),
+                'readiness_score': readiness_prediction.get('readiness_score', 0),
+                'readiness_summary': readiness_prediction.get('summary', ''),
+                'ai_detected': True
             })
+        else:
+            # Fallback to rule-based logic for students without AI predictions
+            last_str = s_data.get('last_login_date')
+            status = 'healthy'
+            momentum = 0
+            
+            # Check login activity
+            if not last_str: 
+                status = 'stagnating'
+            else:
+                days = (datetime.utcnow() - datetime.fromisoformat(last_str)).days
+                if days > 7: status = 'stagnating'
+            
+            # Check chapter completion (NEW)
+            progress = calculate_academic_progress(s_data)
+            completion_rate = progress.get('overall', 0)
+            if completion_rate < 25 and status == 'healthy':
+                status = 'declining'  # Low completion rate
+            
+            # Velocity Momentum
+            results = s_data.get('exam_results', [])
+            if len(results) >= 2:
+                try:
+                    sorted_res = sorted(results, key=lambda x: x.get('date', ''), reverse=True)
+                    series = [float(r.get('percentage', r.get('score', 0))) for r in sorted_res[:3]][::-1]
+                    momentum = series[-1] - series[0]
+                    if momentum < -5: 
+                        status = 'critical' if status == 'stagnating' else 'declining'
+                except: 
+                    pass
+            
+            if status != 'healthy':
+                at_risk_students.append({
+                    'uid': sid,
+                    'name': s_data.get('name', 'Student'),
+                    'class': student_class,
+                    'status': status,
+                    'momentum': round(momentum, 2),
+                    'completion_rate': completion_rate,
+                    'ai_detected': False,
+                    'explanation': f'Rule-based detection: {status} (completion: {completion_rate}%, momentum: {round(momentum, 2)})'
+                })
+    
     return {
         'heatmap': dict(heatmap_data),
         'at_risk': at_risk_students
@@ -1602,7 +1693,7 @@ def profile_dashboard():
     except Exception as e:
         logger.error(f"Fetch upcoming events error: {str(e)}")
     # NEW: Get performance metrics
-    performance_data = {'average': 0, 'last': 0, 'highest': 0}
+    performance_data = {'average': 0, 'last': 0, 'highest': 0, 'readiness': 0}
     try:
         results = user_data.get('exam_results', [])
         if results:
@@ -1617,6 +1708,10 @@ def profile_dashboard():
                 performance_data['average'] = round(sum(scores) / len(scores), 1)
                 performance_data['last'] = round(scores[-1], 1)
                 performance_data['highest'] = round(max(scores), 1)
+        
+        # Calculate readiness using existing function
+        progress_data = calculate_academic_progress(user_data)
+        performance_data['readiness'] = round(progress_data.get('readiness', 0), 1)
     except Exception as e:
         logger.error(f"Calculate performance error: {str(e)}")
     # NEW: Get study time data (last 7 days)
@@ -1640,7 +1735,7 @@ def profile_dashboard():
     except Exception as e:
         logger.error(f"Fetch study time error: {str(e)}")
     # NEW: Get totals
-    totals_data = {'total_goals': 0, 'completed_goals': 0, 'total_tasks': 0, 'completed_tasks': 0}
+    totals_data = {'total_goals': 0, 'completed_goals': 0, 'total_tasks': 0, 'completed_tasks': 0, 'total_study_time': 0}
     try:
         goals = user_data.get('goals', [])
         totals_data['total_goals'] = len(goals) if isinstance(goals, list) else 0
@@ -1648,6 +1743,10 @@ def profile_dashboard():
         tasks = user_data.get('tasks', [])
         totals_data['total_tasks'] = len(tasks) if isinstance(tasks, list) else 0
         totals_data['completed_tasks'] = sum(1 for t in tasks if isinstance(t, dict) and t.get('completed', False)) if isinstance(tasks, list) else 0
+        
+        # Calculate total study time in hours
+        total_minutes = user_data.get('time_studied', 0)
+        totals_data['total_study_time'] = round(total_minutes / 60, 1) if total_minutes > 0 else 0
     except Exception as e:
         logger.error(f"Calculate totals error: {str(e)}")
     # NEW: Get incomplete tasks
@@ -2412,6 +2511,163 @@ def get_thread_history(chatbot_type, thread_id):
     except Exception as e:
         logger.error(f"Error loading thread history: {str(e)}")
         return jsonify({'error': 'Failed to load thread history'}), 500
+
+# ============================================================================
+# GEMINI ANALYTICS API ENDPOINTS
+# ============================================================================
+@app.route('/api/analytics/cluster/class/<class_id>', methods=['POST'])
+@require_teacher_v2
+def cluster_class_study_patterns(class_id):
+    """Generate study pattern clusters for a class"""
+    uid = session['uid']
+    teacher_profile = _get_teacher_profile(uid) or {}
+    institution_id = teacher_profile.get('institution_id')
+    
+    try:
+        # Verify teacher has access to this class
+        class_doc = db.collection('classes').document(class_id).get()
+        if not class_doc.exists:
+            return jsonify({'error': 'Class not found'}), 404
+        
+        class_data = class_doc.to_dict()
+        if class_data.get('institution_id') != institution_id:
+            return jsonify({'error': 'Access denied'}), 403
+        
+        # Check if recently clustered
+        last_clustered = class_data.get('last_clustered')
+        if last_clustered:
+            last_date = datetime.fromisoformat(last_clustered)
+            if (datetime.utcnow() - last_date).days < 7:
+                # Return cached clusters
+                clusters = class_data.get('study_clusters', [])
+                return jsonify({
+                    'clusters': clusters,
+                    'cached': True,
+                    'last_clustered': last_clustered
+                })
+        
+        # Generate new clusters
+        clusters = gemini_analytics.analyze_class_study_patterns(class_id)
+        
+        if clusters:
+            gemini_analytics.store_class_clusters(class_id, clusters)
+            return jsonify({
+                'clusters': clusters,
+                'cached': False,
+                'last_clustered': datetime.utcnow().isoformat()
+            })
+        else:
+            return jsonify({'error': 'Failed to generate clusters'}), 500
+            
+    except Exception as e:
+        logger.error(f"Error clustering class {class_id}: {str(e)}")
+        return jsonify({'error': 'Clustering failed'}), 500
+
+@app.route('/api/analytics/cluster/institution/<institution_id>', methods=['POST'])
+@require_admin_v2
+def cluster_institution_study_patterns(institution_id):
+    """Generate study pattern clusters for entire institution"""
+    uid = session['uid']
+    admin_profile = _get_admin_profile(uid) or {}
+    
+    if admin_profile.get('institution_id') != institution_id:
+        return jsonify({'error': 'Access denied'}), 403
+    
+    try:
+        # Get all classes in institution
+        classes_query = db.collection('classes').where('institution_id', '==', institution_id)
+        institution_clusters = []
+        
+        for class_doc in classes_query.stream():
+            class_id = class_doc.id
+            class_data = class_doc.to_dict()
+            
+            # Check if recently clustered
+            last_clustered = class_data.get('last_clustered')
+            if last_clustered:
+                last_date = datetime.fromisoformat(last_clustered)
+                if (datetime.utcnow() - last_date).days < 7:
+                    # Use cached clusters
+                    clusters = class_data.get('study_clusters', [])
+                    institution_clusters.extend(clusters)
+                    continue
+            
+            # Generate new clusters
+            clusters = gemini_analytics.analyze_class_study_patterns(class_id)
+            if clusters:
+                gemini_analytics.store_class_clusters(class_id, clusters)
+                institution_clusters.extend(clusters)
+        
+        return jsonify({
+            'clusters': institution_clusters,
+            'total_classes': len(list(classes_query.stream())),
+            'generated_at': datetime.utcnow().isoformat()
+        })
+        
+    except Exception as e:
+        logger.error(f"Error clustering institution {institution_id}: {str(e)}")
+        return jsonify({'error': 'Institution clustering failed'}), 500
+
+@app.route('/api/analytics/student/<student_uid>/predictions', methods=['GET'])
+@require_institution_role(['teacher', 'admin'])
+def get_student_predictions(student_uid):
+    """Get AI predictions for a specific student"""
+    uid = session['uid']
+    account_type = _get_account_type()
+    
+    try:
+        # Verify access rights
+        if account_type == 'teacher':
+            teacher_profile = _get_teacher_profile(uid) or {}
+            institution_id = teacher_profile.get('institution_id')
+            class_ids = teacher_profile.get('class_ids', [])
+            
+            # Check if student is in teacher's class
+            student_doc = db.collection('users').document(student_uid).get()
+            if not student_doc.exists:
+                return jsonify({'error': 'Student not found'}), 404
+            
+            student_data = student_doc.to_dict()
+            if student_data.get('institution_id') != institution_id:
+                return jsonify({'error': 'Access denied'}), 403
+            
+            # Check class membership
+            student_class_ids = student_data.get('class_ids', [])
+            if not any(class_id in class_ids for class_id in student_class_ids):
+                return jsonify({'error': 'Student not in your classes'}), 403
+                
+        elif account_type == 'admin':
+            admin_profile = _get_admin_profile(uid) or {}
+            institution_id = admin_profile.get('institution_id')
+            
+            student_doc = db.collection('users').document(student_uid).get()
+            if not student_doc.exists:
+                return jsonify({'error': 'Student not found'}), 404
+            
+            student_data = student_doc.to_dict()
+            if student_data.get('institution_id') != institution_id:
+                return jsonify({'error': 'Access denied'}), 403
+        
+        # Get predictions
+        student_doc = db.collection('users').document(student_uid).get()
+        student_data = student_doc.to_dict()
+        
+        risk_prediction = student_data.get('risk_prediction', {})
+        readiness_prediction = student_data.get('readiness_prediction', {})
+        
+        return jsonify({
+            'risk_prediction': risk_prediction,
+            'readiness_prediction': readiness_prediction,
+            'student_name': student_data.get('name', 'Student'),
+            'last_updated': max(
+                risk_prediction.get('last_updated', ''),
+                readiness_prediction.get('last_updated', '')
+            )
+        })
+        
+    except Exception as e:
+        logger.error(f"Error getting predictions for {student_uid}: {str(e)}")
+        return jsonify({'error': 'Failed to get predictions'}), 500
 
 @app.route('/profile/resume')
 @require_login
@@ -3539,6 +3795,11 @@ def all_students():
     if not inst_id:
         flash('No institution assigned.', 'error')
         return redirect(url_for('profile_dashboard'))
+    
+    # Get analytics data including risk detection
+    analytics = _get_institution_analytics(inst_id)
+    at_risk_data = {student['uid']: student for student in analytics.get('at_risk', [])}
+    
     # Get all students in institution
     students_ref = db.collection('users').where('institution_id', '==', inst_id)
     students_docs = list(students_ref.stream())
@@ -3546,9 +3807,29 @@ def all_students():
     for s_doc in students_docs:
         s_data = s_doc.to_dict()
         s_data['uid'] = s_doc.id
+        
+        # Add risk detection data from analytics
+        risk_info = at_risk_data.get(s_doc.id, {})
+        if risk_info:
+            s_data['risk_level'] = risk_info.get('risk_level', risk_info.get('status', 'healthy'))
+            s_data['status'] = risk_info.get('status', 'healthy')
+            s_data['explanation'] = risk_info.get('explanation', '')
+            s_data['ai_detected'] = risk_info.get('ai_detected', False)
+            s_data['readiness_score'] = risk_info.get('readiness_score', 0)
+            s_data['readiness_summary'] = risk_info.get('readiness_summary', '')
+        else:
+            # Default to healthy if not in risk list
+            s_data['risk_level'] = 'healthy'
+            s_data['status'] = 'healthy'
+            s_data['explanation'] = ''
+            s_data['ai_detected'] = False
+            s_data['readiness_score'] = 0
+            s_data['readiness_summary'] = ''
+        
         # Calculate quick stats
         progress = calculate_academic_progress(s_data, uid=s_doc.id)
         s_data['progress_overall'] = progress.get('overall', 0)
+        
         # Last login
         last_login = s_data.get('last_login_date', '')
         if last_login:
@@ -3560,6 +3841,7 @@ def all_students():
                 s_data['days_inactive'] = 999
         else:
             s_data['days_inactive'] = 999
+        
         # Get class names
         class_ids = s_data.get('class_ids', [])
         class_names = []
@@ -3569,6 +3851,7 @@ def all_students():
                 class_names.append(c_doc.to_dict().get('name', cid))
         s_data['class_names'] = ', '.join(class_names) if class_names else 'No class'
         students_list.append(s_data)
+    
     # Sort by name
     students_list.sort(key=lambda x: x.get('name', ''))
     context = {
@@ -4666,6 +4949,1003 @@ def get_document_versions(doc_id):
             versions.append(version_data)
         versions.sort(key=lambda x: x.get('created_at', datetime(1970, 1, 1)), reverse=True)
     return jsonify({'versions': versions})
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 2A. PDF REPORT GENERATION
+# ─────────────────────────────────────────────────────────────────────────────
+ 
+@app.route('/institution/teacher/class/<class_id>/report')
+@require_teacher_v2
+def generate_class_report(class_id):
+    """Generate and download a PDF report for an entire class."""
+    from report_generator import generate_class_report_pdf
+    from flask import make_response
+    import io
+ 
+    uid = session['uid']
+    profile = _get_teacher_profile(uid) or {}
+    institution_id = profile.get('institution_id')
+ 
+    # Verify teacher owns this class
+    class_doc = db.collection(CLASSES_COL).document(class_id).get()
+    if not class_doc.exists:
+        abort(404)
+    class_data = class_doc.to_dict()
+    if class_data.get('teacher_id') != uid or class_data.get('institution_id') != institution_id:
+        abort(403)
+ 
+    # Fetch institution name
+    inst_doc = db.collection(INSTITUTIONS_COL).document(institution_id).get()
+    institution_name = inst_doc.to_dict().get('name', 'Institution') if inst_doc.exists else 'Institution'
+ 
+    # Fetch analytics (heatmap + at-risk)
+    analytics = _get_institution_analytics(institution_id, class_ids=[class_id])
+    at_risk_map = {s['uid']: s for s in analytics.get('at_risk', [])}
+ 
+    # Fetch all students in class
+    student_uids = class_data.get('student_uids', [])
+    students = []
+    for sid in student_uids:
+        s_doc = db.collection('users').document(sid).get()
+        if not s_doc.exists:
+            continue
+        s_data = s_doc.to_dict()
+        s_data['uid'] = sid
+ 
+        progress = calculate_academic_progress(s_data, uid=sid)
+        s_data['progress_overall'] = progress.get('overall', 0)
+ 
+        # Last active
+        last_login = s_data.get('last_login_date', '')
+        try:
+            last_date = datetime.fromisoformat(last_login).date()
+            s_data['days_inactive'] = (date.today() - last_date).days
+        except Exception:
+            s_data['days_inactive'] = 999
+ 
+        # Avg exam score
+        results = s_data.get('exam_results', [])
+        pcts = []
+        for r in results:
+            try:
+                sc = float(r.get('score', 0))
+                mx = float(r.get('max_score', 100))
+                if mx:
+                    pcts.append((sc / mx) * 100)
+            except Exception:
+                pass
+        s_data['avg_exam_score'] = round(sum(pcts) / len(pcts), 1) if pcts else 0
+ 
+        # Merge risk info
+        risk_info = at_risk_map.get(sid, {})
+        s_data['risk_level'] = risk_info.get('risk_level', risk_info.get('status', 'healthy'))
+        s_data['readiness_score'] = risk_info.get('readiness_score', 0)
+        s_data['explanation'] = risk_info.get('explanation', '')
+        students.append(s_data)
+ 
+    # Clusters (from class doc if already computed)
+    clusters = class_data.get('clusters', [])
+ 
+    try:
+        pdf_bytes = generate_class_report_pdf(
+            class_data=class_data,
+            teacher_name=profile.get('name', 'Teacher'),
+            institution_name=institution_name,
+            students=students,
+            at_risk=analytics.get('at_risk', []),
+            heatmap_data=analytics.get('heatmap', {}),
+            clusters=clusters,
+        )
+        response = make_response(pdf_bytes)
+        safe_name = "".join(c if c.isalnum() or c in " -_" else "_" for c in class_data.get('name', 'class'))
+        response.headers['Content-Type'] = 'application/pdf'
+        response.headers['Content-Disposition'] = f'attachment; filename="report_{safe_name}.pdf"'
+        return response
+    except RuntimeError as e:
+        flash(str(e), 'error')
+        return redirect(url_for('institution_teacher_dashboard'))
+    except Exception as e:
+        logger.error(f"Class report generation error: {e}")
+        flash('Failed to generate report. Please try again.', 'error')
+        return redirect(url_for('institution_teacher_dashboard'))
+ 
+ 
+@app.route('/institution/teacher/student/<student_uid>/report')
+@require_teacher_v2
+def generate_student_report(student_uid):
+    """Generate and download a PDF report for an individual student."""
+    from report_generator import generate_student_report_pdf
+    from flask import make_response
+ 
+    uid = session['uid']
+    profile = _get_teacher_profile(uid) or {}
+    institution_id = profile.get('institution_id')
+ 
+    # Fetch student
+    s_doc = db.collection('users').document(student_uid).get()
+    if not s_doc.exists:
+        abort(404)
+    s_data = s_doc.to_dict()
+ 
+    # Verify student belongs to same institution
+    if s_data.get('institution_id') != institution_id:
+        abort(403)
+ 
+    # Verify student is in one of teacher's classes
+    teacher_class_ids = set()
+    for c in db.collection(CLASSES_COL).where('teacher_id', '==', uid).stream():
+        teacher_class_ids.add(c.id)
+    student_class_ids = set(s_data.get('class_ids', []))
+    if not teacher_class_ids.intersection(student_class_ids):
+        abort(403)
+ 
+    # Find class name
+    class_name = ""
+    for cid in student_class_ids.intersection(teacher_class_ids):
+        c_doc = db.collection(CLASSES_COL).document(cid).get()
+        if c_doc.exists:
+            class_name = c_doc.to_dict().get('name', '')
+            break
+ 
+    progress_data = calculate_academic_progress(s_data, uid=student_uid)
+    results = s_data.get('exam_results', [])
+    recent_results = sorted(results, key=lambda x: x.get('date', ''), reverse=True)[:10]
+ 
+    sessions_ref = (db.collection('users').document(student_uid)
+                    .collection('study_sessions')
+                    .order_by('start_time', direction=firestore.Query.DESCENDING)
+                    .limit(20))
+    sessions = [s.to_dict() for s in sessions_ref.stream()]
+ 
+    # Risk info from Firestore predictions
+    risk_info = {}
+    rp = s_data.get('risk_prediction', {})
+    rdp = s_data.get('readiness_prediction', {})
+    if rp:
+        risk_info['risk_level'] = rp.get('risk', 'healthy')
+        risk_info['explanation'] = rp.get('explanation', '')
+    if rdp:
+        risk_info['readiness_score'] = rdp.get('readiness_score', 0)
+        risk_info['readiness_summary'] = rdp.get('summary', '')
+ 
+    try:
+        pdf_bytes = generate_student_report_pdf(
+            student_data=s_data,
+            student_uid=student_uid,
+            progress_data=progress_data,
+            recent_results=recent_results,
+            sessions=sessions,
+            class_name=class_name,
+            risk_info=risk_info,
+        )
+        response = make_response(pdf_bytes)
+        safe_name = "".join(c if c.isalnum() or c in " -_" else "_" for c in s_data.get('name', student_uid))
+        response.headers['Content-Type'] = 'application/pdf'
+        response.headers['Content-Disposition'] = f'attachment; filename="report_{safe_name}.pdf"'
+        return response
+    except RuntimeError as e:
+        flash(str(e), 'error')
+        return redirect(url_for('student_detail', student_uid=student_uid))
+    except Exception as e:
+        logger.error(f"Student report generation error: {e}")
+        flash('Failed to generate report. Please try again.', 'error')
+        return redirect(url_for('student_detail', student_uid=student_uid))
+ 
+ 
+# ─────────────────────────────────────────────────────────────────────────────
+# 2B. CUSTOM SYLLABUS UPLOAD
+# ─────────────────────────────────────────────────────────────────────────────
+ 
+@app.route('/institution/class/<class_id>/custom-syllabus', methods=['GET', 'POST'])
+@require_institution_role(['teacher', 'admin'])
+def custom_syllabus_upload(class_id):
+    """Handle custom syllabus upload — Gemini extraction + preview storage."""
+    import io, json
+ 
+    uid = session['uid']
+    profile = _get_any_profile(uid)
+    inst_id = profile.get('institution_id')
+ 
+    class_doc = db.collection(CLASSES_COL).document(class_id).get()
+    if not class_doc.exists or class_doc.to_dict().get('institution_id') != inst_id:
+        abort(403)
+    class_data = class_doc.to_dict()
+ 
+    if request.method == 'GET':
+        # Fetch already-linked custom syllabi for display
+        custom_syllabi = []
+        for cid in class_data.get('custom_syllabus_ids', []):
+            cs_doc = db.collection('custom_syllabi').document(cid).get()
+            if cs_doc.exists:
+                cs = cs_doc.to_dict()
+                cs['id'] = cid
+                custom_syllabi.append(cs)
+ 
+        return render_template('custom_syllabus.html',
+                               profile=profile,
+                               class_id=class_id,
+                               class_data=class_data,
+                               custom_syllabi=custom_syllabi)
+ 
+    action = request.form.get('action', 'extract')
+ 
+    # ── EXTRACT: receive text/PDF → call Gemini → return preview ──────────
+    if action == 'extract':
+        raw_text = request.form.get('syllabus_text', '').strip()
+ 
+        # If a PDF was uploaded, extract text from it
+        uploaded_file = request.files.get('syllabus_pdf')
+        if uploaded_file and uploaded_file.filename:
+            try:
+                import pdfplumber
+                with pdfplumber.open(io.BytesIO(uploaded_file.read())) as pdf:
+                    raw_text = "\n".join(
+                        page.extract_text() or "" for page in pdf.pages
+                    )
+            except ImportError:
+                flash('PDF text extraction requires pdfplumber. Install it or paste text manually.', 'warning')
+            except Exception as e:
+                flash(f'Could not read PDF: {e}', 'error')
+                return redirect(url_for('custom_syllabus_upload', class_id=class_id))
+ 
+        if not raw_text:
+            flash('Please upload a PDF or paste syllabus text.', 'error')
+            return redirect(url_for('custom_syllabus_upload', class_id=class_id))
+ 
+        # Call Gemini to extract structure
+        extracted = _extract_syllabus_with_gemini(raw_text)
+        if extracted is None:
+            flash('Gemini extraction failed. Please try again or add chapters manually.', 'error')
+            return redirect(url_for('custom_syllabus_upload', class_id=class_id))
+ 
+        # Store preview in Firestore temporarily (not session to avoid cookie size limits)
+        import uuid
+        preview_id = str(uuid.uuid4())
+        
+        # Store in temporary collection with TTL (expires after 1 hour)
+        db.collection('temp_syllabus_previews').document(preview_id).set({
+            'class_id': class_id,
+            'extracted': extracted,
+            'created_at': datetime.utcnow().isoformat(),
+            'expires_at': (datetime.utcnow() + timedelta(hours=1)).isoformat()
+        })
+        
+        # Store only the preview ID in session
+        session['syllabus_preview_id'] = preview_id
+        flash(f'Extracted {len(extracted)} chapters. Review and confirm below.', 'success')
+        return redirect(url_for('custom_syllabus_preview', class_id=class_id))
+ 
+    # ── MANUAL: create subject from scratch ───────────────────────────────
+    elif action == 'manual':
+        subject_name = request.form.get('subject_name', '').strip()
+        chapters_raw = request.form.get('chapters_json', '[]')
+        try:
+            chapters = json.loads(chapters_raw)
+        except Exception:
+            flash('Invalid chapter data.', 'error')
+            return redirect(url_for('custom_syllabus_upload', class_id=class_id))
+ 
+        if not subject_name or not chapters:
+            flash('Subject name and at least one chapter are required.', 'error')
+            return redirect(url_for('custom_syllabus_upload', class_id=class_id))
+ 
+        _save_custom_syllabus(class_id, subject_name, chapters, uid, inst_id)
+        flash(f'Subject "{subject_name}" added to class syllabus.', 'success')
+        return redirect(url_for('manage_class_syllabus', class_id=class_id))
+ 
+    flash('Unknown action.', 'error')
+    return redirect(url_for('custom_syllabus_upload', class_id=class_id))
+
+
+@app.route('/institution/class/<class_id>/custom-syllabus/<custom_id>/edit', methods=['GET', 'POST'])
+@require_institution_role(['teacher', 'admin'])
+def edit_custom_syllabus(class_id, custom_id):
+    """Edit an existing custom syllabus with rich content."""
+    uid = session['uid']
+    profile = _get_any_profile(uid)
+    inst_id = profile.get('institution_id')
+
+    # Verify permissions
+    class_doc = db.collection(CLASSES_COL).document(class_id).get()
+    if not class_doc.exists or class_doc.to_dict().get('institution_id') != inst_id:
+        abort(403)
+    
+    # Get the custom syllabus
+    cs_doc = db.collection('custom_syllabi').document(custom_id).get()
+    if not cs_doc.exists:
+        abort(404)
+    
+    syllabus_data = cs_doc.to_dict()
+    
+    # Verify the teacher created this syllabus or is admin
+    if syllabus_data.get('created_by') != uid and profile.get('account_type') != 'admin':
+        abort(403)
+
+    if request.method == 'POST':
+        subject_name = request.form.get('subject_name', '').strip()
+        chapters_raw = request.form.get('chapters_json', '[]')
+        
+        try:
+            chapters = json.loads(chapters_raw)
+        except Exception:
+            flash('Invalid chapter data.', 'error')
+            return redirect(request.url)
+
+        if not subject_name or not chapters:
+            flash('Subject name and at least one chapter are required.', 'error')
+            return redirect(request.url)
+
+        # Update the syllabus
+        db.collection('custom_syllabi').document(custom_id).update({
+            'name': subject_name,
+            'chapters': chapters,
+            'updated_at': datetime.utcnow().isoformat(),
+            'updated_by': uid
+        })
+        
+        flash(f'Syllabus "{subject_name}" updated successfully!', 'success')
+        return redirect(url_for('manage_class_syllabus', class_id=class_id))
+
+    # GET request - prepare data for editing
+    return render_template('edit_custom_syllabus.html',
+                           profile=profile,
+                           class_id=class_id,
+                           class_data=class_doc.to_dict(),
+                           syllabus_data=syllabus_data,
+                           custom_id=custom_id)
+
+
+@app.route('/institution/class/<class_id>/custom-syllabus/preview', methods=['GET', 'POST'])
+@require_institution_role(['teacher', 'admin'])
+def custom_syllabus_preview(class_id):
+    """Show Gemini-extracted preview; on confirm, save to Firestore."""
+    import json
+ 
+    uid = session['uid']
+    profile = _get_any_profile(uid)
+    inst_id = profile.get('institution_id')
+ 
+    class_doc = db.collection(CLASSES_COL).document(class_id).get()
+    if not class_doc.exists or class_doc.to_dict().get('institution_id') != inst_id:
+        abort(403)
+ 
+    # Get preview data from Firestore using preview ID
+    preview_id = session.get('syllabus_preview_id')
+    if not preview_id:
+        flash('Preview session expired. Please re-upload.', 'warning')
+        return redirect(url_for('custom_syllabus_upload', class_id=class_id))
+
+    try:
+        preview_doc = db.collection('temp_syllabus_previews').document(preview_id).get()
+        if not preview_doc.exists:
+            flash('Preview data not found. Please re-upload.', 'warning')
+            return redirect(url_for('custom_syllabus_upload', class_id=class_id))
+        
+        preview_data = preview_doc.to_dict()
+        
+        # Verify this preview belongs to the correct class
+        if preview_data.get('class_id') != class_id:
+            flash('Invalid preview data. Please re-upload.', 'warning')
+            return redirect(url_for('custom_syllabus_upload', class_id=class_id))
+        
+        # Check if preview has expired
+        expires_at = preview_data.get('expires_at')
+        if expires_at:
+            from datetime import datetime
+            if datetime.utcnow() > datetime.fromisoformat(expires_at.replace('Z', '+00:00')):
+                flash('Preview expired. Please re-upload.', 'warning')
+                return redirect(url_for('custom_syllabus_upload', class_id=class_id))
+        
+        extracted = preview_data.get('extracted', [])
+        
+    except Exception as e:
+        logger.error(f"Error fetching preview data: {e}")
+        flash('Error loading preview. Please re-upload.', 'error')
+        return redirect(url_for('custom_syllabus_upload', class_id=class_id))
+ 
+    if request.method == 'POST':
+        subject_name = request.form.get('subject_name', '').strip()
+        selected_indices_raw = request.form.getlist('selected_chapters')
+        selected_indices = {int(i) for i in selected_indices_raw if i.isdigit()}
+ 
+        if not subject_name:
+            flash('Please enter a subject name.', 'error')
+        else:
+            confirmed_chapters = [
+                ch for i, ch in enumerate(extracted) if i in selected_indices
+            ]
+            if confirmed_chapters:
+                _save_custom_syllabus(class_id, subject_name, confirmed_chapters, uid, inst_id)
+                
+                # Clean up temporary preview data from Firestore
+                preview_id = session.get('syllabus_preview_id')
+                if preview_id:
+                    try:
+                        db.collection('temp_syllabus_previews').document(preview_id).delete()
+                    except Exception as e:
+                        logger.warning(f"Failed to cleanup preview data: {e}")
+                
+                session.pop('syllabus_preview_id', None)
+                flash(f'Added {len(confirmed_chapters)} chapters under "{subject_name}".', 'success')
+                return redirect(url_for('manage_class_syllabus', class_id=class_id))
+            else:
+                flash('Select at least one chapter.', 'error')
+ 
+    return render_template('custom_syllabus_preview.html',
+                           profile=profile,
+                           class_id=class_id,
+                           class_data=class_doc.to_dict(),
+                           extracted=extracted)
+ 
+ 
+@app.route('/institution/class/<class_id>/custom-syllabus/<custom_id>/delete', methods=['POST'])
+@require_institution_role(['teacher', 'admin'])
+def delete_custom_syllabus(class_id, custom_id):
+    """Remove a custom syllabus from the class."""
+    uid = session['uid']
+    profile = _get_any_profile(uid)
+    inst_id = profile.get('institution_id')
+ 
+    class_doc = db.collection(CLASSES_COL).document(class_id).get()
+    if not class_doc.exists or class_doc.to_dict().get('institution_id') != inst_id:
+        abort(403)
+ 
+    try:
+        db.collection(CLASSES_COL).document(class_id).update({
+            'custom_syllabus_ids': firestore.ArrayRemove([custom_id])
+        })
+        # Optionally also delete the custom_syllabi document (only if not shared)
+        cs_doc = db.collection('custom_syllabi').document(custom_id).get()
+        if cs_doc.exists and cs_doc.to_dict().get('created_by') == uid:
+            db.collection('custom_syllabi').document(custom_id).delete()
+        flash('Custom syllabus removed.', 'success')
+    except Exception as e:
+        logger.error(f"Delete custom syllabus error: {e}")
+        flash('Failed to remove custom syllabus.', 'error')
+ 
+    return redirect(url_for('manage_class_syllabus', class_id=class_id))
+ 
+ 
+# ─────────────────────────────────────────────────────────────────────────────
+# 2C. EXTRA STUDENT STATS FOR FILTERS (update all_students route helper)
+# ─────────────────────────────────────────────────────────────────────────────
+# Replace the existing `all_students` route's per-student computation block
+# OR call this helper — paste it just before the all_students route in sclera.py
+ 
+def _enrich_student_for_list(s_data: dict, sid: str) -> dict:
+    """
+    Compute avg_exam_score and study_time_week for a student dict.
+    Call this inside all_students() before appending to students_list.
+    """
+    # Avg exam score
+    results = s_data.get('exam_results', [])
+    pcts = []
+    for r in results:
+        try:
+            sc = float(r.get('score', 0))
+            mx = float(r.get('max_score', 100))
+            if mx:
+                pcts.append(round((sc / mx) * 100, 1))
+        except Exception:
+            pass
+    s_data['avg_exam_score'] = round(sum(pcts) / len(pcts), 1) if pcts else 0
+ 
+    # Study time this week (minutes)
+    seven_days_ago = (datetime.utcnow() - timedelta(days=7)).isoformat()
+    try:
+        week_sessions = (db.collection('users').document(sid)
+                         .collection('study_sessions')
+                         .where('start_time', '>=', seven_days_ago)
+                         .stream())
+        s_data['study_time_week'] = sum(
+            s.to_dict().get('duration_seconds', 0) // 60 for s in week_sessions
+        )
+    except Exception:
+        s_data['study_time_week'] = 0
+ 
+    return s_data
+ 
+ 
+# ─────────────────────────────────────────────────────────────────────────────
+# INTERNAL HELPERS
+# ─────────────────────────────────────────────────────────────────────────────
+ 
+def _extract_syllabus_with_gemini(text: str) -> list | None:
+    """
+    Call Gemini to extract chapters + rich topic content from raw syllabus text.
+    Returns a list of {chapter: str, topics: [rich topic objects]} dicts or None on failure.
+    """
+    import json, google.generativeai as genai
+
+    api_key = os.environ.get('GEMINI_API_KEY')
+    if not api_key:
+        return None
+
+    # Get the active AI assistant to use its working model
+    try:
+        ai_assistant = get_ai_assistant()
+        logger.info(f"AI assistant available: {hasattr(ai_assistant, 'ai_available')}")
+        if hasattr(ai_assistant, 'ai_available') and ai_assistant.ai_available and hasattr(ai_assistant, 'model'):
+            # Use the active model from AI assistant
+            model = ai_assistant.model
+            model_name = getattr(ai_assistant, 'model_name', 'unknown')
+            logger.info(f"Using active AI assistant model: {model_name}")
+        else:
+            # Fallback: configure and use the working flash-lite-latest model
+            logger.info("AI assistant not available, using fallback model")
+            genai.configure(api_key=api_key)
+            model = genai.GenerativeModel('models/gemini-flash-lite-latest')
+            logger.info("Using fallback model: models/gemini-flash-lite-latest")
+    except Exception as e:
+        # If AI assistant fails, fallback to direct model creation
+        logger.error(f"Failed to get AI assistant: {e}")
+        genai.configure(api_key=api_key)
+        model = genai.GenerativeModel('models/gemini-flash-lite-latest')
+        logger.info("Using emergency fallback model: models/gemini-flash-lite-latest")
+ 
+    prompt = (
+        "You are an academic syllabus parser. Your task is to analyze the given syllabus text and create a well-structured, equally divided academic outline.\n\n"
+        "CRITICAL: You MUST return valid JSON ONLY. No explanations, no markdown, no extra text.\n\n"
+        "IMPORTANT REQUIREMENTS:\n"
+        "1. EQUALLY DIVIDE the content into logical chapters (aim for 3-8 chapters depending on content length)\n"
+        "2. For each chapter, create 3-6 main topics that are equally comprehensive\n"
+        "3. Provide DETAILED explanations for each topic (2-4 comprehensive paragraphs)\n"
+        "4. Generate 5-8 key points for each topic that summarize the main concepts\n"
+        "5. Create a comprehensive list of educational resources for each topic\n\n"
+        "JSON FORMAT REQUIREMENTS:\n"
+        "- Return ONLY a JSON array: [{...}, {...}]\n"
+        "- Each object must have exactly two keys: 'chapter' and 'topics'\n"
+        "- All strings must be properly quoted and escaped\n"
+        "- No trailing commas\n"
+        "- All arrays and objects must be properly closed\n\n"
+        "STRUCTURE:\n"
+        "[\n"
+        "  {\n"
+        '    "chapter": "Chapter Name",\n'
+        '    "topics": [\n'
+        '      {\n'
+        '        "name": "Topic Name",\n'
+        '        "overview": "2-3 sentence overview",\n'
+        '        "explanations": ["Paragraph 1", "Paragraph 2", "Paragraph 3"],\n'
+        '        "key_points": ["Point 1", "Point 2", "Point 3", "Point 4", "Point 5"],\n'
+        '        "images": [\n'
+        '          {"url": "https://example.com/img1.jpg", "caption": "Description"}\n'
+        '        ],\n'
+        '        "resources": {\n'
+        '          "videos": [\n'
+        '            {"title": "Video Title", "url": "https://example.com/video1", "description": "Video description"}\n'
+        '          ],\n'
+        '          "pdfs": [\n'
+        '            {"title": "PDF Title", "url": "https://example.com/pdf1", "description": "PDF description"}\n'
+        '          ],\n'
+        '          "practice": [\n'
+        '            {"title": "Practice Title", "url": "https://example.com/practice1", "description": "Practice description"}\n'
+        '          ]\n'
+        '        }\n'
+        '      }\n'
+        '    ]\n'
+        '  }\n'
+        "]\n\n"
+        "CONTENT GUIDELINES:\n"
+        "- Make chapters roughly equal in scope and importance\n"
+        "- Each topic should have substantial, detailed explanations\n"
+        "- Key points should be concise but comprehensive summaries\n"
+        "- Resources should be specific, educational, and relevant\n"
+        '- Use placeholder URLs like "https://example.com/video1" for resources\n'
+        "- If the original text doesn't have enough detail, expand with relevant educational content\n"
+        "- Double-check all JSON syntax before returning\n\n"
+        f"Syllabus text to process:\n{text[:6000]}"
+    )
+ 
+    try:
+        response = model.generate_content(prompt)
+        raw = response.text.strip()
+        logger.info(f"Raw model response: {raw[:200]}...")  # Log first 200 chars for debugging
+        
+        # Strip markdown fences if present
+        if raw.startswith("```"):
+            raw = raw.split("```")[1]
+            if raw.startswith("json"):
+                raw = raw[4:]
+        
+        # Try to parse JSON, with repair attempts
+        try:
+            parsed = json.loads(raw.strip())
+            logger.info(f"Successfully parsed JSON: {type(parsed)} with {len(parsed) if isinstance(parsed, list) else 'unknown'} items")
+        except json.JSONDecodeError as e:
+            logger.error(f"Failed to parse JSON response: {e}")
+            logger.error(f"Raw response: {raw}")
+            
+            # Attempt basic JSON repair for common issues
+            try:
+                # Fix common JSON issues from AI models
+                raw_repaired = raw.strip()
+                
+                # Fix 1: Remove markdown fences completely
+                if raw_repaired.startswith("```"):
+                    parts = raw_repaired.split("```")
+                    if len(parts) >= 2:
+                        raw_repaired = parts[1]
+                        if raw_repaired.startswith("json"):
+                            raw_repaired = raw_repaired[4:].strip()
+                
+                # Fix 2: Resources array with mixed types (strings and objects)
+                if '"resources": [' in raw_repaired and '": "https://' in raw_repaired:
+                    # Convert string resources to proper object format
+                    import re
+                    # Find and fix malformed resources arrays
+                    resources_pattern = r'"resources": \[([^\]]+)\]'
+                    matches = re.findall(resources_pattern, raw_repaired)
+                    for match in matches:
+                        resources_content = match
+                        # Check if it's mixed strings and objects
+                        if '": "' in resources_content and not resources_content.startswith('{'):
+                            # Try to convert to proper format
+                            fixed_resources = '[]'  # Default to empty array
+                            logger.warning("Fixed malformed resources array - set to empty")
+                            raw_repaired = raw_repaired.replace(match, f'"resources": {fixed_resources}')
+                
+                # Fix 3: Trailing commas and missing quotes
+                raw_repaired = raw_repaired.replace('",\n    }', '"\n    }')  # Fix trailing commas
+                raw_repaired = raw_repaired.replace(',\n]', '\n]')  # Fix trailing commas in arrays
+                raw_repaired = raw_repaired.replace(',\n  }', '\n  }')  # Fix trailing commas in objects
+                
+                # Fix 4: Unclosed quotes and brackets
+                open_braces = raw_repaired.count('{') - raw_repaired.count('}')
+                open_brackets = raw_repaired.count('[') - raw_repaired.count(']')
+                
+                if open_braces > 0:
+                    raw_repaired += '}' * open_braces
+                    logger.warning(f"Added {open_braces} closing braces")
+                if open_brackets > 0:
+                    raw_repaired += ']' * open_brackets
+                    logger.warning(f"Added {open_brackets} closing brackets")
+                
+                # Fix 5: Remove any text before/after JSON
+                raw_repaired = raw_repaired.strip()
+                if raw_repaired.startswith('[') and raw_repaired.endswith(']'):
+                    # Looks like a JSON array, try parsing
+                    pass
+                elif raw_repaired.startswith('{') and raw_repaired.endswith('}'):
+                    # Single object, wrap in array
+                    raw_repaired = f'[{raw_repaired}]'
+                    logger.info("Wrapped single object in array")
+                else:
+                    # Try to extract JSON from the middle
+                    import re
+                    json_match = re.search(r'(\[.*?\]|\{.*?\})', raw_repaired, re.DOTALL)
+                    if json_match:
+                        raw_repaired = json_match.group(1)
+                        logger.info("Extracted JSON from response")
+                
+                logger.info(f"Attempting to parse repaired JSON...")
+                parsed = json.loads(raw_repaired)
+                logger.info("Successfully repaired and parsed JSON")
+                
+            except Exception as repair_error:
+                logger.error(f"JSON repair failed: {repair_error}")
+                logger.error(f"Attempted repair: {raw_repaired[:500]}...")
+                return None
+            
+        logger.info(f"Parsed response type: {type(parsed)}")
+        
+        # Handle different response formats from different models
+        if isinstance(parsed, list):
+            logger.info("Processing list response format")
+            result = []
+            for item in parsed:
+                if not item:
+                    continue
+                    
+                # Handle both dict and string items
+                if isinstance(item, str):
+                    # Simple string format - create basic chapter structure
+                    result.append({
+                        "chapter": item,
+                        "topics": []
+                    })
+                elif isinstance(item, dict):
+                    if not item.get("chapter"):
+                        continue
+                    
+                    chapter_data = {"chapter": str(item["chapter"])}
+                    topics = item.get("topics", [])
+                    
+                    # Handle both old string format and new rich format
+                    processed_topics = []
+                    for topic in topics:
+                        if isinstance(topic, str):
+                            # Backward compatibility: convert string to rich format
+                            processed_topics.append({
+                                "name": topic,
+                                "overview": f"Study of {topic}",
+                                "explanations": [f"Key concepts and principles of {topic}."],
+                                "key_points": [f"Understanding {topic} is essential for this chapter."],
+                                "images": [],
+                                "resources": {"videos": [], "pdfs": [], "practice": []}
+                            })
+                        elif isinstance(topic, dict):
+                            # New rich format - ensure all required fields exist
+                            resources = topic.get("resources", {})
+                            if isinstance(resources, dict):
+                                resources_data = {
+                                    "videos": list(resources.get("videos", [])),
+                                    "pdfs": list(resources.get("pdfs", [])),
+                                    "practice": list(resources.get("practice", []))
+                                }
+                            else:
+                                # If resources is not a dict (e.g., it's a list or None), create empty structure
+                                resources_data = {"videos": [], "pdfs": [], "practice": []}
+                            
+                            processed_topics.append({
+                                "name": str(topic.get("name", "")),
+                                "overview": str(topic.get("overview", f"Study of {topic.get('name', 'topic')}")),
+                                "explanations": list(topic.get("explanations", [])),
+                                "key_points": list(topic.get("key_points", [])),
+                                "images": list(topic.get("images", [])),
+                                "resources": resources_data
+                            })
+                    
+                    chapter_data["topics"] = processed_topics
+                    result.append(chapter_data)
+                else:
+                    logger.warning(f"Unexpected item type in list: {type(item)}")
+                    continue
+            
+            return result
+            
+        elif isinstance(parsed, dict):
+            logger.info("Processing dict response format")
+            # Handle dict response if models return single object
+            if "chapters" in parsed:
+                parsed = parsed["chapters"]
+                # Reuse list processing logic inline
+                result = []
+                for item in parsed:
+                    if not item:
+                        continue
+                    if isinstance(item, str):
+                        result.append({
+                            "chapter": item,
+                            "topics": []
+                        })
+                    elif isinstance(item, dict) and item.get("chapter"):
+                        chapter_data = {"chapter": str(item["chapter"])}
+                        topics = item.get("topics", [])
+                        processed_topics = []
+                        for topic in topics:
+                            if isinstance(topic, str):
+                                processed_topics.append({
+                                    "name": topic,
+                                    "overview": f"Study of {topic}",
+                                    "explanations": [f"Key concepts and principles of {topic}."],
+                                    "key_points": [f"Understanding {topic} is essential for this chapter."],
+                                    "images": [],
+                                    "resources": {"videos": [], "pdfs": [], "practice": []}
+                                })
+                            elif isinstance(topic, dict):
+                                resources = topic.get("resources", {})
+                                if isinstance(resources, dict):
+                                    resources_data = {
+                                        "videos": list(resources.get("videos", [])),
+                                        "pdfs": list(resources.get("pdfs", [])),
+                                        "practice": list(resources.get("practice", []))
+                                    }
+                                else:
+                                    resources_data = {"videos": [], "pdfs": [], "practice": []}
+                                
+                                processed_topics.append({
+                                    "name": str(topic.get("name", "")),
+                                    "overview": str(topic.get("overview", f"Study of {topic.get('name', 'topic')}")),
+                                    "explanations": list(topic.get("explanations", [])),
+                                    "key_points": list(topic.get("key_points", [])),
+                                    "images": list(topic.get("images", [])),
+                                    "resources": resources_data
+                                })
+                        chapter_data["topics"] = processed_topics
+                        result.append(chapter_data)
+                return result
+            elif "chapter" in parsed and parsed.get("chapter"):
+                # Handle single chapter response (common with Gemma models)
+                logger.info("Processing single chapter response")
+                chapter_data = {"chapter": str(parsed["chapter"])}
+                topics = parsed.get("topics", [])
+                
+                processed_topics = []
+                for topic in topics:
+                    if isinstance(topic, str):
+                        processed_topics.append({
+                            "name": topic,
+                            "overview": f"Study of {topic}",
+                            "explanations": [f"Key concepts and principles of {topic}."],
+                            "key_points": [f"Understanding {topic} is essential for this chapter."],
+                            "images": [],
+                            "resources": {"videos": [], "pdfs": [], "practice": []}
+                        })
+                    elif isinstance(topic, dict):
+                        resources = topic.get("resources", {})
+                        if isinstance(resources, dict):
+                            resources_data = {
+                                "videos": list(resources.get("videos", [])),
+                                "pdfs": list(resources.get("pdfs", [])),
+                                "practice": list(resources.get("practice", []))
+                            }
+                        else:
+                            resources_data = {"videos": [], "pdfs": [], "practice": []}
+                        
+                        processed_topics.append({
+                            "name": str(topic.get("name", "")),
+                            "overview": str(topic.get("overview", f"Study of {topic.get('name', 'topic')}")),
+                            "explanations": list(topic.get("explanations", [])),
+                            "key_points": list(topic.get("key_points", [])),
+                            "images": list(topic.get("images", [])),
+                            "resources": resources_data
+                        })
+                
+                chapter_data["topics"] = processed_topics
+                return [chapter_data]  # Return as single-item list
+            else:
+                logger.error("Dict response doesn't contain 'chapters' or 'chapter' key")
+                return None
+        else:
+            logger.error(f"Unexpected response format: {type(parsed)}")
+            return None
+            
+    except Exception as e:
+        error_msg = str(e)
+        logger.error(f"Gemini syllabus extraction error: {error_msg}")
+        
+        # If it's a quota error, try with a different model
+        if "429" in error_msg or "quota" in error_msg.lower():
+            logger.info("Quota exceeded, trying alternative models...")
+            
+            # Try Gemma models as fallback
+            fallback_models = [
+                'models/gemma-3-4b-it', 
+                'models/gemma-3n-e4b-it'
+            ]
+            
+            for fallback_model in fallback_models:
+                try:
+                    logger.info(f"Trying fallback model: {fallback_model}")
+                    genai.configure(api_key=api_key)
+                    fallback_model_instance = genai.GenerativeModel(fallback_model)
+                    response = fallback_model_instance.generate_content(prompt)
+                    
+                    raw = response.text.strip()
+                    if raw.startswith("```"):
+                        raw = raw.split("```")[1]
+                        if raw.startswith("json"):
+                            raw = raw[4:]
+                    
+                    try:
+                        parsed = json.loads(raw.strip())
+                    except json.JSONDecodeError as parse_error:
+                        logger.warning(f"Fallback model {fallback_model} returned invalid JSON: {parse_error}")
+                        continue
+                    
+                    if isinstance(parsed, list):
+                        logger.info(f"Successfully extracted syllabus with fallback model: {fallback_model}")
+                        # Process the response the same way as above
+                        result = []
+                        for item in parsed:
+                            if not item:
+                                continue
+                            if isinstance(item, str):
+                                result.append({
+                                    "chapter": item,
+                                    "topics": []
+                                })
+                            elif isinstance(item, dict) and item.get("chapter"):
+                                chapter_data = {"chapter": str(item["chapter"])}
+                                topics = item.get("topics", [])
+                                processed_topics = []
+                                for topic in topics:
+                                    if isinstance(topic, str):
+                                        processed_topics.append({
+                                            "name": topic,
+                                            "overview": f"Study of {topic}",
+                                            "explanations": [f"Key concepts and principles of {topic}."],
+                                            "key_points": [f"Understanding {topic} is essential for this chapter."],
+                                            "images": [],
+                                            "resources": {"videos": [], "pdfs": [], "practice": []}
+                                        })
+                                    elif isinstance(topic, dict):
+                                        resources = topic.get("resources", {})
+                                        if isinstance(resources, dict):
+                                            resources_data = {
+                                                "videos": list(resources.get("videos", [])),
+                                                "pdfs": list(resources.get("pdfs", [])),
+                                                "practice": list(resources.get("practice", []))
+                                            }
+                                        else:
+                                            resources_data = {"videos": [], "pdfs": [], "practice": []}
+                                        
+                                        processed_topics.append({
+                                            "name": str(topic.get("name", "")),
+                                            "overview": str(topic.get("overview", f"Study of {topic.get('name', 'topic')}")),
+                                            "explanations": list(topic.get("explanations", [])),
+                                            "key_points": list(topic.get("key_points", [])),
+                                            "images": list(topic.get("images", [])),
+                                            "resources": resources_data
+                                        })
+                                chapter_data["topics"] = processed_topics
+                                result.append(chapter_data)
+                        return result
+                        
+                except Exception as fallback_error:
+                    logger.warning(f"Fallback model {fallback_model} failed: {fallback_error}")
+                    continue
+
+    return None
+ 
+ 
+def _save_custom_syllabus(class_id: str, subject_name: str,
+                           chapters: list, teacher_uid: str, inst_id: str):
+    """
+    Persist a custom syllabus document and link it to the class.
+    """
+    doc_ref = db.collection('custom_syllabi').document()
+    doc_ref.set({
+        'name': subject_name,
+        'chapters': chapters,          # [{chapter, topics}]
+        'created_by': teacher_uid,
+        'created_at': datetime.utcnow().isoformat(),
+        'institution_id': inst_id,
+        'class_id': class_id,
+    })
+    # Link to class
+    db.collection(CLASSES_COL).document(class_id).update({
+        'custom_syllabus_ids': firestore.ArrayUnion([doc_ref.id])
+    })
+    logger.info(f"Custom syllabus '{subject_name}' saved as {doc_ref.id} for class {class_id}")
+
+# ============================================================================
+# STUDENT: View class custom syllabus
+# Route: GET /class/<class_id>/syllabus
+# Access: any logged-in student enrolled in the class
+# ============================================================================
+@app.route('/class/<class_id>/syllabus')
+@require_login
+def view_class_syllabus(class_id):
+    """Student-facing view of all custom syllabi for a class."""
+    uid = session['uid']
+ 
+    # Verify the student is enrolled in this class
+    class_doc = db.collection(CLASSES_COL).document(class_id).get()
+    if not class_doc.exists:
+        abort(404)
+    class_data = class_doc.to_dict()
+ 
+    enrolled_uids = class_data.get('student_uids', [])
+    if uid not in enrolled_uids:
+        abort(403)
+ 
+    # Load all custom syllabi linked to this class
+    custom_syllabi = []
+    syllabus_ids = class_data.get('custom_syllabus_ids', [])
+    logger.info(f"Class {class_id} has syllabus IDs: {syllabus_ids}")
+    
+    for cid in syllabus_ids:
+        cs_doc = db.collection('custom_syllabi').document(cid).get()
+        if cs_doc.exists:
+            cs = cs_doc.to_dict()
+            cs['id'] = cid
+            custom_syllabi.append(cs)
+            logger.info(f"Loaded syllabus: {cs.get('name', 'Unnamed')} with {len(cs.get('chapters', []))} chapters")
+        else:
+            logger.warning(f"Syllabus document {cid} not found")
+
+    logger.info(f"Total custom syllabi loaded: {len(custom_syllabi)}")
+    
+    # Sort by created_at ascending (oldest subject first)
+    custom_syllabi.sort(key=lambda x: x.get('created_at', ''))
+ 
+    return render_template('student_class_syllabus.html',
+                           class_id=class_id,
+                           class_data=class_data,
+                           custom_syllabi=custom_syllabi)
 # ============================================================================
 # ERROR HANDLERS
 # ============================================================================
@@ -4731,9 +6011,86 @@ def log_response(response):
                 status_code=response.status_code,
                 ip=request.remote_addr)
     return response
+
+@app.route('/institution/admin/update-ai-predictions', methods=['POST'])
+@require_admin_v2
+def update_ai_predictions():
+    """Manually trigger AI predictions update for all students"""
+    try:
+        data = request.get_json() or {}
+        batch_size = data.get('batch_size', 20)
+        force_update = data.get('force_update', False)
+        
+        # Get active students
+        thirty_days_ago = (datetime.utcnow() - timedelta(days=30)).isoformat()
+        students_query = db.collection('users').where('last_login_date', '>=', thirty_days_ago)
+        
+        student_uids = []
+        for student_doc in students_query.stream():
+            student_uids.append(student_doc.id)
+        
+        if not student_uids:
+            return jsonify({'success': False, 'message': 'No active students found'})
+        
+        # Process students in batches
+        processed_count = 0
+        error_count = 0
+        
+        for i in range(0, len(student_uids), batch_size):
+            batch_uids = student_uids[i:i + batch_size]
+            
+            for uid in batch_uids:
+                try:
+                    # Check if update is needed (unless forced)
+                    if not force_update:
+                        user_doc = db.collection('users').document(uid).get()
+                        if user_doc.exists:
+                            user_data = user_doc.to_dict()
+                            risk_pred = user_data.get('risk_prediction', {})
+                            if risk_pred:
+                                last_updated = risk_pred.get('last_updated', '')
+                                prompt_version = risk_pred.get('prompt_version', 'v1')
+                                if last_updated:
+                                    last_date = datetime.fromisoformat(last_updated)
+                                    if ((datetime.utcnow() - last_date).days <= 7 and 
+                                        prompt_version == 'v2'):
+                                        continue  # Skip if predictions are fresh
+                    
+                    # Generate new predictions
+                    risk_data, readiness_data = gemini_analytics.predict_student_risk_and_readiness(uid)
+                    
+                    if risk_data or readiness_data:
+                        gemini_analytics.store_student_predictions(uid, risk_data, readiness_data)
+                        processed_count += 1
+                    else:
+                        error_count += 1
+                        
+                except Exception as e:
+                    logger.error(f"Error updating predictions for {uid}: {e}")
+                    error_count += 1
+            
+            # Small delay between batches to avoid rate limits
+            if i + batch_size < len(student_uids):
+                time.sleep(0.5)
+        
+        return jsonify({
+            'success': True,
+            'message': f'Updated predictions for {processed_count} students',
+            'processed': processed_count,
+            'errors': error_count
+        })
+        
+    except Exception as e:
+        logger.error(f"Error in update_ai_predictions: {e}")
+        return jsonify({'success': False, 'message': str(e)}), 500
+
 if __name__ == '__main__':
     env = os.environ.get('FLASK_ENV', 'production')
     debug = env == 'development'
-    port = int(os.environ.get('PORT', 5001))  # Use PORT env var for deployment, default to 5000 for local dev
+    port = int(os.environ.get('PORT', 5001))
     logger.info("application_startup", environment=env, debug=debug, port=port)
-    app.run( debug=debug, host='0.0.0.0', port=port)
+    
+    # Register CLI commands
+    register_cli_commands(app)
+    
+    app.run(debug=debug, host='0.0.0.0', port=port)

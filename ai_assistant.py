@@ -65,9 +65,9 @@ class AIAssistant:
                     logger.warning("list_models() not available in this version of google-genai")
                     # Use known working models
                     model_names = [
-                        'models/gemini-2.5-flash',
+                        'models/gemini-2.5-flash-lite',
                         'models/gemini-2.5-pro',
-                        'models/gemini-2.0-flash',
+                        'models/gemini-2.0-flash-lite',
                         'models/gemini-flash-latest'
                     ]
                     logger.info(f"Using default models: {model_names}")
@@ -82,13 +82,66 @@ class AIAssistant:
                 return  # Properly return None from __init__
             
             # Define the models to try in order of preference
+            # Prioritize working free models from the available list
+            # model_names = [
+            #     'models/gemini-flash-latest',  # Working model, put first
+            #     'models/gemini-flash-lite-latest',  # Latest flash lite
+            #     'models/gemini-2.5-flash-lite',  # Free tier (20 requests/day)
+            #     'models/gemini-2.0-flash-lite',  # Free tier model
+            #     'models/gemini-2.0-flash-lite-001',  # Free tier variant
+            #     'models/gemini-2.5-flash-lite-preview-09-2025',  # Preview version
+            #     'models/gemma-3-1b-it',  # Gemma model (free)
+            #     'models/gemma-3-4b-it',  # Gemma model (free)
+            #     'models/gemma-3n-e4b-it',  # Gemma model (free)
+            #     'models/gemma-3n-e2b-it',  # Gemma model (free)
+            #     'models/gemini-2.5-flash',  # Backup if quota allows
+            #     'models/gemini-2.5-pro'  # Last resort (often no free quota)
+            # ]
+
             model_names = [
-                'models/gemini-2.5-flash',  # Latest and most capable model
-                'models/gemini-2.5-pro',    # Alternative model
-                'models/gemini-2.0-flash',  # Fallback model
-                'models/gemini-flash-latest'  # Always points to latest flash model
-            ]
-            
+                    'models/gemini-2.5-pro',
+                    'models/gemini-3.1-pro-preview',
+                    'models/gemini-3-pro-preview',
+                    'models/gemini-2.5-flash',
+                    'models/gemini-3-flash-preview',
+                    'models/gemini-3.1-flash-lite-preview',
+                    'models/gemini-2.5-flash-lite',
+                    'models/gemini-2.0-flash',
+                    'models/gemini-2.0-flash-001',
+                    'models/gemini-2.0-flash-lite',
+                    'models/gemini-2.0-flash-lite-001',
+                    'models/gemini-2.5-flash-lite-preview-09-2025',
+                    'models/gemini-pro-latest',
+                    'models/gemini-flash-latest',
+                    'models/gemini-flash-lite-latest',
+                    'models/deep-research-pro-preview-12-2025',
+                    'models/gemini-2.5-computer-use-preview-10-2025',
+                    'models/gemma-3-27b-it',
+                    'models/gemma-3-12b-it',
+                    'models/gemma-3-4b-it',
+                    'models/gemma-3-1b-it',
+                    'models/gemma-3n-e4b-it',
+                    'models/gemma-3n-e2b-it',
+                    'models/nano-banana-pro-preview',
+                    'models/gemini-embedding-2-preview',
+                    'models/gemini-embedding-001',
+                    'models/aqa'
+                ]
+                
+            # Get available models from the API first
+            try:
+                available_models = [model.name for model in genai.list_models()]
+                logger.info(f"Available models: {available_models}")
+                
+                # Filter our list to only include available models
+                model_names = [m for m in model_names if m in available_models]
+                logger.info(f"Filtered to available models: {model_names}")
+                
+            except Exception as e:
+                logger.warning(f"Could not list models: {e}")
+                # Fall back to original list if list_models fails
+                model_names = model_names
+                
             # Log the models we'll try to use
             logger.info(f"Will try to initialize with models: {model_names}")
             
@@ -100,43 +153,51 @@ class AIAssistant:
             
             for model_name in model_names:
                 try:
-                    logger.info(f"Attempting to initialize model: {model_name}")
+                    logger.info(f"Checking model availability: {model_name}")
                     
                     try:
-                        # Initialize the model with default settings first
-                        logger.info(f"Initializing model: {model_name}")
+                        # Check model metadata first (no quota consumption)
+                        model_info = genai.get_model(model_name)
+                        logger.info(f"Model info retrieved for: {model_name}")
                         
-                        # Try with minimal configuration first
+                        # Initialize the model
+                        logger.info(f"Initializing model: {model_name}")
                         self.model = genai.GenerativeModel(model_name=model_name)
                         
-                        # Test the connection with a simple prompt
-                        logger.info("Testing model with a simple prompt...")
-                        chat = self.model.start_chat(history=[])
-                        response = chat.send_message(
-                            "Hello, please respond with 'Ready' if you can hear me.",
-                            stream=False
-                        )
-                        
-                        # If we get here, the model is working
-                        logger.info(f"Successfully initialized model: {model_name}")
-                        
+                        # Quick health check without consuming quota
+                        # Just verify the model object is properly created
+                        if hasattr(self.model, '_model_name'):
+                            logger.info(f"Model object created successfully: {model_name}")
+                            
+                            # Store model info
+                            self.model_name = model_name
+                            self.ai_available = True
+                            self.error_message = None
+                            
+                            # Log supported methods and limits if available
+                            if hasattr(model_info, 'supported_generation_methods'):
+                                logger.info(f"Supported methods: {model_info.supported_generation_methods}")
+                            if hasattr(model_info, 'input_token_limit'):
+                                logger.info(f"Input token limit: {model_info.input_token_limit}")
+                            
+                            logger.info(f"Successfully initialized with model: {model_name}")
+                            return
+                        else:
+                            logger.warning(f"Model object creation failed for: {model_name}")
+                            continue
+                            
                     except Exception as model_error:
-                        error_msg = f"Failed to initialize model {model_name}: {str(model_error)}"
-                        logger.error(error_msg)
-                        continue  # Try the next model
-                    
-                    if response and hasattr(response, 'text'):
-                        logger.info(f"Successfully initialized with model: {model_name}")
-                        logger.info(f"Model response: {response.text}")
-                        print(f"AI SUCCESS: Initialized with model {model_name}")
-                        self.ai_available = True
-                        self.model_name = model_name
-                        self.chat = chat  # Store chat session for future use
-                        return  # Properly return None from __init__
-                    
-                    logger.warning(f"Model {model_name} responded with empty content")
-                    self.error_message = f"Model {model_name} returned empty response"
+                        error_msg = str(model_error)
+                        logger.warning(f"Model {model_name} failed: {error_msg}")
                         
+                        # Check for quota errors specifically
+                        if "quota" in error_msg.lower() or "429" in error_msg:
+                            logger.warning(f"Quota exceeded for {model_name}")
+                            # Try to extract quota details if available
+                            if hasattr(model_error, 'details'):
+                                logger.warning(f"Quota details: {model_error.details}")
+                        
+                        continue
                 except Exception as model_error:
                     import traceback
                     error_details = str(model_error)
@@ -148,14 +209,11 @@ class AIAssistant:
                     continue
             
             # If we get here, no models worked
-            self.error_message = (
-                "Failed to initialize any available Gemini model. "
-                "Please check your API key and internet connection. "
-                "Make sure your API key has access to the Gemini API."
-            )
+            self.error_message = "Could not initialize any AI model"
             logger.error(self.error_message)
-            print(f"AI MODEL ERROR: {self.error_message}")
-            # No return needed here - just let the function end naturally
+            print(f"AI FAILED: {self.error_message}")
+            self.ai_available = False
+
             
         except Exception as e:
             self.error_message = f"Unexpected error during initialization: {str(e)}"

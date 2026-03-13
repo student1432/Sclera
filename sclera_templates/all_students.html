@@ -14,7 +14,6 @@
             gap: 1.5rem;
             padding: 2rem;
         }
-        
         .island {
             background: var(--bg-secondary);
             border: 1px solid var(--border);
@@ -25,19 +24,14 @@
             position: relative;
             overflow: hidden;
         }
-        
-        .island:hover {
-            transform: translateY(-4px);
-            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
-        }
-        
         .island-header {
             display: flex;
             align-items: center;
             justify-content: space-between;
             margin-bottom: 1.5rem;
+            flex-wrap: wrap;
+            gap: .75rem;
         }
-        
         .island-title {
             font-size: 1.3rem;
             font-weight: 700;
@@ -46,7 +40,118 @@
             align-items: center;
             gap: 0.5rem;
         }
-        
+
+        /* ── Stats ─────────────────────────────────────────────── */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 1rem;
+        }
+        .stat-card {
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border);
+            border-radius: 1rem;
+            padding: 1.25rem;
+            text-align: center;
+        }
+        .stat-number {
+            font-size: 2rem;
+            font-weight: 800;
+            color: var(--accent);
+        }
+        .stat-label {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: .5px;
+            margin-top: 4px;
+        }
+
+        /* ── Filter bar ────────────────────────────────────────── */
+        .filter-bar {
+            display: flex;
+            flex-wrap: wrap;
+            gap: .75rem;
+            align-items: flex-end;
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border);
+            border-radius: 1rem;
+            padding: 1rem 1.25rem;
+            margin-bottom: 1.25rem;
+        }
+        .filter-group {
+            display: flex;
+            flex-direction: column;
+            gap: .35rem;
+            min-width: 130px;
+        }
+        .filter-group label {
+            font-size: 0.72rem;
+            font-weight: 600;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: .5px;
+        }
+        .filter-group select,
+        .filter-group input[type="number"],
+        .filter-group input[type="range"] {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: .5rem;
+            color: var(--text-primary);
+            padding: .4rem .65rem;
+            font-size: 0.85rem;
+            width: 100%;
+        }
+        .filter-group input[type="range"] {
+            padding: 0;
+            cursor: pointer;
+            accent-color: var(--accent);
+        }
+        .filter-range-row {
+            display: flex;
+            align-items: center;
+            gap: .4rem;
+        }
+        .filter-range-row input[type="number"] {
+            width: 60px;
+        }
+        .filter-actions {
+            display: flex;
+            gap: .5rem;
+            align-items: flex-end;
+            padding-bottom: 2px;
+        }
+        .btn-filter {
+            background: var(--accent);
+            color: #fff;
+            border: none;
+            border-radius: .5rem;
+            padding: .45rem 1rem;
+            font-size: .8rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: opacity .2s;
+        }
+        .btn-filter:hover { opacity: .85; }
+        .btn-filter-reset {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            color: var(--text-primary);
+            border-radius: .5rem;
+            padding: .45rem 1rem;
+            font-size: .8rem;
+            font-weight: 600;
+            cursor: pointer;
+        }
+        .filter-count {
+            font-size: .8rem;
+            color: var(--text-muted);
+            align-self: flex-end;
+            padding-bottom: 4px;
+        }
+
+        /* ── Table ─────────────────────────────────────────────── */
         .students-table {
             width: 100%;
             border-collapse: separate;
@@ -55,196 +160,141 @@
             border-radius: 1rem;
             overflow: hidden;
         }
-        
-        .students-table thead {
-            background: var(--bg-tertiary);
-        }
-        
+        .students-table thead { background: var(--bg-tertiary); }
         .students-table th {
             padding: 1rem;
             text-align: left;
             font-weight: 600;
-            font-size: 0.85rem;
+            font-size: .8rem;
             color: var(--text-muted);
             text-transform: uppercase;
-            letter-spacing: 0.5px;
+            letter-spacing: .5px;
+            cursor: pointer;
+            user-select: none;
+            white-space: nowrap;
         }
-        
+        .students-table th:hover { color: var(--accent); }
+        .students-table th .sort-icon { margin-left: 4px; font-size: .7rem; }
         .students-table tbody tr {
             border-bottom: 1px solid var(--border);
-            transition: all 0.2s ease;
+            transition: all .2s ease;
         }
-        
         .students-table tbody tr:hover {
             background: var(--bg-tertiary);
             transform: translateX(4px);
         }
-        
-        .students-table tbody tr:last-child {
-            border-bottom: none;
-        }
-        
-        .students-table td {
-            padding: 1rem;
-            font-size: 0.9rem;
-        }
-        
+        .students-table tbody tr:last-child { border-bottom: none; }
+        .students-table td { padding: .85rem 1rem; font-size: .88rem; }
+        .students-table tr[hidden] { display: none !important; }
+
+        /* ── Progress bar ──────────────────────────────────────── */
         .progress-bar-mini {
             display: flex;
             align-items: center;
             gap: 0.5rem;
-            background: var(--bg-tertiary);
-            border-radius: 0.5rem;
-            padding: 0.25rem;
             min-width: 120px;
         }
-        
-        .progress-fill-mini {
+        .progress-track {
+            flex: 1;
             height: 6px;
-            background: var(--accent);
-            border-radius: 0.25rem;
-            transition: width 0.3s ease;
-        }
-        
-        .progress-text-mini {
-            font-size: 0.75rem;
-            font-weight: 600;
-            color: var(--text-muted);
-        }
-        
-        .btn {
-            padding: 0.4rem 0.8rem;
-            border-radius: 0.5rem;
-            border: none;
-            font-size: 0.75rem;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.2s ease;
-            text-decoration: none;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-        }
-        
-        .btn-primary {
-            background: var(--accent);
-            color: var(--bg-secondary);
-        }
-        
-        .btn-primary:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
-        }
-        
-        .btn-secondary {
             background: var(--bg-tertiary);
-            color: var(--text-primary);
-            border: 1px solid var(--border);
+            border-radius: 3px;
+            overflow: hidden;
         }
-        
-        .btn-secondary:hover {
-            background: var(--bg-secondary);
-            border-color: var(--accent);
+        .progress-fill-mini { height: 100%; background: var(--accent); border-radius: 3px; }
+        .progress-text-mini { font-size: .8rem; color: var(--text-muted); white-space: nowrap; }
+
+        /* ── Risk badges ───────────────────────────────────────── */
+        .risk-badge {
+            display: inline-block;
+            padding: .2rem .65rem;
+            border-radius: 100px;
+            font-size: .75rem;
+            font-weight: 700;
         }
-        
-        .text-success {
-            color: #34d399;
-            font-weight: 600;
+        .risk-healthy   { background: rgba(34,197,94,.12);  color: #22c55e; }
+        .risk-stagnating{ background: rgba(245,158,11,.12); color: #f59e0b; }
+        .risk-declining { background: rgba(239,68,68,.12);  color: #ef4444; }
+        .risk-critical  { background: rgba(239,68,68,.25);  color: #ef4444; }
+        .risk-at_risk   { background: rgba(239,68,68,.2);   color: #ef4444; }
+
+        .readiness-badge {
+            display: inline-block;
+            padding: .2rem .65rem;
+            border-radius: 100px;
+            font-size: .75rem;
+            font-weight: 700;
         }
-        
-        .text-warning {
-            color: #f59e0b;
-            font-weight: 600;
+        .readiness-high   { background: rgba(34,197,94,.12);  color: #22c55e; }
+        .readiness-medium { background: rgba(245,158,11,.12); color: #f59e0b; }
+        .readiness-low    { background: rgba(239,68,68,.12);  color: #ef4444; }
+
+        .ai-indicator {
+            display: inline-block;
+            font-size: .65rem;
+            padding: 1px 5px;
+            background: rgba(59,130,246,.15);
+            color: #3b82f6;
+            border-radius: 4px;
+            margin-left: 4px;
+            font-weight: 700;
         }
-        
-        .text-muted {
+        .tooltip-text {
+            font-size: .7rem;
             color: var(--text-muted);
+            margin-top: 2px;
+            max-width: 200px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
-        
-        .text-center {
-            text-align: center;
-        }
-        
-        .empty-state {
-            text-align: center;
-            padding: 3rem;
-            opacity: 0.6;
-        }
-        
-        .stats-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-            gap: 1rem;
-            margin-bottom: 2rem;
-        }
-        
-        .stat-card {
-            background: var(--bg-tertiary);
-            border-radius: 1rem;
-            padding: 1.5rem;
-            text-align: center;
-            transition: all 0.2s ease;
-        }
-        
-        .stat-card:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
-        }
-        
-        .stat-number {
-            font-size: 2rem;
-            font-weight: 800;
-            color: var(--accent);
-            margin-bottom: 0.5rem;
-        }
-        
-        .stat-label {
-            font-size: 0.8rem;
-            color: var(--text-muted);
-            text-transform: uppercase;
-            font-weight: 600;
-            letter-spacing: 0.5px;
-        }
-        
+        .btn { padding: .35rem .75rem; border-radius: .5rem; border: none;
+               font-size: .75rem; font-weight: 600; cursor: pointer; text-decoration: none;
+               display: inline-flex; align-items: center; gap: .35rem; }
+        .btn-primary { background: var(--accent); color: #fff; }
+        .btn-secondary { background: var(--bg-tertiary); color: var(--text-primary);
+                         border: 1px solid var(--border); }
+        .empty-state { text-align: center; padding: 3rem; opacity: .6; }
         @media (max-width: 768px) {
-            .dashboard-grid {
-                padding: 1rem;
-            }
-            
-            .students-table {
-                font-size: 0.8rem;
-            }
-            
-            .students-table th,
-            .students-table td {
-                padding: 0.75rem 0.5rem;
-            }
-            
-            .island-header {
-                flex-direction: column;
-                align-items: flex-start;
-                gap: 1rem;
-            }
+            .dashboard-grid { padding: 1rem; }
+            .filter-bar { flex-direction: column; }
+            .students-table-container { overflow-x: auto; }
         }
     </style>
 </head>
 
 <body>
-    {% if profile.get('account_type') == 'admin' %}
-        {% include '_admin_topnav.html' %}
-    {% else %}
-        {% include '_teacher_topnav.html' %}
-    {% endif %}
-
     <div class="dashboard-layout">
-        <main class="main-content" style="margin-left: 0;">
+        {% if profile.get('account_type') == 'admin' %}
+            {% include '_admin_topnav.html' %}
+        {% else %}
+            {% include '_teacher_topnav.html' %}
+        {% endif %}
+
+        <main class="main-content" style="margin-left:0">
             <div class="content-header" style="padding: 2rem 2rem 1rem;">
-                <h1 style="font-size: 2.5rem; font-weight: 800; margin-bottom: 0.5rem;">All Students</h1>
-                <p style="opacity: 0.7; font-size: 1.1rem;">Managing {{ total_students }} students across {{ classes|length if classes else 0 }} classes</p>
+                <h1 style="font-size:2.2rem;font-weight:800;margin-bottom:.5rem">Student Directory</h1>
+                <p style="opacity:.7;font-size:1rem">Monitor progress, risk levels and engagement</p>
             </div>
 
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                <div style="padding: 0 2rem;">
+                    {% for cat, msg in messages %}
+                    <div class="alert alert-{{ cat }}" style="margin-bottom:.75rem;padding:.85rem 1rem;border-radius:.75rem;border-left:4px solid;
+                        {% if cat == 'success' %}background:rgba(52,211,153,.1);border-color:#34d399;color:#34d399
+                        {% elif cat == 'error' %}background:rgba(239,68,68,.1);border-color:#ef4444;color:#ef4444
+                        {% else %}background:rgba(59,130,246,.1);border-color:#3b82f6;color:#3b82f6{% endif %}">
+                        {{ msg }}
+                    </div>
+                    {% endfor %}
+                </div>
+                {% endif %}
+            {% endwith %}
+
             <div class="dashboard-grid">
-                <!-- Stats Overview -->
+
+                <!-- ── Stats overview ─────────────────────────────────── -->
                 <div class="island">
                     <div class="stats-grid">
                         <div class="stat-card">
@@ -252,78 +302,221 @@
                             <div class="stat-label">Total Students</div>
                         </div>
                         <div class="stat-card">
-                            <div class="stat-number">{{ students|map(attribute='class_ids')|map('length')|select('greaterthan', 0)|list|length if students else 0 }}</div>
-                            <div class="stat-label">Classes</div>
-                        </div>
-                        <div class="stat-card">
-                            <div class="stat-number">{{ (students|map(attribute='progress_overall')|sum / students|length)|round(0) if students else 0 }}%</div>
+                            <div class="stat-number">
+                                {{ (students|map(attribute='progress_overall')|sum / students|length)|round(0)|int if students else 0 }}%
+                            </div>
                             <div class="stat-label">Avg Progress</div>
                         </div>
                         <div class="stat-card">
-                            <div class="stat-number">{{ (students|selectattr('days_inactive', 'le', 7)|list|length) if students else 0 }}</div>
+                            <div class="stat-number">{{ students|selectattr('days_inactive','le',7)|list|length if students else 0 }}</div>
                             <div class="stat-label">Active This Week</div>
                         </div>
-
+                        <div class="stat-card">
+                            <div class="stat-number" style="color:#ef4444">
+                                {{ students|selectattr('risk_level','in',['at_risk','stagnating','declining','critical'])|list|length if students else 0 }}
+                            </div>
+                            <div class="stat-label">At-Risk</div>
+                        </div>
                     </div>
                 </div>
 
-                <!-- Students Table -->
+                <!-- ── Student table with filters ─────────────────────── -->
                 <div class="island">
                     <div class="island-header">
                         <h3 class="island-title">
-                            <span class="material-symbols-outlined" style="color: var(--accent);">groups</span>
-                            Student Directory
+                            <span class="material-symbols-outlined" style="color:var(--accent)">groups</span>
+                            Students
                         </h3>
+                        <span id="filter-count-badge" class="filter-count">{{ total_students }} students</span>
                     </div>
-                    
-                    <div class="students-table-container" style="overflow-x: auto; border-radius: 1rem;">
-                        <table class="students-table">
+
+                    <!-- Filter bar -->
+                    <div class="filter-bar" id="filterBar">
+                        <!-- Risk level -->
+                        <div class="filter-group">
+                            <label>Risk Level</label>
+                            <select id="f-risk">
+                                <option value="">All</option>
+                                <option value="healthy">Healthy</option>
+                                <option value="stagnating">Stagnating</option>
+                                <option value="declining">Declining</option>
+                                <option value="critical">Critical</option>
+                                <option value="at_risk">At Risk (AI)</option>
+                            </select>
+                        </div>
+
+                        <!-- Progress range -->
+                        <div class="filter-group">
+                            <label>Progress (%)</label>
+                            <div class="filter-range-row">
+                                <input type="number" id="f-prog-min" placeholder="0" min="0" max="100" value="">
+                                <span style="color:var(--text-muted)">–</span>
+                                <input type="number" id="f-prog-max" placeholder="100" min="0" max="100" value="">
+                            </div>
+                        </div>
+
+                        <!-- Avg exam score -->
+                        <div class="filter-group">
+                            <label>Avg Exam Score (%)</label>
+                            <div class="filter-range-row">
+                                <input type="number" id="f-exam-min" placeholder="0" min="0" max="100" value="">
+                                <span style="color:var(--text-muted)">–</span>
+                                <input type="number" id="f-exam-max" placeholder="100" min="0" max="100" value="">
+                            </div>
+                        </div>
+
+                        <!-- Study time this week -->
+                        <div class="filter-group">
+                            <label>Study Time Week (min)</label>
+                            <div class="filter-range-row">
+                                <input type="number" id="f-study-min" placeholder="0" min="0" value="">
+                                <span style="color:var(--text-muted)">–</span>
+                                <input type="number" id="f-study-max" placeholder="∞" min="0" value="">
+                            </div>
+                        </div>
+
+                        <!-- Last active -->
+                        <div class="filter-group">
+                            <label>Last Active (days)</label>
+                            <select id="f-active">
+                                <option value="">Any</option>
+                                <option value="0">Today</option>
+                                <option value="1">Yesterday</option>
+                                <option value="7">Within 7 days</option>
+                                <option value="30">Within 30 days</option>
+                                <option value="999">Never</option>
+                            </select>
+                        </div>
+
+                        <!-- Search -->
+                        <div class="filter-group" style="min-width:170px">
+                            <label>Search</label>
+                            <input type="text" id="f-search" placeholder="Name or email…"
+                                   style="background:var(--bg-secondary);border:1px solid var(--border);border-radius:.5rem;color:var(--text-primary);padding:.4rem .65rem;font-size:.85rem;width:100%">
+                        </div>
+
+                        <div class="filter-actions">
+                            <button class="btn-filter-reset" onclick="resetFilters()">Reset</button>
+                        </div>
+                    </div><!-- /filter-bar -->
+
+                    <!-- Student table -->
+                    <div class="students-table-container" style="overflow-x:auto;border-radius:1rem">
+                        <table class="students-table" id="studentsTable">
                             <thead>
                                 <tr>
-                                    <th>Name</th>
-                                    <th>Email</th>
+                                    <th onclick="sortTable(0)">Name <span class="sort-icon">⇅</span></th>
+                                    <th onclick="sortTable(1)">Email <span class="sort-icon">⇅</span></th>
                                     <th>Classes</th>
-                                    <th>Progress</th>
-                                    <th>Last Active</th>
+                                    <th onclick="sortTable(3)">Progress <span class="sort-icon">⇅</span></th>
+                                    <th onclick="sortTable(4)">Avg Exam <span class="sort-icon">⇅</span></th>
+                                    <th onclick="sortTable(5)">Risk Status <span class="sort-icon">⇅</span></th>
+                                    <th onclick="sortTable(6)">Readiness <span class="sort-icon">⇅</span></th>
+                                    <th onclick="sortTable(7)">Last Active <span class="sort-icon">⇅</span></th>
                                     <th>Actions</th>
                                 </tr>
                             </thead>
-                            <tbody>
+                            <tbody id="studentsBody">
                                 {% for student in students %}
-                                <tr>
-                                    <td><strong>{{ student.get('name', 'Unknown') }}</strong></td>
-                                    <td>{{ student.get('email', 'N/A') }}</td>
-                                    <td>{{ student.get('class_names', 'No class') }}</td>
+                                {%- set risk = student.get('risk_level', student.get('status', 'healthy')) -%}
+                                {%- set progress = student.get('progress_overall', 0) -%}
+                                {%- set avg_exam = student.get('avg_exam_score', 0) -%}
+                                {%- set study_min = student.get('study_time_week', 0) -%}
+                                {%- set days = student.get('days_inactive', 999) -%}
+                                <tr
+                                    data-name="{{ student.get('name','') | lower }}"
+                                    data-email="{{ student.get('email','') | lower }}"
+                                    data-risk="{{ risk }}"
+                                    data-progress="{{ progress }}"
+                                    data-exam="{{ avg_exam }}"
+                                    data-study="{{ study_min }}"
+                                    data-days="{{ days }}"
+                                >
+                                    <!-- Name -->
+                                    <td>
+                                        <strong>{{ student.get('name', 'Unknown') }}</strong>
+                                        {% if student.get('ai_detected') %}
+                                        <span class="ai-indicator">AI</span>
+                                        {% endif %}
+                                    </td>
+                                    <!-- Email -->
+                                    <td style="color:var(--text-muted);font-size:.82rem">{{ student.get('email', '—') }}</td>
+                                    <!-- Classes -->
+                                    <td style="font-size:.82rem">{{ student.get('class_names', 'No class') }}</td>
+                                    <!-- Progress -->
                                     <td>
                                         <div class="progress-bar-mini">
-                                            <div class="progress-fill-mini"
-                                                style="width: {{ student.get('progress_overall', 0) }}%;"></div>
-                                            <span class="progress-text-mini">{{ student.get('progress_overall', 0) }}%</span>
+                                            <div class="progress-track">
+                                                <div class="progress-fill-mini" style="width:{{ progress }}%"></div>
+                                            </div>
+                                            <span class="progress-text-mini">{{ progress }}%</span>
                                         </div>
                                     </td>
+                                    <!-- Avg Exam -->
                                     <td>
-                                        {% set days = student.get('days_inactive', 999) %}
-                                        {% if days == 999 %}
-                                        <span class="text-muted">Never</span>
-                                        {% elif days == 0 %}
-                                        <span class="text-success">Today</span>
-                                        {% elif days == 1 %}
-                                        <span>Yesterday</span>
-                                        {% elif days <= 7 %} <span>{{ days }} days ago</span>
-                                            {% else %}
-                                            <span class="text-warning">{{ days }} days ago</span>
-                                            {% endif %}
+                                        {% if avg_exam > 0 %}
+                                        <div class="progress-bar-mini">
+                                            <div class="progress-track">
+                                                <div class="progress-fill-mini" style="width:{{ avg_exam }}%;background:{{'#22c55e' if avg_exam>=70 else ('#f59e0b' if avg_exam>=40 else '#ef4444')}}"></div>
+                                            </div>
+                                            <span class="progress-text-mini">{{ avg_exam }}%</span>
+                                        </div>
+                                        {% else %}<span style="color:var(--text-muted)">—</span>{% endif %}
                                     </td>
+                                    <!-- Risk -->
                                     <td>
-                                        <a href="{{ url_for('student_detail', student_uid=student.uid) }}"
-                                            class="btn btn-primary">View</a>
+                                        <span class="risk-badge risk-{{ risk }}">
+                                            {{ risk | replace('_',' ') | title }}
+                                        </span>
+                                        {% if student.get('explanation') %}
+                                        <div class="tooltip-text" title="{{ student.explanation }}">
+                                            {{ student.explanation[:40] }}{% if student.explanation|length > 40 %}…{% endif %}
+                                        </div>
+                                        {% endif %}
+                                    </td>
+                                    <!-- Readiness -->
+                                    <td>
+                                        {%- set rs = student.get('readiness_score', 0) -%}
+                                        {% if rs > 0 %}
+                                        <span class="readiness-badge {% if rs >= 70 %}readiness-high{% elif rs >= 40 %}readiness-medium{% else %}readiness-low{% endif %}">
+                                            {{ rs }}%
+                                        </span>
+                                        {% if student.get('readiness_summary') %}
+                                        <div class="tooltip-text" title="{{ student.readiness_summary }}">
+                                            {{ student.readiness_summary[:30] }}…
+                                        </div>
+                                        {% endif %}
+                                        {% else %}<span style="color:var(--text-muted)">—</span>{% endif %}
+                                    </td>
+                                    <!-- Last active -->
+                                    <td>
+                                        {% if days == 999 %}<span style="color:var(--text-muted)">Never</span>
+                                        {% elif days == 0 %}<span style="color:#22c55e">Today</span>
+                                        {% elif days == 1 %}<span>Yesterday</span>
+                                        {% elif days <= 7 %}<span>{{ days }}d ago</span>
+                                        {% else %}<span style="color:#f59e0b">{{ days }}d ago</span>{% endif %}
+                                    </td>
+                                    <!-- Actions -->
+                                    <td>
+                                        <div style="display:flex;gap:.4rem;flex-wrap:wrap">
+                                            <a href="{{ url_for('student_detail', student_uid=student.uid) }}" class="btn btn-primary">
+                                                <span class="material-symbols-outlined" style="font-size:.85rem">person</span>
+                                                View
+                                            </a>
+                                            {% if profile.get('account_type') == 'teacher' %}
+                                            <a href="{{ url_for('generate_student_report', student_uid=student.uid) }}" class="btn btn-secondary" title="Download PDF Report">
+                                                <span class="material-symbols-outlined" style="font-size:.85rem">download</span>
+                                                PDF
+                                            </a>
+                                            {% endif %}
+                                        </div>
                                     </td>
                                 </tr>
                                 {% else %}
-                                <tr>
-                                    <td colspan="6" class="text-center text-muted">
+                                <tr id="emptyRow">
+                                    <td colspan="9">
                                         <div class="empty-state">
-                                            <span class="material-symbols-outlined" style="font-size: 3rem; opacity: 0.3; display: block; margin-bottom: 1rem;">group_off</span>
+                                            <span class="material-symbols-outlined" style="font-size:3rem;opacity:.3;display:block;margin-bottom:1rem">group_off</span>
                                             No students found.
                                         </div>
                                     </td>
@@ -331,11 +524,115 @@
                                 {% endfor %}
                             </tbody>
                         </table>
+                    </div><!-- /table-container -->
+
+                    <div id="no-results" style="display:none;text-align:center;padding:2.5rem;opacity:.6">
+                        <span class="material-symbols-outlined" style="font-size:2.5rem;display:block;margin-bottom:.75rem">search_off</span>
+                        <p>No students match your filters.</p>
+                        <button class="btn-filter-reset" onclick="resetFilters()" style="margin-top:.5rem">Clear Filters</button>
                     </div>
                 </div>
-            </div>
+            </div><!-- /grid -->
         </main>
     </div>
-</body>
 
+    <script>
+    (function () {
+        // ── Theme ──────────────────────────────────────────────────────────
+        const root = document.documentElement;
+        const saved = localStorage.getItem('sclera-theme');
+        if (saved) root.setAttribute('data-theme', saved);
+
+        // ── Filter state ──────────────────────────────────────────────────
+        const rows = Array.from(document.querySelectorAll('#studentsBody tr[data-risk]'));
+        const countBadge = document.getElementById('filter-count-badge');
+        const noResults  = document.getElementById('no-results');
+
+        function getVal(id) { return document.getElementById(id).value.trim(); }
+
+        function applyFilters() {
+            const risk     = getVal('f-risk');
+            const progMin  = parseFloat(getVal('f-prog-min'));
+            const progMax  = parseFloat(getVal('f-prog-max'));
+            const examMin  = parseFloat(getVal('f-exam-min'));
+            const examMax  = parseFloat(getVal('f-exam-max'));
+            const studyMin = parseFloat(getVal('f-study-min'));
+            const studyMax = parseFloat(getVal('f-study-max'));
+            const activeF  = getVal('f-active');
+            const search   = getVal('f-search').toLowerCase();
+
+            let visible = 0;
+
+            rows.forEach(row => {
+                const r     = row.dataset.risk;
+                const prog  = parseFloat(row.dataset.progress);
+                const exam  = parseFloat(row.dataset.exam);
+                const study = parseFloat(row.dataset.study);
+                const days  = parseFloat(row.dataset.days);
+                const name  = row.dataset.name;
+                const email = row.dataset.email;
+
+                let show = true;
+
+                if (risk && r !== risk) show = false;
+                if (!isNaN(progMin) && prog < progMin) show = false;
+                if (!isNaN(progMax) && prog > progMax) show = false;
+                if (!isNaN(examMin) && exam < examMin) show = false;
+                if (!isNaN(examMax) && exam > examMax) show = false;
+                if (!isNaN(studyMin) && study < studyMin) show = false;
+                if (!isNaN(studyMax) && study > studyMax) show = false;
+                if (search && !name.includes(search) && !email.includes(search)) show = false;
+
+                if (activeF !== '') {
+                    const af = parseFloat(activeF);
+                    if (af === 999 && days !== 999) show = false;
+                    else if (af !== 999 && days > af) show = false;
+                }
+
+                row.hidden = !show;
+                if (show) visible++;
+            });
+
+            countBadge.textContent = `${visible} of ${rows.length} students`;
+            noResults.style.display = visible === 0 ? 'block' : 'none';
+        }
+
+        function resetFilters() {
+            ['f-risk', 'f-active'].forEach(id => document.getElementById(id).value = '');
+            ['f-prog-min','f-prog-max','f-exam-min','f-exam-max','f-study-min','f-study-max','f-search']
+                .forEach(id => document.getElementById(id).value = '');
+            applyFilters();
+        }
+        window.resetFilters = resetFilters;
+
+        // Attach listeners — live filtering
+        ['f-risk','f-active'].forEach(id =>
+            document.getElementById(id).addEventListener('change', applyFilters));
+        ['f-prog-min','f-prog-max','f-exam-min','f-exam-max',
+         'f-study-min','f-study-max','f-search'].forEach(id =>
+            document.getElementById(id).addEventListener('input', applyFilters));
+
+        // ── Column sort ───────────────────────────────────────────────────
+        let sortDir = {};
+        window.sortTable = function(col) {
+            const tbody = document.getElementById('studentsBody');
+            const allRows = Array.from(tbody.querySelectorAll('tr[data-risk]'));
+            sortDir[col] = !sortDir[col];
+            const dir = sortDir[col] ? 1 : -1;
+
+            allRows.sort((a, b) => {
+                const getCellText = r => r.querySelectorAll('td')[col]?.textContent?.trim() ?? '';
+                const av = getCellText(a);
+                const bv = getCellText(b);
+                const an = parseFloat(av);
+                const bn = parseFloat(bv);
+                if (!isNaN(an) && !isNaN(bn)) return (an - bn) * dir;
+                return av.localeCompare(bv) * dir;
+            });
+            allRows.forEach(r => tbody.appendChild(r));
+            applyFilters();
+        };
+    })();
+    </script>
+</body>
 </html>

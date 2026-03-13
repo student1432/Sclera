@@ -44,6 +44,10 @@
                                 <span class="material-symbols-outlined" style="font-size: 16px;">folder</span>
                                 <span style="font-size: 14px; color: var(--text-muted);">{{ class_info.files|length }} file(s)</span>
                             </div>
+                            <a href="{{ url_for('view_class_syllabus', class_id=class_info.id) }}" class="btn btn-primary display: flex; align-items: center; font-size: 18px; color: var(--text-muted); gap: 8px; padding: 4px;">
+                                <span class="material-symbols-outlined" style="font-size: 15px;">menu_book</span>
+                                View Syllabus
+                            </a>
                             <form action="{{ url_for('leave_class', class_id=class_info.id) }}" method="POST" style="display: inline;">
                                 <button type="submit" style="background: none; border: none; cursor: pointer; padding: 4px; color: var(--error); display: flex; align-items: center;" onclick="return confirm('Are you sure you want to leave this class?')" title="Leave Class">
                                     <span class="material-symbols-outlined" style="font-size: 18px;">logout</span>

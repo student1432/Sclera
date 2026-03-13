@@ -147,6 +147,87 @@
             color: var(--bg-secondary);
         }
         
+        .btn-secondary {
+            background: var(--bg-tertiary);
+            color: var(--text-primary);
+            border: 1px solid var(--border);
+        }
+        
+        .btn-small {
+            padding: 0.25rem 0.5rem;
+            font-size: 0.7rem;
+        }
+        
+        .ai-indicator {
+            background: rgba(34, 197, 94, 0.1);
+            color: #22c55e;
+            padding: 0.125rem 0.375rem;
+            border-radius: 0.25rem;
+            font-size: 0.6rem;
+            margin-left: 0.5rem;
+        }
+        
+        .ai-badge {
+            background: rgba(34, 197, 94, 0.1);
+            color: #22c55e;
+            padding: 0.25rem 0.5rem;
+            border-radius: 0.5rem;
+            font-size: 0.7rem;
+            font-weight: 600;
+        }
+        
+        .risk-explanation {
+            font-size: 0.8rem;
+            opacity: 0.8;
+            margin-top: 0.25rem;
+        }
+        
+        .readiness-score {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-top: 0.25rem;
+        }
+        
+        .readiness-score .score-label {
+            font-size: 0.7rem;
+            opacity: 0.7;
+        }
+        
+        .readiness-score .score-value {
+            color: white;
+            padding: 0.125rem 0.5rem;
+            border-radius: 0.25rem;
+            font-size: 0.7rem;
+            font-weight: 600;
+        }
+        
+        .readiness-score .score-high {
+            background: #22c55e;
+        }
+        
+        .readiness-score .score-medium {
+            background: #f59e0b;
+        }
+        
+        .readiness-score .score-low {
+            background: #ef4444;
+        }
+        
+        .student-risk-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        
+        .student-risk-item.ai-detected {
+            border-left: 4px solid #22c55e;
+        }
+        
+        .student-risk-item.rule-based {
+            border-left: 4px solid #ef4444;
+        }
+        
         .btn-primary:hover {
             transform: translateY(-2px);
             box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
@@ -339,7 +420,7 @@
                 </div>
 
                 <!-- Active Classes -->
-                <div class="island" style="grid-column: span 2;">
+                <div class="island">
                     <div class="island-header">
                         <h3 class="island-title">
                             <span class="material-symbols-outlined" style="color: var(--accent);">class</span>
@@ -375,24 +456,52 @@
                 </div>
 
                 <!-- Students at Risk -->
-                <div class="island">
+                <div class="island" style="grid-column: span 2;">
                     <div class="island-header">
                         <h3 class="island-title">
                             <span class="material-symbols-outlined" style="color: #ef4444;">warning</span>
-                            Students at Risk (AI)
+                            Students at Risk (AI-Enhanced)
                         </h3>
+                        <div class="ai-badge">AI DETECTED</div>
                     </div>
                     <div class="risk-list">
                         {% if at_risk_students %}
                         {% for student in at_risk_students %}
-                        <div class="study-item" style="border-left: 4px solid #ef4444; display: flex; align-items: center; justify-content: space-between;">
+                        <div class="study-item student-risk-item {% if student.ai_detected %}ai-detected{% else %}rule-based{% endif %}">
                             <div class="study-item-body">
-                                <div class="study-item-title">{{ student.name }}</div>
+                                <div class="study-item-title">
+                                    {{ student.name }}
+                                    {% if student.ai_detected %}
+                                    <span class="ai-indicator">AI</span>
+                                    {% endif %}
+                                </div>
                                 <div class="study-item-meta">{{ student.class }} · {{ student.status.title() }}</div>
+                                {% if student.ai_detected %}
+                                <div class="risk-explanation" title="{{ student.explanation }}">
+                                    {{ student.explanation[:50] }}{% if student.explanation|length > 50 %}...{% endif %}
+                                </div>
+                                {% if student.readiness_score %}
+                                <div class="readiness-score">
+                                    <span class="score-label">Readiness:</span>
+                                    <div class="score-value {% if student.readiness_score >= 70 %}score-high{% elif student.readiness_score >= 40 %}score-medium{% else %}score-low{% endif %}">
+                                        {{ student.readiness_score }}%
+                                    </div>
+                                </div>
+                                {% endif %}
+                                {% endif %}
                             </div>
                             <div class="study-item-actions">
+                                {% if student.ai_detected and student.key_factors %}
+                                <button class="btn btn-small btn-secondary suggestion-btn"
+                                    data-uid="{{ student.uid }}"
+                                    data-suggestion="{{ student.readiness_summary if student.readiness_summary else 'Focus on ' + (student.key_factors[0] if student.key_factors else 'improvement') }}">
+                                    <span class="material-symbols-outlined" style="font-size: 0.9rem;">lightbulb</span>
+                                    Suggest
+                                </button>
+                                {% endif %}
                                 <button class="btn btn-small btn-primary nudge-btn"
-                                    data-uid="{{ student.uid }}">
+                                    data-uid="{{ student.uid }}"
+                                    data-message="{% if student.ai_detected %}{{ student.readiness_summary if student.readiness_summary else 'Based on AI analysis, please focus on your studies and reach out if you need help.' }}{% else %}{{ student.explanation }}{% endif %}">
                                     <span class="material-symbols-outlined" style="font-size: 0.9rem;">notifications</span>
                                     Nudge
                                 </button>
@@ -401,12 +510,34 @@
                         {% endfor %}
                         {% else %}
                         <div class="empty-state">
-                            <span class="material-symbols-outlined" style="font-size: 3rem; opacity: 0.3; color: var(--accent); display: block; margin-bottom: 1rem;">check_circle</span>
-                            <p style="color:var(--text-muted); font-size:14px;">Great performance! No students are currently at risk.</p>
+                            <span class="material-symbols-outlined" style="font-size: 3rem; opacity: 0.3; display: block; margin-bottom: 1rem;">check_circle</span>
+                            <p>No students currently at risk. Great job!</p>
                         </div>
                         {% endif %}
                     </div>
                 </div>
+
+                <!-- Study Patterns -->
+                {% if classes %}
+                <div class="island">
+                    <div class="island-header">
+                        <h3 class="island-title">
+                            <span class="material-symbols-outlined" style="color: var(--accent);">pattern</span>
+                            Study Patterns
+                        </h3>
+                        <button class="btn btn-small btn-primary" id="analyzePatternsBtn">
+                            <span class="material-symbols-outlined" style="font-size: 0.9rem;">analytics</span>
+                            Analyze
+                        </button>
+                    </div>
+                    <div id="patternsContainer">
+                        <div class="empty-state">
+                            <span class="material-symbols-outlined" style="font-size: 3rem; opacity: 0.3; display: block; margin-bottom: 1rem;">pattern</span>
+                            <p>Click "Analyze" to discover study patterns in your classes</p>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
 
                 <!-- Broadcast -->
                 <div class="island" style="grid-column: span 2;">
@@ -460,6 +591,146 @@
                     btn.disabled = true;
                 }
             };
+        });
+
+        // Analytics JavaScript
+        document.addEventListener('DOMContentLoaded', function() {
+            // Handle nudge buttons
+            document.querySelectorAll('.nudge-btn').forEach(btn => {
+                btn.addEventListener('click', async function() {
+                    const uid = this.dataset.uid;
+                    const message = this.dataset.message || 'Please check in with your studies and let me know if you need help.';
+                    
+                    if (confirm(`Send nudge to student? Message: "${message}"`)) {
+                        try {
+                            const response = await fetch('/institution/nudge', {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                },
+                                body: JSON.stringify({
+                                    student_uid: uid,
+                                    message: message
+                                })
+                            });
+                            
+                            if (response.ok) {
+                                this.textContent = 'Sent!';
+                                this.disabled = true;
+                                setTimeout(() => {
+                                    this.textContent = 'Nudge';
+                                    this.disabled = false;
+                                }, 2000);
+                            } else {
+                                alert('Failed to send nudge');
+                            }
+                        } catch (error) {
+                            console.error('Error sending nudge:', error);
+                            alert('Error sending nudge');
+                        }
+                    }
+                });
+            });
+
+            // Handle suggestion buttons
+            document.querySelectorAll('.suggestion-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const suggestion = this.dataset.suggestion;
+                    const uid = this.dataset.uid;
+                    
+                    // Find the nudge button and update its message
+                    const nudgeBtn = document.querySelector(`.nudge-btn[data-uid="${uid}"]`);
+                    if (nudgeBtn) {
+                        nudgeBtn.dataset.message = suggestion;
+                        nudgeBtn.style.background = '#f59e0b'; // Highlight that message is updated
+                        setTimeout(() => {
+                            nudgeBtn.style.background = ''; // Reset color
+                        }, 1000);
+                    }
+                });
+            });
+
+            // Handle study patterns analysis
+            const analyzeBtn = document.getElementById('analyzePatternsBtn');
+            const patternsContainer = document.getElementById('patternsContainer');
+            
+            if (analyzeBtn && patternsContainer) {
+                analyzeBtn.addEventListener('click', async function() {
+                    const classesData = {{ classes|tojson }};
+                    
+                    if (!classesData || classesData.length === 0) {
+                        patternsContainer.innerHTML = '<p>No classes available for analysis.</p>';
+                        return;
+                    }
+                    
+                    // Show loading state
+                    this.disabled = true;
+                    this.innerHTML = '<span class="material-symbols-outlined" style="font-size: 0.9rem;">hourglass_empty</span> Analyzing...';
+                    patternsContainer.innerHTML = '<div style="text-align: center; padding: 2rem;"><span class="material-symbols-outlined" style="font-size: 2rem; animation: spin 1s linear infinite;">refresh</span><p>Analyzing study patterns...</p></div>';
+                    
+                    try {
+                        // Analyze each class
+                        const allClusters = [];
+                        for (const cls of classesData) {
+                            const response = await fetch(`/api/analytics/cluster/class/${cls.id}`, {
+                                method: 'POST'
+                            });
+                            
+                            if (response.ok) {
+                                const data = await response.json();
+                                if (data.clusters && data.clusters.length > 0) {
+                                    allClusters.push({
+                                        className: cls.name,
+                                        clusters: data.clusters,
+                                        cached: data.cached || false
+                                    });
+                                }
+                            }
+                        }
+                        
+                        // Display results
+                        displayStudyPatterns(allClusters);
+                        
+                    } catch (error) {
+                        console.error('Error analyzing patterns:', error);
+                        patternsContainer.innerHTML = '<p style="color: #ef4444;">Error analyzing study patterns. Please try again.</p>';
+                    } finally {
+                        // Reset button
+                        this.disabled = false;
+                        this.innerHTML = '<span class="material-symbols-outlined" style="font-size: 0.9rem;">analytics</span> Analyze';
+                    }
+                });
+            }
+            
+            function displayStudyPatterns(allClusters) {
+                if (allClusters.length === 0) {
+                    patternsContainer.innerHTML = '<p>No study patterns found. Students may need more study activity to generate patterns.</p>';
+                    return;
+                }
+                
+                let html = '';
+                allClusters.forEach(classData => {
+                    html += `<div style="margin-bottom: 2rem;">
+                        <h4 style="margin-bottom: 1rem; color: var(--accent);">${classData.className}</h4>
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1rem;">`;
+                    
+                    classData.clusters.forEach(cluster => {
+                        html += `
+                            <div class="study-item" style="border-left: 4px solid var(--accent);">
+                                <div class="study-item-body">
+                                    <div class="study-item-title">${cluster.label}</div>
+                                    <div class="study-item-meta">${cluster.student_uids.length} students</div>
+                                    <div style="font-size: 0.8rem; opacity: 0.8; margin-top: 0.5rem;">${cluster.description}</div>
+                                    ${cluster.performance_note ? `<div style="font-size: 0.7rem; opacity: 0.6; margin-top: 0.25rem;">${cluster.performance_note}</div>` : ''}
+                                </div>
+                            </div>`;
+                    });
+                    
+                    html += '</div></div>';
+                });
+                
+                patternsContainer.innerHTML = html;
+            }
         });
     </script>
 </body>

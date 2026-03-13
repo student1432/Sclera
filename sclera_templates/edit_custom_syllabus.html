@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <script>(function(){var t=localStorage.getItem('sclera-theme')||'dark';document.documentElement.setAttribute('data-theme',t);})();</script>
+    <title>Edit Syllabus - {{ syllabus_data.get('name', 'Untitled') }}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet" />
+    <style>
+        .page-wrap { max-width: 900px; margin: 0 auto; padding: 2rem; }
+
+        .breadcrumb {
+            display: flex; align-items: center; gap: .4rem;
+            font-size: .8rem; color: var(--text-muted); margin-bottom: 1.25rem;
+        }
+        .breadcrumb a { color: var(--accent); text-decoration: none; }
+        .breadcrumb a:hover { text-decoration: underline; }
+
+        .page-header {
+            background: var(--bg-secondary); border: 1px solid var(--border);
+            border-radius: 1.5rem; padding: 1.75rem 2rem;
+            margin-bottom: 1.75rem;
+        }
+        .page-header h1 { font-size: 1.85rem; font-weight: 800; color: var(--text-primary); margin: 0 0 .35rem; }
+        .page-header p  { color: var(--text-muted); margin: 0; font-size: .92rem; }
+
+        .island {
+            background: var(--bg-secondary); border: 1px solid var(--border);
+            border-radius: 1.5rem; padding: 2rem; margin-bottom: 1.5rem;
+        }
+        .island-title {
+            font-size: 1.3rem; font-weight: 700; color: var(--text-primary);
+            margin-bottom: 1.5rem; display: flex; align-items: center; gap: .5rem;
+        }
+
+        .form-group { margin-bottom: 1.5rem; }
+        .form-group label {
+            display: block; font-weight: 600; color: var(--text-primary);
+            margin-bottom: .5rem; font-size: .9rem;
+        }
+        .form-control {
+            width: 100%; background: var(--bg-tertiary); border: 1px solid var(--border);
+            border-radius: .75rem; padding: .75rem 1rem; color: var(--text-primary);
+            font-size: .9rem; font-family: inherit; transition: border-color .2s;
+        }
+        .form-control:focus { outline: none; border-color: var(--accent); }
+
+        .btn {
+            display: inline-flex; align-items: center; gap: .5rem;
+            padding: .6rem 1.2rem; border-radius: .75rem; font-weight: 600;
+            text-decoration: none; cursor: pointer; border: none; transition: all .2s;
+            font-size: .9rem;
+        }
+        .btn .material-symbols-outlined { font-size: 1rem; }
+        .btn-primary  { background: var(--accent); color: #fff; }
+        .btn-primary:hover  { opacity: .85; }
+        .btn-secondary {
+            background: var(--bg-tertiary); color: var(--text-primary);
+            border: 1px solid var(--border);
+        }
+        .btn-secondary:hover { border-color: var(--accent); color: var(--accent); }
+        .btn-danger { background: rgba(239,68,68,.12); color: #ef4444;
+                      border: 1px solid rgba(239,68,68,.25); }
+        .btn-danger:hover { background: rgba(239,68,68,.22); }
+        .btn-sm { padding: .3rem .7rem; font-size: .78rem; }
+
+        /* Reuse rich topic styles from main template */
+        .chapter-list { display: flex; flex-direction: column; gap: .75rem; }
+        .chapter-item {
+            background: var(--bg-tertiary); border: 1px solid var(--border);
+            border-radius: 1rem; padding: 1rem 1.15rem;
+        }
+        .chapter-item-header {
+            display: flex; align-items: center; gap: .5rem; margin-bottom: .65rem;
+        }
+        .chapter-number {
+            background: var(--accent); color: #fff;
+            border-radius: 50%; width: 24px; height: 24px; min-width: 24px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: .75rem; font-weight: 600;
+        }
+        .chapter-name-input {
+            flex: 1; background: var(--bg-secondary); border: 1px solid var(--border);
+            border-radius: .5rem; padding: .4rem .6rem; color: var(--text-primary);
+            font-size: .85rem; font-family: inherit;
+        }
+        .chapter-name-input:focus { outline: none; border-color: var(--accent); }
+
+        .topic-card {
+            background: var(--bg-secondary); border: 1px solid var(--border);
+            border-radius: .75rem; padding: .75rem; margin-bottom: .5rem;
+        }
+        .topic-header {
+            display: flex; align-items: center; justify-content: space-between;
+            cursor: pointer; padding: .25rem; border-radius: .5rem;
+            transition: background .2s;
+        }
+        .topic-header:hover { background: var(--bg-tertiary); }
+        .topic-name { font-weight: 600; color: var(--text-primary); }
+        .topic-details {
+            margin-top: 1rem; padding-top: 1rem;
+            border-top: 1px solid var(--border);
+        }
+        .detail-section { margin-bottom: 1rem; }
+        .detail-section label {
+            display: block; font-weight: 600; color: var(--text-primary);
+            margin-bottom: .5rem; font-size: .85rem;
+        }
+        .detail-section textarea {
+            width: 100%; min-height: 60px; resize: vertical;
+        }
+        .array-items {
+            display: flex; flex-direction: column; gap: .35rem;
+            margin-bottom: .5rem;
+        }
+        .array-item {
+            display: flex; align-items: center; justify-content: space-between;
+            background: var(--bg-tertiary); padding: .35rem .5rem;
+            border-radius: .5rem; font-size: .8rem;
+        }
+        .add-array-item {
+            display: flex; gap: .35rem;
+        }
+        .add-array-item input {
+            flex: 1; background: var(--bg-secondary); border: 1px solid var(--border);
+            border-radius: .5rem; padding: .25rem .5rem; font-size: .8rem;
+        }
+        .btn-xs {
+            padding: .15rem .35rem; font-size: .75rem;
+            border-radius: .25rem;
+        }
+        .topics-list { margin-bottom: .75rem; }
+        .add-topic-row { display: flex; gap: .4rem; }
+        .add-topic-input {
+            flex: 1; background: var(--bg-secondary);
+            border: 1px solid var(--border); border-radius: .5rem;
+            color: var(--text-primary); padding: .35rem .7rem;
+            font-size: .82rem; font-family: inherit;
+        }
+        .add-topic-input:focus { outline: none; border-color: var(--accent); }
+    </style>
+</head>
+<body>
+    <div class="dashboard-layout">
+        {% if profile.get('account_type') == 'admin' %}
+            {% include '_admin_topnav.html' %}
+        {% else %}
+            {% include '_teacher_topnav.html' %}
+        {% endif %}
+
+        <main class="main-content" style="margin-left:0">
+            <div class="page-wrap">
+
+                <!-- Breadcrumb -->
+                <div class="breadcrumb">
+                    <span class="material-symbols-outlined" style="font-size:1rem">home</span>
+                    <a href="{{ url_for('institution_teacher_dashboard') }}">Dashboard</a>
+                    <span>›</span>
+                    <a href="{{ url_for('institution_teacher_classes') }}">Classes</a>
+                    <span>›</span>
+                    <a href="{{ url_for('manage_class_syllabus', class_id=class_id) }}">Syllabus</a>
+                    <span>›</span>
+                    <span>Edit Syllabus</span>
+                </div>
+
+                <!-- Page Header -->
+                <div class="page-header">
+                    <h1>
+                        <span class="material-symbols-outlined" style="vertical-align:middle;font-size:2rem;color:var(--accent)">edit</span>
+                        Edit Syllabus
+                    </h1>
+                    <p>Modify the custom syllabus for <strong>{{ class_data.get('name', 'this class') }}</strong></p>
+                </div>
+
+                <!-- Edit Form -->
+                <div class="island" data-chapters-data="{{ syllabus_data.get('chapters', [])|tojson|replace('"', '&quot;') }}">
+                    <form method="POST" onsubmit="serializeChapters(event)">
+                        <input type="hidden" name="chapters_json" id="chapters_json_input">
+
+                        <div class="form-group">
+                            <label for="subject_name">Subject Name</label>
+                            <input type="text" class="form-control" id="subject_name"
+                                   name="subject_name" value="{{ syllabus_data.get('name', '') }}" required>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Chapters &amp; Topics</label>
+                            <div class="chapter-list" id="chapterList"></div>
+                            <button type="button" class="btn btn-secondary" style="margin-top:.75rem" onclick="addChapter()">
+                                <span class="material-symbols-outlined">add</span>
+                                Add Chapter
+                            </button>
+                        </div>
+
+                        <div style="display:flex;justify-content:flex-end;gap:.5rem;margin-top:1rem">
+                            <a href="{{ url_for('manage_class_syllabus', class_id=class_id) }}" class="btn btn-secondary">
+                                Cancel
+                            </a>
+                            <button type="submit" class="btn btn-primary">
+                                <span class="material-symbols-outlined">save</span>
+                                Save Changes
+                            </button>
+                        </div>
+                    </form>
+                </div>
+
+            </div>
+        </main>
+    </div>
+
+    <script>
+    // Initialize with existing data from data attribute
+    const islandElement = document.querySelector('.island');
+    const chaptersDataJson = islandElement.getAttribute('data-chapters-data');
+    let chaptersData = JSON.parse(chaptersDataJson);
+
+    // Convert simple string topics to rich format if needed
+    chaptersData = chaptersData.map(ch => ({
+        name: ch.chapter || '',
+        topics: (ch.topics || []).map(topic => {
+            if (typeof topic === 'string') {
+                return {
+                    name: topic,
+                    overview: '',
+                    explanations: [],
+                    key_points: [],
+                    images: [],
+                    resources: { videos: [], pdfs: [], practice: [] }
+                };
+            }
+            return topic;
+        })
+    }));
+
+    // Include the same rich content functions from the main template
+    function addChapter() {
+        const idx = chaptersData.length;
+        chaptersData.push({ 
+            name: '', 
+            topics: []
+        });
+        renderChapters();
+        setTimeout(() => {
+            const inputs = document.querySelectorAll('.chapter-name-input');
+            inputs[inputs.length - 1]?.focus();
+        }, 50);
+    }
+
+    function removeChapter(idx) {
+        chaptersData.splice(idx, 1);
+        renderChapters();
+    }
+
+    function updateChapterName(idx, val) {
+        chaptersData[idx].name = val;
+    }
+
+    function addTopic(idx) {
+        const input = document.getElementById('topic-input-' + idx);
+        const val = input.value.trim();
+        if (!val) return;
+        
+        const richTopic = {
+            name: val,
+            overview: '',
+            explanations: [],
+            key_points: [],
+            images: [],
+            resources: { videos: [], pdfs: [], practice: [] }
+        };
+        
+        chaptersData[idx].topics.push(richTopic);
+        input.value = '';
+        renderChapters();
+        setTimeout(() => document.getElementById('topic-input-' + idx)?.focus(), 50);
+    }
+
+    function removeTopic(chIdx, tIdx) {
+        chaptersData[chIdx].topics.splice(tIdx, 1);
+        renderChapters();
+    }
+
+    function toggleTopicDetails(chIdx, tIdx) {
+        const details = document.getElementById(`topic-details-${chIdx}-${tIdx}`);
+        const chevron = document.getElementById(`topic-chevron-${chIdx}-${tIdx}`);
+        
+        if (details.style.display === 'none' || !details.style.display) {
+            details.style.display = 'block';
+            chevron.textContent = 'expand_less';
+        } else {
+            details.style.display = 'none';
+            chevron.textContent = 'expand_more';
+        }
+    }
+
+    function renderChapters() {
+        const list = document.getElementById('chapterList');
+        list.innerHTML = '';
+        chaptersData.forEach((ch, idx) => {
+            const div = document.createElement('div');
+            div.className = 'chapter-item';
+            div.innerHTML = `
+                <div class="chapter-item-header">
+                    <div class="chapter-number">${idx + 1}</div>
+                    <input class="chapter-name-input" type="text"
+                           placeholder="Chapter name…"
+                           value="${escHtml(ch.name)}"
+                           oninput="updateChapterName(${idx}, this.value)"
+                    >
+                    <button type="button" class="btn btn-danger btn-sm" onclick="removeChapter(${idx})"
+                            title="Remove chapter">
+                        <span class="material-symbols-outlined" style="font-size:.85rem">close</span>
+                    </button>
+                </div>
+                <div class="topics-list" id="topics-${idx}">
+                    ${ch.topics.map((t, ti) => `
+                        <div class="topic-card">
+                            <div class="topic-header" onclick="toggleTopicDetails(${idx}, ${ti})">
+                                <span class="topic-name">${escHtml(t.name || 'Untitled Topic')}</span>
+                                <span class="material-symbols-outlined" id="topic-chevron-${idx}-${ti}">expand_more</span>
+                            </div>
+                            <div class="topic-details" id="topic-details-${idx}-${ti}" style="display:none">
+                                <div class="detail-section">
+                                    <label>Overview</label>
+                                    <textarea class="form-control" placeholder="Brief overview..."
+                                              oninput="window.updateTopicField(${idx}, ${ti}, 'overview', this.value)">${escHtml(t.overview || '')}</textarea>
+                                </div>
+                            </div>
+                            <button type="button" class="btn btn-xs btn-danger" onclick="removeTopic(${idx}, ${ti})" title="Remove topic">✕</button>
+                        </div>`).join('')}
+                </div>
+                <div class="add-topic-row">
+                    <input class="add-topic-input" type="text" id="topic-input-${idx}"
+                           placeholder="Add topic and press Enter or +"
+                           onkeydown="if(event.key==='Enter'){event.preventDefault();addTopic(${idx});}">
+                    <button type="button" class="btn btn-secondary btn-sm" onclick="addTopic(${idx})">
+                        <span class="material-symbols-outlined" style="font-size:.85rem">add</span>
+                    </button>
+                </div>`;
+            list.appendChild(div);
+        });
+    }
+
+    function escHtml(str) {
+        return String(str)
+            .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+            .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+
+    function serializeChapters(e) {
+        const payload = chaptersData
+            .filter(ch => ch.name.trim())
+            .map(ch => ({ chapter: ch.name.trim(), topics: ch.topics }));
+
+        if (payload.length === 0) {
+            e.preventDefault();
+            alert('Please add at least one chapter with a name.');
+            return;
+        }
+        document.getElementById('chapters_json_input').value = JSON.stringify(payload);
+    }
+
+    // Initialize the form
+    renderChapters();
+    </script>
+</body>
+</html>

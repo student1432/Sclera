@@ -518,7 +518,7 @@ Complete Sclera Profile
         const themeIcon = themeToggle.querySelector('span');
         
         // Load saved theme
-        const savedTheme = localStorage.getItem('studyos-theme') || 'light';
+        const savedTheme = localStorage.getItem('sclera-theme') || 'light';
         html.setAttribute('data-theme', savedTheme);
         body.setAttribute('data-theme', savedTheme);
         updateThemeIcon(savedTheme);
@@ -528,7 +528,7 @@ Complete Sclera Profile
             const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
             html.setAttribute('data-theme', newTheme);
             body.setAttribute('data-theme', newTheme);
-            localStorage.setItem('studyos-theme', newTheme);
+            localStorage.setItem('sclera-theme', newTheme);
             updateThemeIcon(newTheme);
         });
 

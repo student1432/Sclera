@@ -1,0 +1,1277 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <script>(function(){var t=localStorage.getItem('sclera-theme')||'dark';document.documentElement.setAttribute('data-theme',t);})();</script>
+    <title>{{ class_data.get('name','Class') }} — Syllabus</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet" />
+    <style>
+        .page-wrap { 
+            width: 100%; 
+            max-width: none; 
+            margin: 0; 
+            padding: 1.5rem 2rem; 
+            display: grid;
+            grid-template-columns: 280px 1fr;
+            gap: 2rem;
+            min-height: calc(100vh - 120px);
+        }
+
+        /* Full-page layout responsive adjustments */
+        @media (max-width: 1400px) {
+            .page-wrap {
+                grid-template-columns: 1fr;
+                gap: 1.5rem;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .page-wrap {
+                padding: 1rem;
+                gap: 1rem;
+            }
+        }
+
+        .breadcrumb {
+            display: flex; align-items: center; gap: .4rem;
+            font-size: .8rem; color: var(--text-muted); margin-bottom: 1.25rem;
+        }
+        .breadcrumb a { color: var(--accent); text-decoration: none; }
+        .breadcrumb a:hover { text-decoration: underline; }
+
+        /* ── Navigation Sidebar ───────────────────────────── */
+        .nav-sidebar {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 1.25rem;
+            padding: 1.5rem;
+            height: fit-content;
+            position: sticky;
+            top: 6rem;
+            backdrop-filter: blur(10px);
+            background: rgba(20, 20, 20, 0.8);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        }
+
+        @media (max-width: 1400px) {
+            .nav-sidebar {
+                display: none;
+            }
+        }
+
+        .sidebar-section {
+            margin-bottom: 2rem;
+        }
+
+        .sidebar-section:last-child {
+            margin-bottom: 0;
+        }
+
+        .sidebar-title {
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .nav-item {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.75rem 1rem;
+            border-radius: 0.75rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+            margin-bottom: 0.25rem;
+            border: 1px solid transparent;
+        }
+
+        .nav-item:hover {
+            background: var(--bg-tertiary);
+            color: var(--text-primary);
+            border-color: var(--border);
+        }
+
+        .nav-item.active {
+            background: var(--accent);
+            color: var(--bg-primary);
+            border-color: var(--accent);
+        }
+
+        .nav-item .material-symbols-outlined {
+            font-size: 1.1rem;
+        }
+
+        .progress-mini {
+            width: 100%;
+            height: 4px;
+            background: var(--bg-tertiary);
+            border-radius: 2px;
+            overflow: hidden;
+            margin-top: 0.5rem;
+        }
+
+        .progress-mini-fill {
+            height: 100%;
+            background: var(--accent);
+            border-radius: 2px;
+            transition: width 0.3s;
+        }
+
+        /* ── Main Content Area ─────────────────────────── */
+        .main-content-area {
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+
+        @media (max-width: 1400px) {
+            .main-content-area {
+                width: 100%;
+            }
+        }
+
+        /* ── Page header ───────────────────────────────── */
+        .page-header {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 1.5rem; padding: 2rem;
+            margin-bottom: 0;
+            display: flex; align-items: flex-start; justify-content: space-between;
+            gap: 1rem; flex-wrap: wrap;
+            backdrop-filter: blur(10px);
+            background: rgba(20, 20, 20, 0.6);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+            position: static;
+        }
+        .page-header h1 { 
+            font-size: 2rem; 
+            font-weight: 800; 
+            color: var(--text-primary); 
+            margin: 0 0 .5rem; 
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+        .page-header p  { color: var(--text-muted); margin: 0; font-size: .92rem; }
+        .header-meta { display: flex; gap: .65rem; flex-wrap: wrap; margin-top: .75rem; }
+        .meta-badge {
+            display: inline-flex; align-items: center; gap: .3rem;
+            background: var(--bg-tertiary); border: 1px solid var(--border);
+            border-radius: 100px; padding: .25rem .75rem; font-size: .78rem;
+            color: var(--text-muted);
+        }
+        .meta-badge .material-symbols-outlined { font-size: .95rem; }
+
+        /* ── Subject selector bar ──────────────────────── */
+        .subject-tabs {
+            display: flex; flex-wrap: wrap; gap: .5rem;
+            margin-bottom: 1.5rem;
+            padding: 1rem;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 1rem;
+            backdrop-filter: blur(5px);
+            background: rgba(20, 20, 20, 0.4);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+        .subject-tab {
+            background: var(--bg-tertiary); border: 1px solid var(--border);
+            border-radius: 100px; padding: .5rem 1.25rem;
+            font-size: .85rem; font-weight: 600; color: var(--text-muted);
+            cursor: pointer; transition: all .2s; user-select: none;
+            backdrop-filter: blur(5px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .subject-tab:hover { border-color: var(--accent); color: var(--accent); }
+        .subject-tab.active {
+            background: var(--accent); border-color: var(--accent);
+            color: var(--bg-primary);
+        }
+
+        /* ── Subject panel ─────────────────────────────── */
+        .subject-panel { display: none; }
+        .subject-panel.active { display: block; }
+
+        /* ── Chapter accordion ─────────────────────────── */
+        .chapter-card {
+            background: var(--bg-secondary); border: 1px solid var(--border);
+            border-radius: 1.25rem; margin-bottom: 1rem;
+            overflow: hidden; transition: all .3s;
+            backdrop-filter: blur(10px);
+            background: rgba(20, 20, 20, 0.6);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+        }
+        .chapter-card:hover { 
+            transform: translateY(-2px);
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.3);
+            border-color: rgba(255, 255, 255, 0.2);
+        }
+        [data-theme="light"] .chapter-card:hover { box-shadow: 0 8px 30px rgba(0, 0, 0, 0.15); }
+
+        .chapter-header {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 1rem 1.25rem; cursor: pointer; user-select: none;
+        }
+        .chapter-header:hover { background: var(--bg-tertiary); }
+        .chapter-header-left {
+            display: flex; align-items: center; gap: .75rem; min-width: 0;
+        }
+        .chapter-num-badge {
+            background: var(--accent); color: var(--bg-primary);
+            border-radius: .5rem; padding: .25rem .55rem;
+            font-size: .72rem; font-weight: 800; white-space: nowrap;
+            min-width: 32px; text-align: center;
+        }
+        .chapter-name {
+            font-weight: 700; font-size: 1rem; color: var(--text-primary);
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+        }
+        .chapter-topic-count {
+            font-size: .75rem; color: var(--text-muted); margin-left: .3rem;
+            white-space: nowrap;
+        }
+        .chapter-chevron {
+            font-size: 1.25rem; color: var(--text-muted);
+            transition: transform .25s; flex-shrink: 0;
+        }
+        .chapter-card.open .chapter-chevron { transform: rotate(180deg); }
+
+        /* Chapter body */
+        .chapter-body {
+            display: none;
+            padding: 0 1.25rem 1.15rem;
+            border-top: 1px solid var(--border);
+        }
+        .chapter-card.open .chapter-body { display: block; }
+
+        /* Topic items */
+        .topics-list { list-style: none; margin: .85rem 0 0; padding: 0; display: flex; flex-direction: column; gap: .5rem; }
+        .topic-item {
+            display: flex; align-items: flex-start; gap: .75rem;
+            padding: .75rem 1rem;
+            background: var(--bg-tertiary); border: 1px solid var(--border);
+            border-radius: .85rem; transition: all .2s;
+            backdrop-filter: blur(5px);
+            background: rgba(31, 31, 31, 0.4);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+        .topic-item:hover { border-color: var(--accent); }
+        .topic-bullet {
+            width: 8px; height: 8px; min-width: 8px; border-radius: 50%;
+            background: var(--accent); margin-top: 5px;
+        }
+        .topic-name { font-size: .9rem; color: var(--text-primary); font-weight: 500; line-height: 1.4; }
+        .topic-no-items {
+            font-size: .85rem; color: var(--text-muted);
+            padding: .85rem 0; font-style: italic;
+        }
+
+        /* ── Progress ring on chapter ──────────────────── */
+        .chapter-progress-ring { flex-shrink: 0; }
+
+        /* ── Empty / no syllabus ───────────────────────── */
+        .empty-state {
+            text-align: center; padding: 3.5rem 2rem;
+            color: var(--text-muted); opacity: .65;
+            background: var(--bg-secondary); border: 1px solid var(--border);
+            border-radius: 1.5rem;
+        }
+        .empty-state .material-symbols-outlined {
+            font-size: 3rem; display: block; margin-bottom: 1rem;
+        }
+        .empty-state p { margin: 0; font-size: .95rem; }
+
+        /* ── Stats strip ───────────────────────────────── */
+        .stats-strip {
+            display: grid; 
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+        .stat-pill {
+            background: var(--bg-secondary); border: 1px solid var(--border);
+            border-radius: 1rem; padding: .85rem 1.25rem;
+            text-align: center; flex: 1; min-width: 110px;
+        }
+        .stat-pill-num { font-size: 1.6rem; font-weight: 800; color: var(--accent); }
+        .stat-pill-lbl { font-size: .72rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: .5px; margin-top: 2px; }
+
+        /* ── Rich Topic Content Styles ─────────────────── */
+        .topic-content { flex: 1; }
+        .topic-header {
+            display: flex; align-items: center; justify-content: space-between;
+            cursor: pointer; padding: .25rem; border-radius: .5rem;
+            transition: background .2s; margin-bottom: .5rem;
+        }
+        .topic-header:hover { background: var(--bg-tertiary); }
+        .topic-chevron { font-size: 1.2rem; color: var(--text-muted); }
+        .topic-details {
+            padding: 1rem; margin-top: .5rem;
+            background: var(--bg-tertiary); border-radius: .75rem;
+            border: 1px solid var(--border);
+        }
+        .topic-section { margin-bottom: 1.5rem; }
+        .topic-section:last-child { margin-bottom: 0; }
+        .topic-section h4 {
+            color: var(--accent); font-size: .95rem; font-weight: 600;
+            margin-bottom: .75rem; display: flex; align-items: center; gap: .5rem;
+        }
+        .topic-overview {
+            color: var(--text-primary); line-height: 1.6;
+            font-size: .9rem; margin: 0;
+        }
+        .explanations-list { display: flex; flex-direction: column; gap: .75rem; }
+        .explanation-item {
+            background: var(--bg-secondary); padding: .75rem;
+            border-radius: .5rem; border-left: 3px solid var(--accent);
+        }
+        .explanation-item p {
+            margin: 0; color: var(--text-primary);
+            line-height: 1.5; font-size: .88rem;
+        }
+        .key-points-list { display: flex; flex-direction: column; gap: .5rem; }
+        .key-point-item {
+            color: var(--text-primary); font-size: .85rem;
+            line-height: 1.4; margin-left: 1rem; position: relative;
+        }
+        .key-point-item::before {
+            content: "•"; color: var(--accent); font-weight: bold;
+            position: absolute; left: -1rem;
+        }
+        .images-gallery {
+            display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem; margin-top: .75rem;
+        }
+        .image-item {
+            background: var(--bg-secondary); border-radius: .75rem;
+            overflow: hidden; border: 1px solid var(--border);
+            cursor: pointer; transition: transform .2s, box-shadow .2s;
+        }
+        .image-item:hover {
+            transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+        .image-item img {
+            width: 100%; height: 120px; object-fit: cover;
+            border-bottom: 1px solid var(--border);
+        }
+        .image-caption {
+            padding: .5rem; font-size: .8rem; color: var(--text-muted);
+            text-align: center; background: var(--bg-tertiary);
+        }
+        .resources-grid {
+            display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1rem; margin-top: .75rem;
+        }
+        .resource-group {
+            background: var(--bg-secondary); border: 1px solid var(--border);
+            border-radius: .75rem; padding: 1rem;
+        }
+        .resource-group h5 {
+            color: var(--text-primary); font-size: .85rem; font-weight: 600;
+            margin-bottom: .75rem; display: flex; align-items: center; gap: .5rem;
+        }
+        .resource-link {
+            display: flex; align-items: center; gap: .5rem;
+            color: var(--text-primary); text-decoration: none;
+            padding: .4rem .5rem; border-radius: .5rem;
+            font-size: .8rem; transition: background .2s;
+            margin-bottom: .35rem;
+        }
+        .resource-link:hover {
+            background: var(--bg-tertiary); text-decoration: none;
+        }
+        .resource-link .material-symbols-outlined {
+            font-size: 1rem; color: var(--accent);
+        }
+        .video-link:hover { background: rgba(239,68,68,.1); }
+        .pdf-link:hover { background: rgba(59,130,246,.1); }
+        .practice-link:hover { background: rgba(34,197,94,.1); }
+
+        /* ── Enhanced Visual Effects ─────────────────────── */
+        .glass-effect {
+            backdrop-filter: blur(10px);
+            background: rgba(20, 20, 20, 0.6);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+        }
+
+        .hover-lift {
+            transition: all 0.3s ease;
+        }
+
+        .hover-lift:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.3);
+        }
+
+        /* Enhanced animations */
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .animate-in {
+            animation: slideIn 0.5s ease forwards;
+        }
+
+        /* Mobile bottom navigation */
+        .mobile-nav-drawer {
+            display: none;
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: var(--bg-secondary);
+            border-top: 1px solid var(--border);
+            padding: 1rem;
+            z-index: 100;
+            transform: translateY(100%);
+            transition: transform 0.3s ease;
+        }
+
+        .mobile-nav-drawer.open {
+            transform: translateY(0);
+        }
+
+        @media (max-width: 768px) {
+            .mobile-nav-drawer {
+                display: block;
+            }
+        }
+
+        /* Enhanced topic progress indicators */
+        .topic-progress {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-left: auto;
+            padding: 0.25rem 0.75rem;
+            background: var(--bg-tertiary);
+            border-radius: 1rem;
+            font-size: 0.75rem;
+            color: var(--text-muted);
+        }
+
+        .topic-progress.completed {
+            background: var(--success-bg);
+            color: var(--success);
+        }
+
+        /* Enhanced search bar (for future implementation) */
+        .search-container {
+            position: relative;
+            margin-bottom: 1.5rem;
+        }
+
+        .search-input {
+            width: 100%;
+            padding: 1rem 3rem 1rem 1rem;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 1rem;
+            color: var(--text-primary);
+            font-size: 0.9rem;
+            transition: all 0.2s;
+        }
+
+        .search-input:focus {
+            outline: none;
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.1);
+        }
+
+        .search-icon {
+            position: absolute;
+            right: 1rem;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-muted);
+        }
+
+        /* Accessibility improvements */
+        .visually-hidden {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            padding: 0;
+            margin: -1px;
+            overflow: hidden;
+            clip: rect(0, 0, 0, 0);
+            white-space: nowrap;
+            border: 0;
+        }
+
+        /* Focus indicators */
+        *:focus-visible {
+            outline: 2px solid var(--accent);
+            outline-offset: 2px;
+        }
+
+        /* Enhanced contrast for better readability */
+        .text-high-contrast {
+            color: var(--text-primary);
+            font-weight: 600;
+        }
+
+        /* Loading skeleton */
+        .skeleton {
+            background: linear-gradient(90deg, var(--bg-tertiary) 25%, var(--bg-secondary) 50%, var(--bg-tertiary) 75%);
+            background-size: 200% 100%;
+            animation: loading 1.5s infinite;
+        }
+
+        @keyframes loading {
+            0% { background-position: 200% 0; }
+            100% { background-position: -200% 0; }
+        }
+
+        /* ── Image Modal ───────────────────────────────── */
+        .image-modal {
+            display: none; position: fixed; z-index: 1000;
+            left: 0; top: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.9); cursor: pointer;
+        }
+        .image-modal img {
+            position: absolute; top: 50%; left: 50%;
+            transform: translate(-50%, -50%); max-width: 90%;
+            max-height: 90%; border-radius: .5rem;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        }
+        .image-modal .modal-caption {
+            position: absolute; bottom: 20px; left: 50%;
+            transform: translateX(-50%); color: var(--bg-primary);
+            background: rgba(0,0,0,0.7); padding: .5rem 1rem;
+            border-radius: .5rem; font-size: .9rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="dashboard-layout">
+        {% include '_topnav.html' %}
+
+        <main class="main-content" style="margin-left:0">
+            <div class="page-wrap">
+                
+                <!-- Navigation Sidebar -->
+                <aside class="nav-sidebar" id="navSidebar">
+                    <div class="sidebar-section">
+                        <div class="sidebar-title">
+                            <span class="material-symbols-outlined">navigation</span>
+                            Quick Navigation
+                        </div>
+                        <div id="quickNavItems">
+                            <!-- Dynamically populated -->
+                        </div>
+                    </div>
+                    
+                    <div class="sidebar-section">
+                        <div class="sidebar-title">
+                            <span class="material-symbols-outlined">analytics</span>
+                            Progress Overview
+                        </div>
+                        <div class="nav-item">
+                            <span class="material-symbols-outlined">school</span>
+                            <div>
+                                <div>Total Progress</div>
+                                <div class="progress-mini">
+                                    <div class="progress-mini-fill" style="width: 0%" id="overallProgress"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="sidebar-section">
+                        <div class="sidebar-title">
+                            <span class="material-symbols-outlined">filter_list</span>
+                            Quick Filters
+                        </div>
+                        <div class="nav-item" onclick="filterContent('all')">
+                            <span class="material-symbols-outlined">view_all</span>
+                            All Content
+                        </div>
+                        <div class="nav-item" onclick="filterContent('completed')">
+                            <span class="material-symbols-outlined">check_circle</span>
+                            Completed
+                        </div>
+                        <div class="nav-item" onclick="filterContent('remaining')">
+                            <span class="material-symbols-outlined">pending</span>
+                            Remaining
+                        </div>
+                    </div>
+                </aside>
+
+                <!-- Main Content Area -->
+                <div class="main-content-area">
+
+                <!-- Breadcrumb -->
+                <div class="breadcrumb">
+                    <span class="material-symbols-outlined" style="font-size:1rem">home</span>
+                    <a href="{{ url_for('profile_dashboard') }}">Home</a>
+                    <span>›</span>
+                    <span>{{ class_data.get('name', 'Class') }}</span>
+                    <span>›</span>
+                    <span>Syllabus</span>
+                </div>
+
+                <!-- Page Header -->
+                <div class="page-header" id="subject-header-0">
+                    <div>
+                        <h1>
+                            <span class="material-symbols-outlined" style="vertical-align:middle;font-size:2rem;color:var(--accent)">menu_book</span>
+                            {{ class_data.get('name', 'Class') }}
+                        </h1>
+                        <p>{{ class_data.get('description', 'Class syllabus and study plan') }}</p>
+                        <div class="header-meta">
+                            <span class="meta-badge">
+                                <span class="material-symbols-outlined">library_books</span>
+                                {{ custom_syllabi|length }} Subject{{ 's' if custom_syllabi|length != 1 }}
+                            </span>
+                            {%- set total_chapters = namespace(n=0) -%}
+                            {%- set total_topics   = namespace(n=0) -%}
+                            {%- for cs in custom_syllabi -%}
+                                {%- set total_chapters.n = total_chapters.n + cs.get('chapters',[])|length -%}
+                                {%- for ch in cs.get('chapters',[]) -%}
+                                    {%- set total_topics.n = total_topics.n + ch.get('topics',[])|length -%}
+                                {%- endfor -%}
+                            {%- endfor -%}
+                            <span class="meta-badge">
+                                <span class="material-symbols-outlined">bookmark</span>
+                                {{ total_chapters.n }} Chapter{{ 's' if total_chapters.n != 1 }}
+                            </span>
+                            <span class="meta-badge">
+                                <span class="material-symbols-outlined">check_circle</span>
+                                {{ total_topics.n }} Topic{{ 's' if total_topics.n != 1 }}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+
+                {% if custom_syllabi %}
+
+                <!-- Subject selector tabs -->
+                <div class="subject-tabs" id="subjectTabs">
+                    {% for cs in custom_syllabi %}
+                    <div class="subject-tab {% if loop.first %}active{% endif %}"
+                         onclick="showSubject('subj-{{ loop.index0 }}', this)">
+                        {{ cs.get('name', 'Subject') }}
+                    </div>
+                    {% endfor %}
+                </div>
+
+                <!-- Per-subject panels -->
+                {% for cs in custom_syllabi %}
+                {%- set chapters = cs.get('chapters', []) -%}
+                {%- set topic_count = namespace(n=0) -%}
+                {%- for ch in chapters -%}{%- set topic_count.n = topic_count.n + ch.get('topics',[])|length -%}{%- endfor -%}
+
+                <div class="subject-panel {% if loop.first %}active{% endif %}" id="subj-{{ loop.index0 }}">
+
+                    <!-- Stats strip -->
+                    <div class="stats-strip">
+                        <div class="stat-pill">
+                            <div class="stat-pill-num">{{ chapters|length }}</div>
+                            <div class="stat-pill-lbl">Chapters</div>
+                        </div>
+                        <div class="stat-pill">
+                            <div class="stat-pill-num">{{ topic_count.n }}</div>
+                            <div class="stat-pill-lbl">Topics</div>
+                        </div>
+                        <div class="stat-pill">
+                            <div class="stat-pill-num">{{ cs.get('created_at','')[:4] or '—' }}</div>
+                            <div class="stat-pill-lbl">Year Added</div>
+                        </div>
+                    </div>
+
+                    <!-- Chapter accordion list -->
+                    {% if chapters %}
+                    {% for ch in chapters %}
+                    {%- set topics = ch.get('topics', []) -%}
+                    {%- set chapter_idx = loop.index0 -%}
+                    <div class="chapter-card" id="chap-{{ chapter_idx }}-{{ chapter_idx }}">
+                        <div class="chapter-header"
+                             onclick="toggleChapter(this.parentElement)">
+                            <div class="chapter-header-left">
+                                <span class="chapter-num-badge">Ch.{{ loop.index }}</span>
+                                <span class="chapter-name">{{ ch.get('chapter', 'Unnamed Chapter') }}</span>
+                                <span class="chapter-topic-count">· {{ topics|length }} topic{{ 's' if topics|length != 1 }}</span>
+                            </div>
+                            <span class="material-symbols-outlined chapter-chevron">expand_more</span>
+                        </div>
+                        <div class="chapter-body">
+                            {% if topics %}
+                            <ul class="topics-list">
+                                {% for topic in topics %}
+                                {%- set topic_idx = loop.index0 -%}
+                                {%- set unique_id = chapter_idx ~ '-' ~ topic_idx -%}
+                                {% set topic_name = topic.name if topic is mapping else topic %}
+                                {% set is_rich = topic is mapping %}
+                                <li class="topic-item">
+                                    <div class="topic-bullet"></div>
+                                    <div class="topic-content">
+                                        <div class="topic-header" onclick="openTopicModal({{ chapter_idx }}, {{ topic_idx }})" style="cursor: pointer;">
+                                            <span class="topic-name">{{ topic_name }}</span>
+                                            <span class="material-symbols-outlined" style="font-size: 1rem; color: var(--accent);">open_in_new</span>
+                                        </div>
+                                    </div>
+                                </li>
+                                {% endfor %}
+                            </ul>
+                            {% else %}
+                            <p class="topic-no-items">No topics listed for this chapter.</p>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endfor %}
+
+                    {% else %}
+                    <div class="empty-state">
+                        <span class="material-symbols-outlined">book_2</span>
+                        <p>No chapters defined for this subject yet.</p>
+                    </div>
+                    {% endif %}
+
+                </div><!-- /subject-panel -->
+                {% endfor %}
+
+                {% else %}
+                <!-- No syllabi at all -->
+                <div class="empty-state">
+                    <span class="material-symbols-outlined">menu_book</span>
+                    <p>Your teacher hasn't added a custom syllabus for this class yet.</p>
+                    <p style="margin-top:.5rem;font-size:.85rem;opacity:.7">Check back later or contact your teacher.</p>
+                </div>
+                {% endif %}
+
+            </div><!-- /main-content-area -->
+            </div><!-- /page-wrap -->
+        </main>
+    </div>
+
+    <script>
+    // Enhanced navigation and interaction functionality
+    let currentFilter = 'all';
+    let syllabusData = {{ custom_syllabi|tojson|safe }};
+
+    function showSubject(id, btn) {
+        document.querySelectorAll('.subject-panel').forEach(p => p.classList.remove('active'));
+        document.querySelectorAll('.subject-tab').forEach(b => b.classList.remove('active'));
+        document.getElementById(id).classList.add('active');
+        btn.classList.add('active');
+        
+        // Update both sidebar and mobile navigation
+        updateSidebarNavigation();
+        updateMobileNavigation();
+        updateProgress();
+    }
+
+    function toggleChapter(card) {
+        card.classList.toggle('open');
+    }
+
+    // Update sidebar navigation with current subjects and chapters
+    function updateSidebarNavigation() {
+        const quickNavItems = document.getElementById('quickNavItems');
+        const activePanel = document.querySelector('.subject-panel.active');
+        
+        if (!activePanel || !quickNavItems) return;
+        
+        const subjectIndex = Array.from(document.querySelectorAll('.subject-panel')).indexOf(activePanel);
+        const subject = syllabusData[subjectIndex];
+        
+        if (!subject) return;
+        
+        let navHTML = '';
+        
+        // Subject overview
+        navHTML += `
+            <div class="nav-item active" onclick="scrollToElement('subject-header-${subjectIndex}')">
+                <span class="material-symbols-outlined">menu_book</span>
+                <span>${subject.name}</span>
+            </div>
+        `;
+        
+        // Add chapters
+        subject.chapters?.forEach((chapter, idx) => {
+            const chapterId = `chap-${idx}-${subjectIndex}`;
+            navHTML += `
+                <div class="nav-item" onclick="scrollToElement('${chapterId}')">
+                    <span class="material-symbols-outlined">bookmark</span>
+                    <span>Ch. ${idx + 1}: ${chapter.chapter?.substring(0, 20)}...</span>
+                </div>
+            `;
+        });
+        
+        quickNavItems.innerHTML = navHTML;
+    }
+
+    // Smooth scroll to element
+    function scrollToElement(elementId) {
+        const element = document.getElementById(elementId);
+        if (element) {
+            element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            
+            // Update active state in sidebar
+            document.querySelectorAll('#quickNavItems .nav-item').forEach(item => {
+                item.classList.remove('active');
+            });
+            event.target.closest('.nav-item').classList.add('active');
+        }
+    }
+
+    // Filter content
+    function filterContent(filter) {
+        currentFilter = filter;
+        
+        // Update filter buttons
+        document.querySelectorAll('.sidebar-section:last-child .nav-item').forEach(item => {
+            item.classList.remove('active');
+        });
+        event.target.closest('.nav-item').classList.add('active');
+        
+        // Apply filtering logic here based on filter type
+        const allItems = document.querySelectorAll('.topic-item, .chapter-card');
+        
+        allItems.forEach(item => {
+            if (filter === 'all') {
+                item.style.display = '';
+            } else if (filter === 'completed') {
+                // Show only completed items (add completion tracking later)
+                item.style.display = '';
+            } else if (filter === 'remaining') {
+                // Show only remaining items
+                item.style.display = '';
+            }
+        });
+    }
+
+    // Update progress indicators
+    function updateProgress() {
+        // Calculate overall progress (placeholder for now)
+        let totalTopics = 0;
+        let completedTopics = 0;
+        
+        syllabusData.forEach(subject => {
+            subject.chapters?.forEach(chapter => {
+                totalTopics += chapter.topics?.length || 0;
+                // Add completion tracking logic here
+            });
+        });
+        
+        const progressPercent = totalTopics > 0 ? (completedTopics / totalTopics) * 100 : 0;
+        const progressBar = document.getElementById('overallProgress');
+        if (progressBar) {
+            progressBar.style.width = progressPercent + '%';
+        }
+    }
+
+    // Initialize on page load
+    document.addEventListener('DOMContentLoaded', function() {
+        updateSidebarNavigation();
+        updateProgress();
+        updateMobileNavigation();
+        
+        // Auto-open first chapter in each subject
+        document.querySelectorAll('.subject-panel').forEach(panel => {
+            const first = panel.querySelector('.chapter-card');
+            if (first) first.classList.add('open');
+        });
+        
+        // Add keyboard navigation
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                closeTopicModal();
+                closeMobileNav();
+            }
+        });
+    });
+
+    // Mobile navigation functions
+    function toggleMobileNav() {
+        const drawer = document.getElementById('mobileNavDrawer');
+        drawer.classList.toggle('open');
+    }
+
+    function closeMobileNav() {
+        const drawer = document.getElementById('mobileNavDrawer');
+        drawer.classList.remove('open');
+    }
+
+    function updateMobileNavigation() {
+        const mobileNavItems = document.getElementById('mobileNavItems');
+        const activePanel = document.querySelector('.subject-panel.active');
+        
+        if (!activePanel || !mobileNavItems) return;
+        
+        const subjectIndex = Array.from(document.querySelectorAll('.subject-panel')).indexOf(activePanel);
+        const subject = syllabusData[subjectIndex];
+        
+        if (!subject) return;
+        
+        let navHTML = '';
+        
+        // Subject overview
+        navHTML += `
+            <div class="nav-item" onclick="scrollToElement('subject-header-${subjectIndex}'); toggleMobileNav();">
+                <span class="material-symbols-outlined">menu_book</span>
+                <span>${subject.name}</span>
+            </div>
+        `;
+        
+        // Add chapters
+        subject.chapters?.forEach((chapter, idx) => {
+            const chapterId = `chap-${idx}-${subjectIndex}`;
+            navHTML += `
+                <div class="nav-item" onclick="scrollToElement('${chapterId}'); toggleMobileNav();">
+                    <span class="material-symbols-outlined">bookmark</span>
+                    <span>Ch. ${idx + 1}: ${chapter.chapter?.substring(0, 20)}...</span>
+                </div>
+            `;
+        });
+        
+        mobileNavItems.innerHTML = navHTML;
+    }
+
+    // Image modal functionality
+    function openImageModal(imageSrc, caption) {
+        // Remove existing modal if any
+        const existingModal = document.getElementById('imageModal');
+        if (existingModal) {
+            existingModal.remove();
+        }
+
+        // Create modal
+        const modal = document.createElement('div');
+        modal.id = 'imageModal';
+        modal.className = 'image-modal';
+        modal.innerHTML = `
+            <img src="${imageSrc}" alt="${caption}">
+            <div class="modal-caption">${caption}</div>
+        `;
+        
+        // Add to body and show
+        document.body.appendChild(modal);
+        modal.style.display = 'block';
+        
+        // Close on click
+        modal.onclick = function() {
+            modal.style.display = 'none';
+            setTimeout(() => modal.remove(), 300);
+        };
+        
+        // Close on ESC key
+        document.addEventListener('keydown', function escHandler(e) {
+            if (e.key === 'Escape') {
+                modal.style.display = 'none';
+                setTimeout(() => modal.remove(), 300);
+                document.removeEventListener('keydown', escHandler);
+            }
+        });
+    }
+
+    // Auto-open first chapter in each subject
+    document.querySelectorAll('.subject-panel').forEach(panel => {
+        const first = panel.querySelector('.chapter-card');
+        if (first) first.classList.add('open');
+    });
+
+    // Modal functionality as backup
+    function openTopicModal(chapterIndex, topicIndex) {
+        // Get the syllabus data from the page
+        const syllabusData = {{ custom_syllabi|tojson }};
+        const subjectPanel = document.querySelector('.subject-panel.active');
+        const subjectIndex = Array.from(document.querySelectorAll('.subject-panel')).indexOf(subjectPanel);
+        
+        if (subjectIndex >= 0 && syllabusData[subjectIndex]) {
+            const chapter = syllabusData[subjectIndex].chapters[chapterIndex];
+            const topic = chapter.topics[topicIndex];
+
+            document.getElementById('modalTopicName').textContent = topic.name || topic;
+            const modalContent = document.getElementById('modalTopicContent');
+            modalContent.innerHTML = ''; // Clear previous content
+
+            // Handle both rich and simple topics
+            if (typeof topic === 'object' && topic !== null) {
+                // Rich topic format
+                if (topic.overview) {
+                    modalContent.innerHTML += `<div class="modal-section"><h4>Overview</h4><p>${topic.overview}</p></div>`;
+                }
+
+                if (topic.explanations && topic.explanations.length > 0) {
+                    modalContent.innerHTML += `<div class="modal-section"><h4>Explanations</h4><ul>${topic.explanations.map(exp => `<li>${exp}</li>`).join('')}</ul></div>`;
+                }
+
+                if (topic.key_points && topic.key_points.length > 0) {
+                    modalContent.innerHTML += `<div class="modal-section"><h4>Key Points</h4><ul>${topic.key_points.map(kp => `<li>${kp}</li>`).join('')}</ul></div>`;
+                }
+
+                if (topic.images && topic.images.length > 0) {
+                    modalContent.innerHTML += `<div class="modal-section"><h4>Images</h4><div class="resource-grid">${topic.images.map(img => `
+                        <div class="resource-item">
+                            <img src="${img.url}" alt="${img.caption}" style="max-width:100%;height:auto;border-radius:.5rem;margin-bottom:.5rem;">
+                            <p class="resource-desc">${img.caption}</p>
+                            <a href="${img.url}" target="_blank" class="resource-link">View Image</a>
+                        </div>`).join('')}</div></div>`;
+                }
+
+                if (topic.resources) {
+                    let resourcesHtml = '';
+                    if (topic.resources.videos && topic.resources.videos.length > 0) {
+                        resourcesHtml += `<h5>📹 Videos</h5><div class="resource-grid">${topic.resources.videos.map(res => `
+                            <div class="resource-item">
+                                <p class="resource-title">${res.title || res}</p>
+                                <a href="${res.url || res}" target="_blank" class="resource-link">View Video</a>
+                            </div>`).join('')}</div>`;
+                    }
+                    if (topic.resources.pdfs && topic.resources.pdfs.length > 0) {
+                        resourcesHtml += `<h5>📄 PDFs</h5><div class="resource-grid">${topic.resources.pdfs.map(res => `
+                            <div class="resource-item">
+                                <p class="resource-title">${res.title || res}</p>
+                                <a href="${res.url || res}" target="_blank" class="resource-link">View PDF</a>
+                            </div>`).join('')}</div>`;
+                    }
+                    if (topic.resources.practice && topic.resources.practice.length > 0) {
+                        resourcesHtml += `<h5>🎯 Practice</h5><div class="resource-grid">${topic.resources.practice.map(res => `
+                            <div class="resource-item">
+                                <p class="resource-title">${res.title || res}</p>
+                                <a href="${res.url || res}" target="_blank" class="resource-link">View Practice</a>
+                            </div>`).join('')}</div>`;
+                    }
+                    if (resourcesHtml) {
+                        modalContent.innerHTML += `<div class="modal-section"><h4>Learning Resources</h4>${resourcesHtml}</div>`;
+                    }
+                }
+            } else {
+                // Simple topic format
+                modalContent.innerHTML += `<div class="modal-section"><h4>Topic</h4><p>${topic}</p></div>`;
+            }
+
+            document.getElementById('topicModalOverlay').style.display = 'block';
+        }
+    }
+
+    function closeTopicModal() {
+        document.getElementById('topicModalOverlay').style.display = 'none';
+    }
+
+    // Close modal when clicking outside
+    document.getElementById('topicModalOverlay').addEventListener('click', function(e) {
+        if (e.target === this) {
+            closeTopicModal();
+        }
+    });
+    </script>
+
+    <!-- Topic Detail Modal (Backup) -->
+    <div class="modal-overlay" id="topicModalOverlay" style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.7); display: none; z-index: 1000; backdrop-filter: blur(4px);">
+        <div class="modal-content" style="position: relative; background: var(--bg-primary); margin: 3% auto; padding: 0; width: 95%; max-width: 700px; max-height: 85vh; overflow: hidden; border-radius: 1rem; box-shadow: 0 20px 40px rgba(0,0,0,0.3); border: 1px solid var(--border);">
+            <div class="modal-header" style="display: flex; justify-content: space-between; align-items: center; padding: 1.5rem 2rem; background: var(--bg-secondary); border-bottom: 1px solid var(--border);">
+                <h3 class="modal-title" id="modalTopicName" style="margin: 0; color: var(--text-primary); font-size: 1.3rem; font-weight: 600;"></h3>
+                <button class="modal-close" onclick="closeTopicModal()" style="background: var(--bg-tertiary); border: 1px solid var(--border); border-radius: 50%; width: 2.5rem; height: 2.5rem; font-size: 1.2rem; cursor: pointer; color: var(--text-muted); display: flex; align-items: center; justify-content: center; transition: all 0.2s;">&times;</button>
+            </div>
+            <div id="modalTopicContent" style="padding: 2rem; overflow-y: auto; max-height: calc(85vh - 100px); background: var(--bg-primary);">
+                <!-- Content will be inserted here -->
+            </div>
+        </div>
+    </div>
+
+    <style>
+    .modal-section {
+        margin-bottom: 2rem;
+        padding-bottom: 1.5rem;
+        border-bottom: 1px solid var(--border);
+    }
+    
+    .modal-section:last-child {
+        border-bottom: none;
+        margin-bottom: 0;
+        padding-bottom: 0;
+    }
+    
+    .modal-section h4 {
+        color: var(--text-primary);
+        font-size: 1.1rem;
+        font-weight: 600;
+        margin-bottom: 1rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    
+    .modal-section h5 {
+        color: var(--text-primary);
+        font-size: 0.95rem;
+        font-weight: 600;
+        margin-bottom: 0.8rem;
+        margin-top: 1.2rem;
+    }
+    
+    .modal-section h5:first-child {
+        margin-top: 0;
+    }
+    
+    .modal-section p {
+        color: var(--text-secondary);
+        line-height: 1.6;
+        margin-bottom: 1rem;
+    }
+    
+    .modal-section ul {
+        color: var(--text-secondary);
+        line-height: 1.6;
+        margin: 0;
+        padding-left: 1.5rem;
+    }
+    
+    .modal-section li {
+        margin-bottom: 0.5rem;
+    }
+    
+    .resource-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 1rem;
+        margin-top: 1rem;
+    }
+    
+    .resource-item {
+        background: var(--bg-secondary);
+        border: 1px solid var(--border);
+        border-radius: 0.5rem;
+        padding: 1rem;
+        transition: all 0.2s;
+    }
+    
+    .resource-item:hover {
+        border-color: var(--accent);
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+    
+    .resource-title {
+        font-weight: 600;
+        color: var(--text-primary);
+        margin-bottom: 0.5rem;
+        font-size: 0.9rem;
+    }
+    
+    .resource-desc {
+        color: var(--text-muted);
+        font-size: 0.85rem;
+        margin-bottom: 0.8rem;
+        line-height: 1.4;
+    }
+    
+    .resource-link {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.3rem;
+        color: var(--accent);
+        text-decoration: none;
+        font-size: 0.85rem;
+        font-weight: 500;
+        padding: 0.3rem 0.6rem;
+        border: 1px solid var(--accent);
+        border-radius: 0.3rem;
+        transition: all 0.2s;
+    }
+    
+    .resource-link:hover {
+        background: var(--accent);
+        color: var(--bg-primary);
+    }
+    
+    .modal-close:hover {
+        background: var(--accent) !important;
+        color: var(--bg-primary) !important;
+        border-color: var(--accent) !important;
+        transform: scale(1.1);
+    }
+    
+    @media (max-width: 768px) {
+        .modal-content {
+            margin: 1% auto;
+            width: 98%;
+            max-height: 90vh;
+        }
+        
+        .modal-header {
+            padding: 1rem 1.5rem;
+        }
+        
+        .modal-title {
+            font-size: 1.1rem;
+        }
+        
+        #modalTopicContent {
+            padding: 1.5rem;
+        }
+        
+        .resource-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+    </style>
+
+    <!-- Mobile Navigation Drawer -->
+    <div class="mobile-nav-drawer" id="mobileNavDrawer">
+        <div class="drawer-content">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                <h4 style="margin: 0; color: var(--text-primary);">Quick Navigation</h4>
+                <button onclick="toggleMobileNav()" style="background: none; border: none; color: var(--text-muted); font-size: 1.5rem; cursor: pointer;">×</button>
+            </div>
+            <div id="mobileNavItems">
+                <!-- Dynamically populated -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Mobile Navigation Toggle Button -->
+    <button class="mobile-nav-toggle" onclick="toggleMobileNav()" style="
+        display: none;
+        position: fixed;
+        bottom: 1rem;
+        right: 1rem;
+        width: 3rem;
+        height: 3rem;
+        border-radius: 50%;
+        background: var(--accent);
+        color: var(--bg-primary);
+        border: none;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        cursor: pointer;
+        z-index: 99;
+        font-size: 1.2rem;
+    ">
+        <span class="material-symbols-outlined">navigation</span>
+    </button>
+
+    <style>
+        @media (max-width: 768px) {
+            .mobile-nav-toggle {
+                display: flex !important;
+                align-items: center;
+                justify-content: center;
+            }
+        }
+    </style>
+</body>
+</html>

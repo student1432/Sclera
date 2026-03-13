@@ -292,6 +292,14 @@
                                             <span class="material-symbols-outlined" style="font-size: 0.9rem; margin-right: 0.25rem;">menu_book</span>
                                             Syllabus
                                         </a>
+                                        <a href="{{ url_for('generate_class_report', class_id=cls.id) }}"class="btn btn-secondary" title="Download PDF Report">
+                                            <span class="material-symbols-outlined" style="font-size:.9rem">picture_as_pdf</span>
+                                            Report
+                                        </a>
+                                        <a href="{{ url_for('custom_syllabus_upload', class_id=cls.id) }}" class="btn btn-secondary">
+                                            <span class="material-symbols-outlined" style="font-size:.9rem">add_circle</span>
+                                            Custom Syllabus
+                                        </a>
                                         <form method="POST" action="{{ url_for('delete_class', class_id=cls.id) }}" style="display:inline;" onsubmit="return confirm('Are you sure you want to delete this class? This action cannot be undone and will remove all students from the class.');">
                                             <button type="submit" class="btn btn-danger">
                                                 <span class="material-symbols-outlined" style="font-size: 0.9rem; margin-right: 0.25rem;">delete</span>
