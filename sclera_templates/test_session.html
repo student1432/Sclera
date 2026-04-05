@@ -1,0 +1,853 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Practice — Sclera</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Serif+Display:ital,wght@0,300;0,400;0,600;0,700;1,400&family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap" rel="stylesheet"/>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: { extend: {
+                colors: { "primary": "#ffffff" },
+                fontFamily: { "display": ["Inter","sans-serif"] },
+                borderRadius: { "DEFAULT": "1rem", "lg": "2rem", "xl": "3rem", "full": "9999px" }
+            }}
+        }
+    </script>
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: var(--bg-primary); color: var(--text-primary); }
+        .glass-panel { background: var(--bg-secondary); backdrop-filter: blur(16px); border: 1px solid var(--border); }
+
+        /* Progress dots */
+        .prog-dot { 
+            width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; 
+            background: var(--bg-tertiary); transition: all 0.25s; cursor: pointer;
+            border: 2px solid transparent;
+        }
+        .prog-dot:hover:not(.current) { 
+            background: var(--accent); opacity: 0.7; 
+        }
+        .prog-dot.answered-correct { background: var(--success); border-color: var(--success); }
+        .prog-dot.answered-wrong   { background: var(--error); border-color: var(--error); }
+        .prog-dot.selected-but-not-submitted { 
+            background: var(--accent); border-color: var(--accent); 
+            opacity: 0.8;
+        }
+        .prog-dot.current          { 
+            background: var(--accent); border-color: var(--accent); 
+            transform: scale(1.2); 
+        }
+
+        /* Option card */
+        .option-card {
+            display: flex; align-items: flex-start; gap: 0.875rem;
+            padding: 0.875rem 1rem; border-radius: 0.875rem;
+            border: 1.5px solid var(--border);
+            background: var(--bg-secondary);
+            cursor: pointer; transition: border-color 0.15s, background 0.15s;
+            user-select: none;
+        }
+        .option-card:hover:not(.locked) { border-color: var(--accent); background: var(--bg-hover); }
+        .option-card.selected  { border-color: var(--accent); background: var(--bg-hover); }
+        .option-card.correct   { border-color: var(--success) !important; background: var(--success-bg) !important; cursor: default; }
+        .option-card.wrong     { border-color: var(--error)   !important; background: var(--error-bg)   !important; cursor: default; }
+        .option-card.show-correct { border-color: var(--success) !important; background: var(--success-bg) !important; cursor: default; }
+        .option-card.locked    { cursor: default; }
+        
+        /* Button styles */
+        .btn-secondary {
+            padding: 0.75rem 1.5rem; border-radius: 0.875rem;
+            border: 1.5px solid var(--border); background: var(--bg-secondary);
+            color: var(--text-primary); font-weight: 600;
+            cursor: pointer; transition: all 0.15s;
+        }
+        .btn-secondary:hover:not(:disabled) { 
+            border-color: var(--accent); background: var(--bg-hover); 
+        }
+        .btn-secondary:disabled { 
+            opacity: 0.4; cursor: not-allowed; 
+        }
+        
+        /* Enhanced option card animations */
+        .option-card {
+            display: flex; align-items: flex-start; gap: 0.875rem;
+            padding: 0.875rem 1rem; border-radius: 0.875rem;
+            border: 1.5px solid var(--border);
+            background: var(--bg-secondary);
+            cursor: pointer; transition: all 0.2s ease;
+            user-select: none; position: relative;
+        }
+        .option-card:hover:not(.locked) { 
+            border-color: var(--accent); background: var(--bg-hover);
+            transform: translateY(-1px);
+        }
+        .option-card.selected  { 
+            border-color: var(--accent); background: var(--accent-bg);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(var(--accent-rgb), 0.15);
+        }
+        .option-card.correct   { 
+            border-color: var(--success) !important; 
+            background: var(--success-bg) !important; 
+            cursor: default; 
+            transform: translateY(0);
+        }
+        .option-card.correct::after {
+            content: '✓';
+            position: absolute; top: 0.5rem; right: 0.5rem;
+            width: 24px; height: 24px; border-radius: 50%;
+            background: var(--success); color: white;
+            display: flex; align-items: center; justify-content: center;
+            font-weight: bold; font-size: 14px;
+            animation: checkmark 0.3s ease;
+        }
+        .option-card.wrong     { 
+            border-color: var(--error) !important; 
+            background: var(--error-bg) !important; 
+            cursor: default; 
+            animation: shake 0.5s ease;
+        }
+        .option-card.wrong::after {
+            content: '✗';
+            position: absolute; top: 0.5rem; right: 0.5rem;
+            width: 24px; height: 24px; border-radius: 50%;
+            background: var(--error); color: white;
+            display: flex; align-items: center; justify-content: center;
+            font-weight: bold; font-size: 14px;
+            animation: crossmark 0.3s ease;
+        }
+        .option-card.show-correct { 
+            border-color: var(--success) !important; 
+            background: var(--success-bg) !important; 
+            cursor: default; 
+        }
+        .option-card.locked    { cursor: default; }
+        
+        /* Status indicator animations */
+        @keyframes pulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.7; transform: scale(1.05); }
+        }
+        @keyframes checkmark {
+            0% { transform: scale(0) rotate(-180deg); opacity: 0; }
+            50% { transform: scale(1.2) rotate(-10deg); opacity: 1; }
+            100% { transform: scale(1) rotate(0deg); opacity: 1; }
+        }
+        @keyframes crossmark {
+            0% { transform: scale(0) rotate(180deg); opacity: 0; }
+            50% { transform: scale(1.2) rotate(10deg); opacity: 1; }
+            100% { transform: scale(1) rotate(0deg); opacity: 1; }
+        }
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-5px); }
+            75% { transform: translateX(5px); }
+        }
+        
+        /* Enhanced progress dots */
+        .prog-dot { 
+            width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; 
+            background: var(--bg-tertiary); transition: all 0.3s ease; cursor: pointer;
+            border: 2px solid transparent; position: relative;
+        }
+        .prog-dot:hover:not(.current) { 
+            background: var(--accent); opacity: 0.8; 
+            transform: scale(1.2);
+        }
+        .prog-dot.answered-correct { 
+            background: var(--success); border-color: var(--success); 
+            box-shadow: 0 0 8px rgba(var(--success-rgb), 0.3);
+        }
+        .prog-dot.answered-wrong   { 
+            background: var(--error); border-color: var(--error);
+            box-shadow: 0 0 8px rgba(var(--error-rgb), 0.3);
+        }
+        .prog-dot.selected-but-not-submitted { 
+            background: var(--accent); border-color: var(--accent); 
+            opacity: 0.8;
+        }
+        .prog-dot.current          { 
+            background: var(--accent); border-color: var(--accent); 
+            transform: scale(1.3); 
+            box-shadow: 0 0 12px rgba(var(--accent-rgb), 0.4);
+        }
+        
+        /* Status indicators */
+        .status-selected {
+            color: var(--accent) !important;
+            animation: fadeIn 0.3s ease;
+        }
+        .status-submitted {
+            color: var(--success) !important;
+            animation: fadeIn 0.3s ease;
+        }
+        .status-unsubmitted {
+            color: var(--text-muted) !important;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-5px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .opt-letter {
+            width: 28px; height: 28px; border-radius: 50%;
+            background: var(--bg-tertiary); display: flex; align-items: center; justify-content: center;
+            font-size: 0.75rem; font-weight: 700; flex-shrink: 0; color: var(--text-muted);
+            transition: background 0.15s, color 0.15s;
+        }
+        .option-card.correct   .opt-letter { background: var(--success); color: #fff; }
+        .option-card.wrong     .opt-letter { background: var(--error);   color: #fff; }
+        .option-card.show-correct .opt-letter { background: var(--success); color: #fff; }
+        .option-card.selected:not(.correct):not(.wrong) .opt-letter { background: var(--accent); color: var(--bg-primary); }
+
+        .opt-text { font-size: 0.9rem; line-height: 1.5; color: var(--text-primary); padding-top: 0.1rem; }
+
+        /* Explanation box */
+        .expl-box { border-left: 3px solid var(--accent); border-radius: 0 0.75rem 0.75rem 0; background: var(--bg-tertiary); padding: 0.875rem 1rem; }
+        .ai-expl-box { border-left: 3px solid var(--success); border-radius: 0 0.75rem 0.75rem 0; background: var(--success-bg); padding: 0.875rem 1rem; }
+
+        /* Diff badge */
+        .diff-badge { font-size: 0.65rem; font-weight: 600; letter-spacing: 0.06em; padding: 0.2rem 0.55rem; border-radius: 999px; text-transform: uppercase; }
+        .diff-badge.easy   { background: var(--success-bg); color: var(--success); }
+        .diff-badge.medium { background: var(--warning-bg, rgba(234,179,8,0.12)); color: var(--warning, #eab308); }
+        .diff-badge.hard   { background: var(--error-bg); color: var(--error); }
+
+        /* Timer */
+        .timer-badge { font-size: 0.8rem; font-weight: 600; font-variant-numeric: tabular-nums; padding: 0.3rem 0.7rem; border-radius: 0.5rem; background: var(--bg-tertiary); color: var(--text-primary); }
+        .timer-badge.warning { background: var(--error-bg); color: var(--error); }
+
+        /* Buttons */
+        .btn-primary { background: var(--accent); color: var(--bg-primary); padding: 0.75rem 1.5rem; border-radius: 0.75rem; font-size: 0.875rem; font-weight: 600; cursor: pointer; transition: opacity 0.15s; }
+        .btn-primary:hover { opacity: 0.85; }
+        .btn-secondary { background: var(--bg-tertiary); color: var(--text-secondary); padding: 0.75rem 1.5rem; border-radius: 0.75rem; font-size: 0.875rem; font-weight: 500; cursor: pointer; border: 1px solid var(--border); transition: background 0.15s; }
+        .btn-secondary:hover { background: var(--bg-hover); }
+
+        @keyframes fadeSlide { from{opacity:0;transform:translateY(6px);}to{opacity:1;transform:translateY(0);} }
+        .fade-slide { animation: fadeSlide 0.22s ease; }
+
+        @keyframes revealIn { from{opacity:0;transform:translateY(4px);}to{opacity:1;transform:translateY(0);} }
+        .reveal-in { animation: revealIn 0.2s ease; }
+
+        /* Spinner */
+        .spinner { width: 28px; height: 28px; border: 2.5px solid var(--bg-tertiary); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* Result overlay */
+        .result-indicator { display: inline-flex; align-items: center; gap: 0.375rem; font-size: 0.875rem; font-weight: 600; }
+        .result-indicator.correct { color: var(--success); }
+        .result-indicator.wrong   { color: var(--error); }
+    </style>
+</head>
+
+<body class="min-h-screen flex flex-col">
+{% include '_topnav.html' %}
+
+<div class="flex-1 pt-20 pb-8 px-4 flex flex-col max-w-2xl mx-auto w-full">
+
+    <!-- ── Loading screen ─────────────────────────────────────────────────── -->
+    <div id="loadingScreen" class="flex-1 flex flex-col items-center justify-center gap-4">
+        <div class="spinner"></div>
+        <p class="text-sm" style="color:var(--text-muted);">Preparing your questions…</p>
+    </div>
+
+    <!-- ── Error screen ───────────────────────────────────────────────────── -->
+    <div id="errorScreen" class="flex-1 flex flex-col items-center justify-center gap-3 text-center hidden">
+        <span class="material-symbols-outlined text-5xl" style="color:var(--error);">error_outline</span>
+        <p class="text-base font-semibold" id="errorMsg" style="color:var(--text-primary);">Something went wrong</p>
+        <a href="/test" class="btn-primary mt-2 inline-block">← Back to Tests</a>
+    </div>
+
+    <!-- ── Active session ─────────────────────────────────────────────────── -->
+    <div id="sessionScreen" class="hidden flex flex-col gap-5">
+
+        <!-- Top bar: back + progress + timer -->
+        <div class="flex items-center gap-3">
+            <button onclick="confirmExit()" style="color:var(--text-muted);">
+                <span class="material-symbols-outlined">arrow_back</span>
+            </button>
+            <!-- Progress dots -->
+            <div class="flex items-center gap-1.5 flex-1 overflow-hidden" id="progressDots"></div>
+            <!-- Q counter -->
+            <span class="text-xs font-medium flex-shrink-0" id="qCounter" style="color:var(--text-muted);"></span>
+            <!-- Timer (mock only) -->
+            <div id="timerBadge" class="timer-badge hidden">00:00</div>
+        </div>
+
+        <!-- Question card -->
+        <div class="glass-panel rounded-xl p-6 flex flex-col gap-5 fade-slide" id="questionCard">
+            <!-- Meta row -->
+            <div class="flex items-center justify-between gap-2 flex-wrap">
+                <span class="diff-badge easy" id="diffBadge">Easy</span>
+                <span class="text-xs" id="topicLabel" style="color:var(--text-muted);"></span>
+            </div>
+
+            <!-- Question text -->
+            <p class="text-base font-medium leading-relaxed" id="questionText" style="color:var(--text-primary);"></p>
+
+            <!-- Options -->
+            <div class="flex flex-col gap-2.5" id="optionsContainer"></div>
+
+            <!-- Result indicator (shows after answer) -->
+            <div id="resultRow" class="hidden">
+                <div id="resultIndicator" class="result-indicator"></div>
+            </div>
+
+            <!-- Explanation (shows after answer) -->
+            <div id="explanationSection" class="hidden flex flex-col gap-2.5 reveal-in">
+                <div class="expl-box" id="explBox">
+                    <p class="text-xs font-semibold mb-1" style="color:var(--accent);">Explanation</p>
+                    <p class="text-sm leading-relaxed" id="explText" style="color:var(--text-secondary);"></p>
+                </div>
+                <div class="ai-expl-box hidden" id="aiExplBox">
+                    <div class="flex items-center gap-1.5 mb-1">
+                        <span class="material-symbols-outlined text-sm" style="color:var(--success);">auto_awesome</span>
+                        <p class="text-xs font-semibold" style="color:var(--success);">AI Explanation</p>
+                    </div>
+                    <p class="text-sm leading-relaxed" id="aiExplText" style="color:var(--text-secondary);"></p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Action row -->
+        <div class="flex gap-3" id="actionRow">
+            <button id="btnPrevious" class="btn-secondary flex-1 hidden" onclick="previousQuestion()">
+                ← Previous
+            </button>
+            <button id="btnSubmit" class="btn-primary flex-1 hidden" onclick="submitAnswer()">
+                Submit Answer ✓
+            </button>
+            <button id="btnNext" class="btn-primary flex-1 hidden" onclick="nextQuestion()">
+                Next Question →
+            </button>
+            <button id="btnFinish" class="btn-primary flex-1 hidden" onclick="finishSession()">
+                View Results →
+            </button>
+        </div>
+        
+        <!-- Status indicator row -->
+        <div class="flex items-center justify-between text-xs mt-2" id="statusRow">
+            <div id="selectionStatus" class="flex items-center gap-1" style="color:var(--text-muted);">
+                <span class="material-symbols-outlined text-sm">radio_button_unchecked</span>
+                <span>No answer selected</span>
+            </div>
+            <div id="submissionStatus" class="flex items-center gap-1" style="color:var(--text-muted);">
+                <span class="material-symbols-outlined text-sm">schedule</span>
+                <span>Not submitted</span>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- ── Completing screen ──────────────────────────────────────────────── -->
+    <div id="completingScreen" class="flex-1 flex flex-col items-center justify-center gap-4 hidden">
+        <div class="spinner"></div>
+        <p class="text-sm" style="color:var(--text-muted);">Saving your results…</p>
+    </div>
+
+</div>
+
+<script>
+// ─── State ────────────────────────────────────────────────────────────────────
+let session_id  = null;
+let questions   = [];
+let currentIdx  = 0;
+let answered    = {};   // idx → {selected, submitted, is_correct, correct_option_index, explanation, ai_explanation}
+let selected    = {};   // idx → selected_option (for tracking selections before submission)
+let mode        = 'topic';
+let timeLimitMs = 0;
+let timerEnd    = 0;
+let timerHandle = null;
+
+const LETTERS = ['A','B','C','D'];
+
+// ─── Boot ─────────────────────────────────────────────────────────────────────
+(function boot() {
+    const saved = (() => { try { return JSON.parse(sessionStorage.getItem('__test_session')); } catch{ return null; }})();
+    if (!saved) { showError('No session data found.'); return; }
+
+    session_id = saved.session_id;
+    questions  = saved.questions;
+    mode       = saved.mode || 'topic';
+    if (saved.time_limit_minutes) {
+        timeLimitMs = saved.time_limit_minutes * 60 * 1000;
+        // Start or restore timer
+        const storedEnd = parseInt(sessionStorage.getItem('__test_timer_end') || '0', 10);
+        timerEnd = storedEnd || (Date.now() + timeLimitMs);
+        sessionStorage.setItem('__test_timer_end', timerEnd);
+        startTimer();
+    }
+
+    showSession();
+    renderQuestion();
+})();
+
+// ─── Render question ──────────────────────────────────────────────────────────
+function renderQuestion() {
+    const q = questions[currentIdx];
+    if (!q) return;
+
+    // Diff badge
+    const badge = document.getElementById('diffBadge');
+    badge.className = 'diff-badge ' + (q.difficulty || 'medium');
+    badge.textContent = q.difficulty ? q.difficulty.charAt(0).toUpperCase() + q.difficulty.slice(1) : 'Medium';
+
+    // Topic label
+    const parts = (q.topic_id || '').split('_');
+    document.getElementById('topicLabel').textContent =
+        parts.length >= 5 ? parts.slice(4).join(' ').replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase()) : (q.subject || '');
+
+    // Counter
+    document.getElementById('qCounter').textContent = `${currentIdx + 1} / ${questions.length}`;
+
+    // Question text
+    document.getElementById('questionText').textContent = q.text;
+
+    // Options
+    const container = document.getElementById('optionsContainer');
+    container.innerHTML = '';
+    q.options.forEach((opt, i) => {
+        const card = document.createElement('div');
+        card.className = 'option-card';
+        card.dataset.idx = i;
+        card.innerHTML = `
+            <span class="opt-letter">${LETTERS[i]}</span>
+            <span class="opt-text">${esc(opt)}</span>`;
+
+        // Handle different answer states
+        const submitted = answered[currentIdx];
+        const selectedOpt = selected[currentIdx];
+        
+        if (submitted) {
+            card.classList.add('locked');
+            if (i === submitted.correct_option_index) card.classList.add('correct');
+            else if (i === submitted.selected)         card.classList.add('wrong');
+        } else if (selectedOpt !== undefined) {
+            card.classList.add('selected');
+            if (i === selectedOpt) {
+                // This option is currently selected but not submitted
+            }
+        } else {
+            card.addEventListener('click', () => selectOption(i));
+        }
+        container.appendChild(card);
+    });
+
+    // Restore revealed state for submitted answers
+    const submitted = answered[currentIdx];
+    if (submitted) {
+        showReveal(submitted);
+    } else {
+        document.getElementById('resultRow').classList.add('hidden');
+        document.getElementById('explanationSection').classList.add('hidden');
+    }
+
+    // Update button visibility
+    updateButtonStates();
+    updateStatusIndicators();
+
+    // Progress dots
+    renderDots();
+
+    // Animate card
+    const card = document.getElementById('questionCard');
+    card.classList.remove('fade-slide');
+    void card.offsetWidth;
+    card.classList.add('fade-slide');
+}
+
+function renderDots() {
+    const container = document.getElementById('progressDots');
+    container.innerHTML = '';
+    const max = Math.min(questions.length, 20);
+    for (let i = 0; i < max; i++) {
+        const dot = document.createElement('div');
+        dot.className = 'prog-dot';
+        dot.title = `Question ${i + 1}`;
+        
+        const submitted = answered[i];
+        const selectedOpt = selected[i];
+        
+        if (i === currentIdx) {
+            dot.classList.add('current');
+        } else if (submitted) {
+            dot.classList.add(submitted.is_correct ? 'answered-correct' : 'answered-wrong');
+            dot.title += ` (${submitted.is_correct ? 'Correct' : 'Wrong'})`;
+        } else if (selectedOpt !== undefined) {
+            dot.classList.add('selected-but-not-submitted');
+            dot.title += ' (Selected, not submitted)';
+        }
+        
+        // Make dots clickable for navigation
+        dot.addEventListener('click', () => navigateToQuestion(i));
+        container.appendChild(dot);
+    }
+}
+
+// ─── Option selection ─────────────────────────────────────────────────────────
+function selectOption(optIdx) {
+    const q = questions[currentIdx];
+    if (answered[currentIdx]) return; // Already submitted, can't change
+
+    // Store selection
+    selected[currentIdx] = optIdx;
+    
+    // Visual: update selected state with animation
+    document.querySelectorAll('.option-card').forEach((c, i) => {
+        c.classList.toggle('selected', i === optIdx);
+        // Add selection animation
+        if (i === optIdx) {
+            c.style.animation = 'none';
+            void c.offsetWidth; // Trigger reflow
+            c.style.animation = 'fadeIn 0.3s ease';
+        }
+    });
+    
+    // Update button states and status indicators
+    updateButtonStates();
+    updateStatusIndicators();
+}
+
+function showReveal(rev) {
+    // Result indicator
+    const ri = document.getElementById('resultIndicator');
+    ri.className = 'result-indicator ' + (rev.is_correct ? 'correct' : 'wrong');
+    ri.innerHTML = rev.is_correct
+        ? '<span class="material-symbols-outlined text-base">check_circle</span> Correct!'
+        : '<span class="material-symbols-outlined text-base">cancel</span> Incorrect';
+    document.getElementById('resultRow').classList.remove('hidden');
+
+    // Explanation
+    document.getElementById('explanationSection').classList.remove('hidden');
+    document.getElementById('explanationSection').classList.add('reveal-in');
+    document.getElementById('explText').textContent = rev.explanation || '';
+    const explBox = document.getElementById('explBox');
+    explBox.classList.toggle('hidden', !rev.explanation);
+
+    const aiBox = document.getElementById('aiExplBox');
+    if (rev.ai_explanation && !rev.is_correct) {
+        document.getElementById('aiExplText').textContent = rev.ai_explanation;
+        aiBox.classList.remove('hidden');
+    } else {
+        aiBox.classList.add('hidden');
+    }
+
+    // Next / Finish button
+    const isLast = currentIdx === questions.length - 1;
+    document.getElementById('btnNext').classList.toggle('hidden', isLast);
+    document.getElementById('btnFinish').classList.toggle('hidden', !isLast);
+}
+
+// ─── Navigation functions ─────────────────────────────────────────────────────
+function navigateToQuestion(index) {
+    if (index < 0 || index >= questions.length) return;
+    
+    // Check if user wants to leave unsaved selection
+    if (selected[currentIdx] !== undefined && answered[currentIdx] === undefined) {
+        const selectedOpt = selected[currentIdx];
+        const optionLetter = LETTERS[selectedOpt];
+        if (!confirm(`You have selected Option ${optionLetter} but haven't submitted it. Are you sure you want to leave this question? Your selection will be lost.`)) {
+            return;
+        }
+        // Clear selection if user chooses to leave
+        delete selected[currentIdx];
+    }
+    
+    currentIdx = index;
+    renderQuestion();
+    window.scrollTo({top: 0, behavior: 'smooth'});
+}
+
+function previousQuestion() {
+    if (currentIdx > 0) {
+        navigateToQuestion(currentIdx - 1);
+    }
+}
+
+function nextQuestion() {
+    if (currentIdx < questions.length - 1) {
+        navigateToQuestion(currentIdx + 1);
+    }
+}
+
+// ─── Status indicator management ─────────────────────────────────────────────────
+function updateStatusIndicators() {
+    const selectionStatus = document.getElementById('selectionStatus');
+    const submissionStatus = document.getElementById('submissionStatus');
+    const submitted = answered[currentIdx];
+    const selectedOpt = selected[currentIdx];
+    
+    // Update selection status
+    if (selectedOpt !== undefined) {
+        const optionLetter = LETTERS[selectedOpt];
+        selectionStatus.innerHTML = `
+            <span class="material-symbols-outlined text-sm">radio_button_checked</span>
+            <span>Option ${optionLetter} selected</span>
+        `;
+        selectionStatus.className = 'flex items-center gap-1 status-selected';
+    } else {
+        selectionStatus.innerHTML = `
+            <span class="material-symbols-outlined text-sm">radio_button_unchecked</span>
+            <span>No answer selected</span>
+        `;
+        selectionStatus.className = 'flex items-center gap-1 status-unsubmitted';
+    }
+    
+    // Update submission status
+    if (submitted) {
+        const statusIcon = submitted.is_correct ? 'check_circle' : 'cancel';
+        const statusText = submitted.is_correct ? 'Correct!' : 'Incorrect';
+        submissionStatus.innerHTML = `
+            <span class="material-symbols-outlined text-sm">${statusIcon}</span>
+            <span>${statusText}</span>
+        `;
+        submissionStatus.className = `flex items-center gap-1 status-submitted`;
+    } else if (selectedOpt !== undefined) {
+        submissionStatus.innerHTML = `
+            <span class="material-symbols-outlined text-sm">pending</span>
+            <span>Ready to submit</span>
+        `;
+        submissionStatus.className = 'flex items-center gap-1 status-selected';
+    } else {
+        submissionStatus.innerHTML = `
+            <span class="material-symbols-outlined text-sm">schedule</span>
+            <span>Not submitted</span>
+        `;
+        submissionStatus.className = 'flex items-center gap-1 status-unsubmitted';
+    }
+}
+
+// ─── Submit answer function ───────────────────────────────────────────────────
+async function submitAnswer() {
+    const q = questions[currentIdx];
+    const selectedOpt = selected[currentIdx];
+    
+    if (selectedOpt === undefined) {
+        showError('Please select an answer before submitting.');
+        return;
+    }
+    
+    if (answered[currentIdx]) {
+        showError('This answer has already been submitted.');
+        return;
+    }
+
+    // Disable submit button during submission
+    const btnSubmit = document.getElementById('btnSubmit');
+    btnSubmit.disabled = true;
+    btnSubmit.innerHTML = 'Submitting...';
+
+    // Call API to submit answer (submit_answer = true)
+    const res = await apiFetch('/api/test/answer', 'POST', {
+        session_id,
+        question_id: q.question_id,
+        selected_option: selectedOpt,
+        submit_answer: true,  // Explicitly submit for scoring
+    });
+    
+    // Re-enable button
+    btnSubmit.disabled = false;
+    btnSubmit.innerHTML = 'Submit Answer ✓';
+    
+    if (!res.success) { 
+        showError(res.error || 'Failed to submit answer'); 
+        return; 
+    }
+
+    // Store submitted result
+    answered[currentIdx] = {
+        selected: selectedOpt,
+        is_correct: res.is_correct,
+        correct_option_index: res.correct_option_index,
+        explanation: res.explanation,
+        ai_explanation: res.ai_explanation,
+    };
+    
+    // Clear selection since it's now submitted
+    delete selected[currentIdx];
+
+    // Apply correct/wrong classes with animations
+    document.querySelectorAll('.option-card').forEach((c, i) => {
+        c.classList.add('locked');
+        c.removeEventListener('click', () => selectOption(i));
+        c.classList.remove('selected');
+        
+        if (i === res.correct_option_index) {
+            setTimeout(() => c.classList.add('correct'), 100);
+        } else if (i === selectedOpt && !res.is_correct) {
+            setTimeout(() => c.classList.add('wrong'), 100);
+        }
+    });
+
+    showReveal(answered[currentIdx]);
+    updateButtonStates();
+    updateStatusIndicators();
+    renderDots();
+    
+    // Show success feedback
+    if (res.is_correct) {
+        showSuccess('Correct answer submitted!');
+    }
+}
+
+// ─── Button state management ───────────────────────────────────────────────────
+function updateButtonStates() {
+    const btnPrevious = document.getElementById('btnPrevious');
+    const btnSubmit = document.getElementById('btnSubmit');
+    const btnNext = document.getElementById('btnNext');
+    const btnFinish = document.getElementById('btnFinish');
+    
+    const isSubmitted = answered[currentIdx] !== undefined;
+    const hasSelection = selected[currentIdx] !== undefined;
+    const isFirst = currentIdx === 0;
+    const isLast = currentIdx === questions.length - 1;
+    
+    // Previous button
+    btnPrevious.classList.toggle('hidden', isFirst);
+    btnPrevious.disabled = isFirst;
+    
+    // Submit button (only show if not submitted and has selection)
+    btnSubmit.classList.toggle('hidden', isSubmitted || !hasSelection);
+    
+    // Next/Finish buttons (only show if submitted)
+    btnNext.classList.toggle('hidden', isLast || !isSubmitted);
+    btnFinish.classList.toggle('hidden', !isLast || !isSubmitted);
+}
+
+async function finishSession() {
+    // Check for unsubmitted answers
+    const unsubmittedCount = Object.keys(selected).filter(idx => answered[idx] === undefined).length;
+    if (unsubmittedCount > 0) {
+        const details = Object.keys(selected).filter(idx => answered[idx] === undefined)
+            .map(idx => {
+                const optIndex = selected[idx];
+                return `Question ${parseInt(idx) + 1} (Option ${LETTERS[optIndex]})`;
+            }).join(', ');
+        
+        if (!confirm(`You have ${unsubmittedCount} question(s) with selected answers that haven't been submitted:\n\n${details}\n\nThese will not be counted in your final score. Are you sure you want to finish?`)) {
+            return;
+        }
+    }
+    
+    if (timerHandle) clearInterval(timerHandle);
+    document.getElementById('sessionScreen').classList.add('hidden');
+    document.getElementById('completingScreen').classList.remove('hidden');
+
+    const res = await apiFetch('/api/test/complete', 'POST', {session_id});
+    sessionStorage.removeItem('__test_session');
+    sessionStorage.removeItem('__test_timer_end');
+
+    if (res.success) {
+        window.location.href = '/test/results/' + res.attempt_id;
+    } else {
+        showError(res.error || 'Failed to save results.');
+    }
+}
+
+// ─── Message functions ─────────────────────────────────────────────────────
+function showSuccess(message) {
+    // Create success notification
+    const notification = document.createElement('div');
+    notification.className = 'fixed top-4 right-4 bg-green-500 text-white px-4 py-2 rounded-lg shadow-lg z-50 flex items-center gap-2';
+    notification.innerHTML = `
+        <span class="material-symbols-outlined text-sm">check_circle</span>
+        <span>${message}</span>
+    `;
+    notification.style.animation = 'fadeIn 0.3s ease';
+    
+    document.body.appendChild(notification);
+    
+    // Auto remove after 3 seconds
+    setTimeout(() => {
+        notification.style.animation = 'fadeOut 0.3s ease';
+        setTimeout(() => notification.remove(), 300);
+    }, 3000);
+}
+
+function showError(message) {
+    // Create error notification
+    const notification = document.createElement('div');
+    notification.className = 'fixed top-4 right-4 bg-red-500 text-white px-4 py-2 rounded-lg shadow-lg z-50 flex items-center gap-2';
+    notification.innerHTML = `
+        <span class="material-symbols-outlined text-sm">error</span>
+        <span>${message}</span>
+    `;
+    notification.style.animation = 'fadeIn 0.3s ease';
+    
+    document.body.appendChild(notification);
+    
+    // Auto remove after 5 seconds
+    setTimeout(() => {
+        notification.style.animation = 'fadeOut 0.3s ease';
+        setTimeout(() => notification.remove(), 300);
+    }, 5000);
+}
+
+// ─── Timer ────────────────────────────────────────────────────────────────────
+function startTimer() {
+    const badge = document.getElementById('timerBadge');
+    badge.classList.remove('hidden');
+
+    function tick() {
+        const remaining = Math.max(0, timerEnd - Date.now());
+        const m = Math.floor(remaining / 60000);
+        const s = Math.floor((remaining % 60000) / 1000);
+        badge.textContent = `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+        if (remaining < 120000) badge.classList.add('warning');
+        if (remaining <= 0) {
+            clearInterval(timerHandle);
+            finishSession();
+        }
+    }
+    tick();
+    timerHandle = setInterval(tick, 1000);
+}
+
+// ─── Screen helpers ───────────────────────────────────────────────────────────
+function showSession() {
+    document.getElementById('loadingScreen').classList.add('hidden');
+    document.getElementById('sessionScreen').classList.remove('hidden');
+}
+
+function showError(msg) {
+    document.getElementById('loadingScreen').classList.add('hidden');
+    document.getElementById('sessionScreen').classList.add('hidden');
+    document.getElementById('errorMsg').textContent = msg;
+    document.getElementById('errorScreen').classList.remove('hidden');
+}
+
+function confirmExit() {
+    const done = Object.keys(answered).length;
+    if (done === 0 || confirm(`You've answered ${done}/${questions.length} questions. Exit?`)) {
+        sessionStorage.removeItem('__test_session');
+        sessionStorage.removeItem('__test_timer_end');
+        window.location.href = '/test';
+    }
+}
+
+// ─── Utils ────────────────────────────────────────────────────────────────────
+async function apiFetch(url, method, body) {
+    try {
+        const r = await fetch(url, {
+            method, headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(body),
+        });
+        return r.json();
+    } catch(e) { return {success: false, error: e.message}; }
+}
+
+function esc(str) {
+    const d = document.createElement('div');
+    d.textContent = str; return d.innerHTML;
+}
+
+(function(){
+    const t = localStorage.getItem('sclera-theme');
+    if (t) document.documentElement.setAttribute('data-theme', t);
+})();
+</script>
+</body>
+</html>

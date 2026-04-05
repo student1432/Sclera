@@ -1,114 +1,396 @@
 <!DOCTYPE html>
-<html lang="en" data-theme="{{ settings.get('theme', 'dark') }}">
-
+<html class="dark" lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta charset="utf-8"/>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
     <title>Class Management — Sclera</title>
-    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Serif+Display:ital,wght@0,300;0,400;0,600;0,700;1,400&family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
     <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    
+    <script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#ffffff",
+                        "background-light": "#f6f6f8",
+                        "background-dark": "#0a0c10",
+                    },
+                    fontFamily: {
+                        "display": ["Inter", "sans-serif"],
+                        "serif": ["Noto Serif Display", "serif"]
+                    },
+                    borderRadius: {
+                        "DEFAULT": "1rem",
+                        "lg": "2rem",
+                        "xl": "3rem",
+                        "full": "9999px"
+                    },
+                },
+            },
+        }
+    </script>
+    
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
+        }
+        .serif-text {
+            font-family: 'Noto Serif Display', serif;
+        }
+        .glass-panel {
+            background: var(--bg-secondary);
+            backdrop-filter: blur(16px);
+            border: 1px solid var(--border);
+        }
+        .floating-notch {
+            background: var(--bg-elevated);
+            backdrop-filter: blur(24px);
+            border: 1px solid var(--border);
+        }
+        .hide-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .hide-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+        
+        /* Class management specific classes using root variables */
+        .class-container {
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
+        }
+        .class-text {
+            color: var(--text-primary);
+        }
+        .class-text-secondary {
+            color: var(--text-secondary);
+        }
+        .class-text-muted {
+            color: var(--text-muted);
+        }
+        .class-border {
+            border-color: var(--border);
+        }
+        .class-border-t {
+            border-top-color: var(--border);
+        }
+        .class-border-subtle {
+            border-color: var(--border-subtle);
+        }
+        .class-bg-secondary {
+            background-color: var(--bg-secondary);
+        }
+        .class-bg-tertiary {
+            background-color: var(--bg-tertiary);
+        }
+        .class-bg-hover {
+            background-color: var(--bg-hover);
+        }
+        .class-accent {
+            background-color: var(--accent-primary);
+            color: white;
+        }
+        .class-accent-hover {
+            background-color: var(--accent-hover);
+            color: white;
+        }
+        .class-success {
+            color: var(--success);
+        }
+        .class-warning {
+            color: var(--warning);
+        }
+        .class-error {
+            color: var(--error);
+        }
+        .class-success-bg {
+            background-color: var(--success-bg);
+        }
+        .class-warning-bg {
+            background-color: var(--warning-bg);
+        }
+        .class-error-bg {
+            background-color: var(--error-bg);
+        }
+    </style>
 </head>
 
-<body>
-    <div class="dashboard-layout">
+<body class="class-container class-text min-h-screen overflow-hidden">
+    
+    <!-- Use existing topnav -->
+    {% include '_topnav.html' %}
 
-        <!-- TOPNAV -->
-        {% include '_topnav.html' %}
-
-        <!-- MAIN -->
-        <main class="main-content">
-
-
-
-            <div class="content-header">
-                <h1 style="display: flex; align-items: center; gap: 12px; margin-bottom: 8px;">
-                    <span class="material-symbols-outlined" style="font-size: 32px; color: var(--accent-primary);">school</span>
-                    Class Management
-                </h1>
-                <p style="color: var(--text-muted); margin: 0;">Manage your classes and access shared materials</p>
+    <!-- Main Content Area -->
+    <main class="flex h-screen pt-24 pb-6 px-6 gap-6 max-w-[1600px] mx-auto">
+        
+        <!-- Left Sidebar: Class Overview -->
+        <aside class="w-80 flex flex-col gap-4">
+            <div class="glass-panel rounded-xl p-6 flex flex-col gap-6">
+                
+                <!-- Header -->
+                <div class="flex items-center gap-3 mb-2">
+                    <div class="w-10 h-10 class-accent rounded-full flex items-center justify-center">
+                        <span class="material-symbols-outlined text-lg">school</span>
+                    </div>
+                    <div>
+                        <h1 class="text-xl font-bold class-text">Class Management</h1>
+                        <p class="text-sm class-text-muted">Your academic journey</p>
+                    </div>
+                </div>
+                
+                <!-- Institution Info -->
+                <div class="class-bg-tertiary rounded-xl p-4">
+                    <div class="flex items-center gap-2 mb-3">
+                        <span class="material-symbols-outlined class-text-secondary text-lg">location_on</span>
+                        <span class="text-xs font-bold uppercase tracking-widest class-text-secondary">Institution</span>
+                    </div>
+                    <p class="class-text font-medium">{{ classes_info[0].institution_name if classes_info else 'No Institution' }}</p>
+                </div>
+                
+                <!-- Quick Stats -->
+                <div class="grid grid-cols-2 gap-3">
+                    <div class="class-bg-tertiary rounded-xl p-4 text-center">
+                        <div class="text-2xl font-bold class-text">{{ classes_info|length }}</div>
+                        <div class="text-xs class-text-muted uppercase tracking-widest">Classes</div>
+                    </div>
+                    <div class="class-bg-tertiary rounded-xl p-4 text-center">
+                        <div class="text-2xl font-bold class-text">{{ classes_info|map(attribute='files')|map('length')|sum if classes_info else 0 }}</div>
+                        <div class="text-xs class-text-muted uppercase tracking-widest">Files</div>
+                    </div>
+                </div>
+                
+                <!-- Navigation -->
+                <div class="flex flex-col gap-2 mt-4">
+                    <button onclick="scrollToClass('all')" class="w-full flex items-center gap-3 class-border class-text font-medium text-sm py-3 px-4 rounded-xl hover:class-bg-hover transition-all">
+                        <span class="material-symbols-outlined">grid_view</span>
+                        All Classes
+                    </button>
+                    <button onclick="scrollToClass('recent')" class="w-full flex items-center gap-3 class-border class-text font-medium text-sm py-3 px-4 rounded-xl hover:class-bg-hover transition-all">
+                        <span class="material-symbols-outlined">schedule</span>
+                        Recent Activity
+                    </button>
+                </div>
             </div>
+        </aside>
 
-            {% for class_info in classes_info %}
-            <div class="study-island" style="{% if loop.first %}margin-top: 40px;{% endif %} margin-bottom: 40px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); overflow: hidden; position: relative;">
-                {% if not loop.first %}
-                <div style="position: absolute; top: -20px; left: 0; right: 0; height: 1px; background: linear-gradient(to right, transparent, var(--border), transparent);"></div>
-                {% endif %}
-                <div class="study-island-header" style="background: var(--bg-secondary); padding: 24px; border-bottom: 1px solid var(--border);">
-                    <div style="display: flex; align-items: center; width: 100%;">
-                        <div style="display: flex; align-items: center; gap: 16px; flex: 1;">
-                            <span class="material-symbols-outlined" style="font-size: 24px; color: var(--accent-primary);">class</span>
-                            <h3 style="margin: 0; color: var(--text-primary);">{{ class_info.name }}</h3>
-                        </div>
-                        <div style="display: flex; align-items: center; gap: 12px;">
-                            <div style="display: flex; align-items: center; gap: 6px;">
-                                <span class="material-symbols-outlined" style="font-size: 16px;">folder</span>
-                                <span style="font-size: 14px; color: var(--text-muted);">{{ class_info.files|length }} file(s)</span>
-                            </div>
-                            <a href="{{ url_for('view_class_syllabus', class_id=class_info.id) }}" class="btn btn-primary display: flex; align-items: center; font-size: 18px; color: var(--text-muted); gap: 8px; padding: 4px;">
-                                <span class="material-symbols-outlined" style="font-size: 15px;">menu_book</span>
-                                View Syllabus
-                            </a>
-                            <form action="{{ url_for('leave_class', class_id=class_info.id) }}" method="POST" style="display: inline;">
-                                <button type="submit" style="background: none; border: none; cursor: pointer; padding: 4px; color: var(--error); display: flex; align-items: center;" onclick="return confirm('Are you sure you want to leave this class?')" title="Leave Class">
-                                    <span class="material-symbols-outlined" style="font-size: 18px;">logout</span>
-                                </button>
-                            </form>
-                        </div>
-                    </div>
+        <!-- Central Content: Classes -->
+        <div class="flex-1 glass-panel rounded-xl overflow-y-auto hide-scrollbar">
+            <div class="p-8">
+                
+                <!-- Page Header -->
+                <div class="mb-8">
+                    <h2 class="serif-text text-4xl font-bold class-text mb-2">My Classes</h2>
+                    <p class="class-text-secondary">Manage your enrolled classes and access shared materials</p>
                 </div>
-                <div style="padding: 20px;">
-                    <div style="display: flex; align-items: center; gap: 20px; flex-wrap: wrap; margin-bottom: 20px;">
-                        <div style="display: flex; align-items: center; gap: 8px;">
-                            <span class="material-symbols-outlined" style="font-size: 18px; color: var(--text-muted);">location_on</span>
-                            <div>
-                                <p style="margin: 0; font-weight: 500; color: var(--text-primary);">Institution</p>
-                                <p style="margin: 0; color: var(--text-muted);">{{ class_info.institution_name }}</p>
+                
+                {% if classes_info %}
+                <!-- Classes Grid -->
+                <div class="space-y-8" id="classesContainer">
+                    {% for class_info in classes_info %}
+                    <div class="class-card" data-class-id="{{ class_info.id }}">
+                        <!-- Class Header -->
+                        <div class="glass-panel rounded-xl overflow-hidden">
+                            <div class="class-bg-secondary p-6 class-border-b">
+                                <div class="flex items-center justify-between">
+                                    <div class="flex items-center gap-4">
+                                        <div class="w-12 h-12 class-accent rounded-full flex items-center justify-center">
+                                            <span class="material-symbols-outlined text-xl">class</span>
+                                        </div>
+                                        <div>
+                                            <h3 class="text-xl font-bold class-text">{{ class_info.name }}</h3>
+                                            <p class="class-text-muted text-sm">{{ class_info.teacher_name }}</p>
+                                        </div>
+                                    </div>
+                                    <div class="flex items-center gap-3">
+                                        <!-- File Count Badge -->
+                                        <div class="flex items-center gap-2 class-bg-tertiary px-3 py-2 rounded-full">
+                                            <span class="material-symbols-outlined text-sm class-text-muted">folder</span>
+                                            <span class="text-sm font-medium class-text">{{ class_info.files|length }}</span>
+                                        </div>
+                                        <!-- Actions -->
+                                        <div class="flex items-center gap-2">
+                                            <a href="{{ url_for('view_class_syllabus', class_id=class_info.id) }}" class="class-accent text-white p-2 rounded-full hover:class-accent-hover transition-all flex items-center justify-center" title="View Syllabus">
+                                                <span class="material-symbols-outlined text-sm">menu_book</span>
+                                            </a>
+                                            <form action="{{ url_for('leave_class', class_id=class_info.id) }}" method="POST" style="display: inline;">
+                                                <button type="submit" class="class-error-bg class-error p-2 rounded-full hover:opacity-80 transition-all" onclick="return confirm('Are you sure you want to leave this class?')" title="Leave Class">
+                                                    <span class="material-symbols-outlined text-sm">logout</span>
+                                                </button>
+                                            </form>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
-                        </div>
-                        <div style="display: flex; align-items: center; gap: 8px;">
-                            <span class="material-symbols-outlined" style="font-size: 18px; color: var(--text-muted);">person</span>
-                            <div>
-                                <p style="margin: 0; font-weight: 500; color: var(--text-primary);">Teacher</p>
-                                <p style="margin: 0; color: var(--text-muted);">{{ class_info.teacher_name }}</p>
+                            
+                            <!-- Class Details -->
+                            <div class="p-6">
+                                <div class="grid grid-cols-2 gap-6 mb-6">
+                                    <div class="flex items-center gap-3">
+                                        <span class="material-symbols-outlined class-text-muted text-lg">location_on</span>
+                                        <div>
+                                            <div class="text-xs class-text-muted uppercase tracking-widest">Institution</div>
+                                            <div class="font-medium class-text">{{ class_info.institution_name }}</div>
+                                        </div>
+                                    </div>
+                                    <div class="flex items-center gap-3">
+                                        <span class="material-symbols-outlined class-text-muted text-lg">person</span>
+                                        <div>
+                                            <div class="text-xs class-text-muted uppercase tracking-widest">Teacher</div>
+                                            <div class="font-medium class-text">{{ class_info.teacher_name }}</div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <!-- Files Section -->
+                                <div class="class-bg-tertiary rounded-xl p-6">
+                                    <div class="flex items-center justify-between mb-4">
+                                        <h4 class="font-bold class-text flex items-center gap-2">
+                                            <span class="material-symbols-outlined text-lg">folder_shared</span>
+                                            Shared Files
+                                        </h4>
+                                        <span class="text-sm class-text-muted">{{ class_info.files|length }} file(s)</span>
+                                    </div>
+                                    
+                                    {% if class_info.files %}
+                                    <div class="grid gap-3">
+                                        {% for file in class_info.files %}
+                                        <div class="glass-panel rounded-lg p-4 hover:class-bg-hover transition-all">
+                                            <div class="flex items-center justify-between">
+                                                <div class="flex items-center gap-3">
+                                                    <div class="w-8 h-8 class-accent rounded-full flex items-center justify-center">
+                                                        <span class="material-symbols-outlined text-sm">description</span>
+                                                    </div>
+                                                    <div>
+                                                        <div class="font-medium class-text text-sm">{{ file.file_name }}</div>
+                                                        <div class="text-xs class-text-muted">
+                                                            {{ file.upload_date[:10] }} · {{ file.file_size }} bytes
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <a href="{{ url_for('download_class_file', file_id=file.id) }}" class="class-accent text-white px-3 py-1.5 rounded-full text-xs font-medium hover:class-accent-hover transition-all flex items-center gap-1">
+                                                    <span class="material-symbols-outlined text-sm">download</span>
+                                                    Download
+                                                </a>
+                                            </div>
+                                        </div>
+                                        {% endfor %}
+                                    </div>
+                                    {% else %}
+                                    <div class="text-center py-12">
+                                        <span class="material-symbols-outlined text-4xl class-text-muted mb-3 block">folder_off</span>
+                                        <p class="class-text-muted text-sm">No files available in this class yet.</p>
+                                    </div>
+                                    {% endif %}
+                                </div>
                             </div>
-                        </div>
-                    </div>
-                </div>
-                <div style="padding: 20px; background: var(--bg-secondary); border-top: 1px solid var(--border);">
-                    <h4 style="margin: 0 0 16px 0; color: var(--text-primary);">Shared Files</h4>
-                    {% if class_info.files %}
-                    <div style="display: grid; gap: 12px;">
-                    {% for file in class_info.files %}
-                    <div class="study-item" style="border-radius: 8px; padding: 16px; background: var(--bg-primary); border: 1px solid var(--border);">
-                        <div class="study-item-body">
-                            <div class="study-item-title" style="display: flex; align-items: center; gap: 8px;">
-                                <span class="material-symbols-outlined" style="font-size: 18px; color: var(--accent-primary);">description</span>
-                                {{ file.file_name }}
-                            </div>
-                            <div class="study-item-meta" style="color: var(--text-muted); font-size: 12px;">Uploaded {{ file.upload_date[:10] }} · {{ file.file_size }} bytes</div>
-                        </div>
-                        <div class="study-item-actions">
-                            <a href="{{ url_for('download_class_file', file_id=file.id) }}" class="btn btn-small btn-primary" target="_blank" style="display: flex; align-items: center; gap: 8px;">
-                                <span class="material-symbols-outlined" style="font-size: 16px;">download</span>
-                                Download
-                            </a>
                         </div>
                     </div>
                     {% endfor %}
+                </div>
+                {% else %}
+                <!-- Empty State -->
+                <div class="flex flex-col items-center justify-center py-24">
+                    <div class="w-20 h-20 class-bg-tertiary rounded-full flex items-center justify-center mb-6">
+                        <span class="material-symbols-outlined text-3xl class-text-muted">school</span>
                     </div>
-                    {% else %}
-                    <div class="empty-state" style="text-align: center; padding: 40px;">
-                        <span class="material-symbols-outlined" style="font-size: 48px; color: var(--text-muted); display: block; margin-bottom: 16px;">folder_off</span>
-                        <p style="color: var(--text-muted); margin: 0;">No files available in this class yet.</p>
+                    <h3 class="text-2xl font-bold class-text mb-3">No Classes Yet</h3>
+                    <p class="class-text-secondary text-center max-w-md mb-8">
+                        You haven't joined any classes yet. Contact your teacher or institution to get class invite codes.
+                    </p>
+                    <div class="flex gap-4">
+                        <a href="{{ url_for('profile_dashboard') }}" class="class-accent text-white px-6 py-3 rounded-full font-medium hover:class-accent-hover transition-all">
+                            <span class="material-symbols-outlined text-sm mr-2">home</span>
+                            Back to Dashboard
+                        </a>
+                        <a href="{{ url_for('student_join_class') }}" class="class-border class-text px-6 py-3 rounded-full font-medium hover:class-bg-hover transition-all">
+                            <span class="material-symbols-outlined text-sm mr-2">add</span>
+                            Join Class
+                        </a>
                     </div>
-                    {% endif %}
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Right Sidebar: Quick Actions -->
+        <aside class="w-64 flex flex-col gap-4">
+            <div class="glass-panel rounded-xl p-6 flex flex-col gap-6">
+                
+                <!-- Quick Actions -->
+                <div>
+                    <h3 class="text-xs font-bold uppercase tracking-widest class-text-muted mb-4">Quick Actions</h3>
+                    <div class="space-y-3">
+                        <a href="{{ url_for('student_join_class') }}" class="w-full class-accent text-white font-medium text-sm py-3 px-4 rounded-xl class-accent-hover transition-all flex items-center justify-center gap-2">
+                            <span class="material-symbols-outlined text-sm">add</span>
+                            Join New Class
+                        </a>
+                        <a href="{{ url_for('profile_dashboard') }}" class="w-full class-border class-text font-medium text-sm py-3 px-4 rounded-xl hover:class-bg-hover transition-all flex items-center justify-center gap-2">
+                            <span class="material-symbols-outlined text-sm">home</span>
+                            Dashboard
+                        </a>
+                    </div>
+                </div>
+                
+                <!-- Help Card -->
+                <div class="class-bg-tertiary rounded-xl p-4 mt-auto">
+                    <div class="flex items-center gap-2 mb-3">
+                        <span class="material-symbols-outlined class-text-secondary text-lg">help_outline</span>
+                        <span class="text-xs font-bold uppercase tracking-widest class-text-secondary">Need Help?</span>
+                    </div>
+                    <p class="text-xs class-text-muted mb-3">
+                        Can't find your class? Contact your teacher for an invite code.
+                    </p>
+                    <a href="#" class="text-xs class-accent font-medium hover:underline">Get Support →</a>
                 </div>
             </div>
-            {% endfor %}
+        </aside>
+    </main>
 
-        </main>
-    </div>
+    <script>
+        // Smooth scroll functionality
+        function scrollToClass(target) {
+            if (target === 'all') {
+                document.getElementById('classesContainer').scrollIntoView({ behavior: 'smooth' });
+            } else if (target === 'recent') {
+                const firstClass = document.querySelector('.class-card');
+                if (firstClass) {
+                    firstClass.scrollIntoView({ behavior: 'smooth' });
+                }
+            }
+        }
+        
+        // Add hover effects and interactions
+        document.addEventListener('DOMContentLoaded', function() {
+            // Add subtle animations to class cards
+            const classCards = document.querySelectorAll('.class-card');
+            classCards.forEach((card, index) => {
+                card.style.animationDelay = `${index * 0.1}s`;
+                card.style.animation = 'fadeInUp 0.6s ease-out forwards';
+            });
+        });
+        
+        // Add fadeInUp animation
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes fadeInUp {
+                from {
+                    opacity: 0;
+                    transform: translateY(20px);
+                }
+                to {
+                    opacity: 1;
+                    transform: translateY(0);
+                }
+            }
+        `;
+        document.head.appendChild(style);
+    </script>
 
 </body>
-
 </html>

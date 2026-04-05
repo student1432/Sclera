@@ -105,3 +105,47 @@ def get_syllabus_cache_key(subject: str, purpose: str) -> str:
 def get_chapters_cache_key(uid: str) -> str:
     """Generate cache key for user chapters"""
     return f"chapters:{uid}"
+
+
+def get_ai_risk_cache_key(uid: str) -> str:
+    """Generate cache key for AI risk/readiness predictions"""
+    return f"gemini_risk:predict_student_risk_and_readiness:{uid}"
+
+
+def get_ai_cluster_cache_key(class_id: str) -> str:
+    """Generate cache key for AI class clustering"""
+    return f"gemini_cluster:analyze_class_study_patterns:{class_id}"
+
+
+def clear_ai_cache_for_student(uid: str):
+    """Clear AI cache for a specific student"""
+    risk_key = get_ai_risk_cache_key(uid)
+    CacheManager.delete(risk_key)
+    print(f"Cleared AI risk cache for student {uid}")
+
+
+def clear_ai_cache_for_class(class_id: str):
+    """Clear AI cache for a specific class"""
+    cluster_key = get_ai_cluster_cache_key(class_id)
+    CacheManager.delete(cluster_key)
+    print(f"Cleared AI clustering cache for class {class_id}")
+
+
+def clear_all_ai_cache():
+    """Clear all AI-related cache entries"""
+    invalidate_cache("gemini_")
+    print("Cleared all AI cache entries")
+
+
+def clear_cache_for_pattern(pattern: str):
+    """Clear cache entries matching a pattern (for testing)"""
+    invalidate_cache(pattern)
+    print(f"Cleared cache entries matching pattern: {pattern}")
+
+
+def list_cache_keys(pattern: str = None) -> list:
+    """List cache keys, optionally filtered by pattern (for debugging)"""
+    keys = list(cache.iterkeys())
+    if pattern:
+        keys = [key for key in keys if pattern in str(key)]
+    return keys

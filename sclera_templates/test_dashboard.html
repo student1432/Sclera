@@ -1,0 +1,735 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Practice Tests — Sclera</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Serif+Display:ital,wght@0,300;0,400;0,600;0,700;1,400&family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap" rel="stylesheet"/>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: { extend: {
+                colors: { "primary": "#ffffff" },
+                fontFamily: { "display": ["Inter","sans-serif"], "serif": ["Noto Serif Display","serif"] },
+                borderRadius: { "DEFAULT": "1rem", "lg": "2rem", "xl": "3rem", "full": "9999px" }
+            }}
+        }
+    </script>
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: var(--bg-primary); color: var(--text-primary); }
+        .glass-panel { background: var(--bg-secondary); backdrop-filter: blur(16px); border: 1px solid var(--border); }
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
+        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+        /* Subject tabs */
+        .subj-tab { padding: 0.5rem 1rem; border-radius: 0.625rem; font-size: 0.8rem; font-weight: 500; cursor: pointer; transition: all 0.15s; color: var(--text-muted); border: 1px solid transparent; white-space: nowrap; }
+        .subj-tab.active { background: var(--bg-tertiary); color: var(--text-primary); border-color: var(--border); }
+        .subj-tab:not(.active):hover { color: var(--text-secondary); }
+
+        /* Filter pills */
+        .filter-pill { padding: 0.35rem 0.85rem; border-radius: 999px; font-size: 0.75rem; font-weight: 500; cursor: pointer; transition: all 0.15s; color: var(--text-muted); border: 1px solid var(--border); }
+        .filter-pill.active { background: var(--accent); color: var(--bg-primary); border-color: var(--accent); }
+        .filter-pill:not(.active):hover { color: var(--text-primary); border-color: var(--text-muted); }
+
+        /* Chapter accordion */
+        details.chapter-group > summary { list-style: none; }
+        details.chapter-group > summary::-webkit-details-marker { display: none; }
+        details.chapter-group[open] .ch-arrow { transform: rotate(180deg); }
+        .ch-arrow { transition: transform 0.2s ease; }
+
+        /* Topic rows */
+        .topic-row { display: flex; align-items: center; gap: 0.75rem; padding: 0.75rem 1rem; border-radius: 0.75rem; border: 1px solid var(--border); background: var(--bg-secondary); transition: background 0.15s, border-color 0.15s; }
+        .topic-row:hover { background: var(--bg-hover); }
+        .topic-row[data-hidden="true"] { display: none; }
+
+        /* Confidence dot */
+        .conf-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+        .conf-dot.not_started { background: var(--text-muted); }
+        .conf-dot.practiced   { background: var(--warning, #eab308); }
+        .conf-dot.confident   { background: var(--success); }
+
+        /* Confidence badge */
+        .conf-badge { font-size: 0.65rem; font-weight: 600; padding: 0.2rem 0.55rem; border-radius: 999px; white-space: nowrap; }
+        .conf-badge.not_started { background: var(--bg-tertiary); color: var(--text-muted); }
+        .conf-badge.practiced   { background: var(--warning-bg, rgba(234,179,8,0.12)); color: var(--warning, #eab308); }
+        .conf-badge.confident   { background: var(--success-bg); color: var(--success); }
+
+        /* Difficulty chips */
+        .diff-chip { font-size: 0.65rem; font-weight: 500; padding: 0.15rem 0.45rem; border-radius: 4px; }
+        .diff-chip.easy   { background: var(--success-bg); color: var(--success); }
+        .diff-chip.medium { background: var(--warning-bg, rgba(234,179,8,0.1)); color: var(--warning, #eab308); }
+        .diff-chip.hard   { background: var(--error-bg); color: var(--error); }
+        .diff-chip.zero   { opacity: 0.3; }
+
+        /* Accuracy mini-bar */
+        .acc-bar { width: 48px; height: 3px; border-radius: 2px; background: var(--bg-tertiary); overflow: hidden; flex-shrink: 0; }
+        .acc-fill { height: 100%; border-radius: 2px; transition: width 0.4s ease; }
+        .acc-fill.low  { background: var(--error); }
+        .acc-fill.mid  { background: var(--warning, #eab308); }
+        .acc-fill.high { background: var(--success); }
+
+        /* Start button */
+        .start-btn { font-size: 0.75rem; font-weight: 600; padding: 0.4rem 0.9rem; border-radius: 0.5rem; background: var(--accent); color: var(--bg-primary); cursor: pointer; transition: opacity 0.15s; white-space: nowrap; flex-shrink: 0; }
+        .start-btn:hover { opacity: 0.85; }
+        .start-btn.no-q { background: var(--bg-tertiary); color: var(--text-muted); cursor: not-allowed; }
+
+        /* Subject progress ring (SVG) */
+        .ring-wrap { position: relative; width: 36px; height: 36px; flex-shrink: 0; }
+        .ring-wrap svg { transform: rotate(-90deg); }
+        .ring-label { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 0.6rem; font-weight: 700; color: var(--text-primary); }
+
+        /* Recent attempt row */
+        .attempt-row { display: flex; align-items: center; gap: 0.75rem; padding: 0.65rem 0.875rem; border-radius: 0.75rem; border: 1px solid var(--border); background: var(--bg-secondary); text-decoration: none; transition: background 0.15s; }
+        .attempt-row:hover { background: var(--bg-hover); }
+
+        /* Modal */
+        .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); backdrop-filter: blur(4px); z-index: 50; display: flex; align-items: flex-end; justify-content: center; padding-bottom: 1rem; }
+        @media (min-width: 640px) { .modal-overlay { align-items: center; } }
+        .modal-card { background: var(--bg-elevated, var(--bg-secondary)); border: 1px solid var(--border); border-radius: 1.25rem; padding: 1.5rem; width: 100%; max-width: 380px; }
+
+        /* Num/diff picker buttons */
+        .pick-btn { flex: 1; padding: 0.5rem; border-radius: 0.5rem; border: 1.5px solid var(--border); font-size: 0.8rem; font-weight: 500; cursor: pointer; text-align: center; color: var(--text-secondary); transition: all 0.15s; }
+        .pick-btn.sel { border-color: var(--accent); background: var(--accent); color: var(--bg-primary); }
+        .pick-btn:not(.sel):hover { border-color: var(--text-muted); color: var(--text-primary); }
+
+        @keyframes fadeUp { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }
+        .fade-up { animation: fadeUp 0.2s ease; }
+        
+        /* Custom minimalistic scrollbars */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: var(--border);
+            border-radius: 3px;
+            transition: background 0.2s ease;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--text-muted);
+        }
+        ::-webkit-scrollbar-corner {
+            background: transparent;
+        }
+        
+        /* Firefox scrollbar styling */
+        * {
+            scrollbar-width: thin;
+            scrollbar-color: var(--border) transparent;
+        }
+        
+        /* Remove hide-scrollbar class behavior to show scrollbars */
+        .hide-scrollbar::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        .hide-scrollbar::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .hide-scrollbar::-webkit-scrollbar-thumb {
+            background: var(--border);
+            border-radius: 3px;
+            transition: background 0.2s ease;
+        }
+        .hide-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: var(--text-muted);
+        }
+    </style>
+</head>
+
+<body class="min-h-screen" style="background-color:var(--bg-primary); color:var(--text-primary);">
+{% include '_topnav.html' %}
+
+<!-- ═══════════════════════════════════════════════════════════════════════════
+     START MODAL
+═══════════════════════════════════════════════════════════════════════════ -->
+<div id="startModal" class="modal-overlay hidden" onclick="if(event.target===this)closeModal()">
+    <div class="modal-card fade-up" onclick="event.stopPropagation()">
+        <div class="flex items-center justify-between mb-4">
+            <div>
+                <p class="text-xs font-medium" style="color:var(--text-muted)">Practice</p>
+                <h3 class="text-base font-semibold" id="modalTopicName" style="color:var(--text-primary)">Topic Name</h3>
+            </div>
+            <button onclick="closeModal()" style="color:var(--text-muted)">
+                <span class="material-symbols-outlined text-xl">close</span>
+            </button>
+        </div>
+
+        <!-- Difficulty -->
+        <p class="text-xs font-semibold mb-2" style="color:var(--text-muted)">DIFFICULTY</p>
+        <div class="flex gap-2 mb-4" id="diffPicker">
+            <button class="pick-btn sel" data-diff="mixed">Mixed</button>
+            <button class="pick-btn" data-diff="easy">Easy</button>
+            <button class="pick-btn" data-diff="medium">Medium</button>
+            <button class="pick-btn" data-diff="hard">Hard</button>
+        </div>
+
+        <!-- Num questions -->
+        <p class="text-xs font-semibold mb-2" style="color:var(--text-muted)">QUESTIONS</p>
+        <div class="flex gap-2 mb-5" id="numPicker">
+            <button class="pick-btn" data-num="5">5</button>
+            <button class="pick-btn sel" data-num="10">10</button>
+            <button class="pick-btn" data-num="20">20</button>
+        </div>
+
+        <button id="modalStartBtn" onclick="launchSession()"
+            class="w-full py-3 rounded-xl text-sm font-semibold transition-opacity"
+            style="background:var(--accent);color:var(--bg-primary);">
+            Start Practice →
+        </button>
+        <p id="modalNoQ" class="text-center text-xs mt-2 hidden" style="color:var(--error)">
+            No questions available for this filter
+        </p>
+    </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════════════
+     MOCK MODAL
+═══════════════════════════════════════════════════════════════════════════ -->
+<div id="mockModal" class="modal-overlay hidden" onclick="if(event.target===this)closeMockModal()">
+    <div class="modal-card fade-up" onclick="event.stopPropagation()">
+        <div class="flex items-center justify-between mb-4">
+            <div>
+                <p class="text-xs font-medium" style="color:var(--text-muted)">Timed Exam</p>
+                <h3 class="text-base font-semibold" style="color:var(--text-primary)">Mock Test</h3>
+            </div>
+            <button onclick="closeMockModal()" style="color:var(--text-muted)">
+                <span class="material-symbols-outlined text-xl">close</span>
+            </button>
+        </div>
+
+        <!-- Subject filter -->
+        <p class="text-xs font-semibold mb-2" style="color:var(--text-muted)">SUBJECT</p>
+        <select id="mockSubject" class="w-full mb-4 px-3 py-2 rounded-lg text-sm border outline-none"
+            style="background:var(--bg-tertiary);color:var(--text-primary);border-color:var(--border);">
+            <option value="">All Subjects</option>
+            {% for s in subjects_data %}
+            <option value="{{ s.name }}">{{ s.name }}</option>
+            {% endfor %}
+        </select>
+
+        <!-- Num questions -->
+        <p class="text-xs font-semibold mb-2" style="color:var(--text-muted)">QUESTIONS</p>
+        <div class="flex gap-2 mb-4" id="mockNumPicker">
+            <button class="pick-btn" data-num="20">20</button>
+            <button class="pick-btn sel" data-num="30">30</button>
+            <button class="pick-btn" data-num="50">50</button>
+        </div>
+
+        <!-- Time limit -->
+        <p class="text-xs font-semibold mb-2" style="color:var(--text-muted)">TIME LIMIT</p>
+        <div class="flex gap-2 mb-5" id="mockTimePicker">
+            <button class="pick-btn" data-time="30">30 min</button>
+            <button class="pick-btn sel" data-time="60">60 min</button>
+            <button class="pick-btn" data-time="90">90 min</button>
+        </div>
+
+        <button onclick="launchMock()"
+            class="w-full py-3 rounded-xl text-sm font-semibold transition-opacity"
+            style="background:var(--accent);color:var(--bg-primary);">
+            Begin Mock Test →
+        </button>
+    </div>
+</div>
+<!-- ═══════════════════════════════════════════════════════════════════════════
+     MAIN LAYOUT  (two-panel layout with stacked left panels)
+═══════════════════════════════════════════════════════════════════════════ -->
+<main class="flex mt-24 mb-8 px-6 gap-6 max-w-[1600px] mx-auto">
+
+    <!-- ── LEFT COLUMN (Stacked Panels) ─────────────────────────────────────────── -->
+    <div class="flex-1 flex flex-col gap-4" style="min-width:0;">
+        
+        <!-- Topics & Chapters Panel -->
+        <div class="glass-panel rounded-xl p-6 flex flex-col gap-5 overflow-y-auto hide-scrollbar"
+             style="height: calc(85vh - 2rem);">
+
+            <!-- Header row -->
+            <div class="flex items-center justify-between">
+                <div>
+                    <h2 class="text-lg font-bold" style="color:var(--text-primary);">Practice Tests</h2>
+                    <p class="text-xs mt-0.5" style="color:var(--text-muted);">
+                        {% if board and grade %}Class {{ grade }} · {{ board.upper() }}{% else %}Setup Required{% endif %}
+                    </p>
+                </div>
+                <button onclick="openMockModal()"
+                    class="flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium border transition-colors"
+                    style="border-color:var(--border);color:var(--text-secondary);"
+                    onmouseover="this.style.background='var(--bg-hover)'" onmouseout="this.style.background=''">
+                    <span class="material-symbols-outlined text-base">timer</span>
+                    Mock Test
+                </button>
+            </div>
+
+            <!-- Search + filter -->
+            <div class="flex flex-col gap-2">
+                <div class="flex items-center gap-2 px-3 py-2 rounded-lg border"
+                     style="background:var(--bg-tertiary);border-color:var(--border);">
+                    <span class="material-symbols-outlined text-base" style="color:var(--text-muted);">search</span>
+                    <input id="searchInput" type="text" placeholder="Search topics…"
+                        oninput="applyFilters()"
+                        class="flex-1 bg-transparent text-sm outline-none"
+                        style="color:var(--text-primary);" autocomplete="off"/>
+                </div>
+                <div class="flex gap-2 flex-wrap">
+                    <button class="filter-pill active" data-filter="all"     onclick="setFilter(this,'all')">All</button>
+                    <button class="filter-pill"         data-filter="not_started" onclick="setFilter(this,'not_started')">Not Started</button>
+                    <button class="filter-pill"         data-filter="weakness"    onclick="setFilter(this,'weakness')">Weaknesses</button>
+                    <button class="filter-pill"         data-filter="strength"    onclick="setFilter(this,'strength')">Strengths</button>
+                </div>
+            </div>
+
+            <!-- Subject tabs -->
+            {% if subjects_data %}
+            <div class="flex gap-1.5 overflow-x-auto hide-scrollbar flex-shrink-0 pb-1">
+                {% for s in subjects_data %}
+                <button class="subj-tab {% if loop.first %}active{% endif %}"
+                        data-subj-idx="{{ loop.index0 }}"
+                        onclick="switchSubject({{ loop.index0 }}, this)">
+                    {{ s.name }}
+                </button>
+                {% endfor %}
+            </div>
+
+            <!-- Subject panels -->
+            {% for s in subjects_data %}
+            <div class="subject-panel flex flex-col gap-3 {% if not loop.first %}hidden{% endif %}"
+                 id="subj-panel-{{ loop.index0 }}">
+
+                <!-- Subject progress bar -->
+                <div class="flex items-center gap-3">
+                    <div class="flex-1 h-1 rounded-full overflow-hidden" style="background:var(--bg-tertiary);">
+                        <div class="h-full rounded-full transition-all" style="width:{{ s.completion_pct }}%;background:var(--accent);"></div>
+                    </div>
+                    <span class="text-xs font-medium flex-shrink-0" style="color:var(--text-muted);">
+                        {{ s.confident_topics }}/{{ s.total_topics }} confident
+                    </span>
+                </div>
+
+                <!-- Chapter accordions -->
+                {% for ch in s.chapters %}
+                <details class="chapter-group" open>
+                    <summary class="flex items-center justify-between p-3 rounded-lg cursor-pointer transition-colors"
+                             style="background:var(--bg-tertiary);"
+                             onmouseover="this.style.background='var(--bg-hover)'" onmouseout="this.style.background='var(--bg-tertiary)'">
+                        <span class="text-sm font-semibold" style="color:var(--text-primary);">{{ ch.name }}</span>
+                        <div class="flex items-center gap-2">
+                            <span class="text-xs" style="color:var(--text-muted);">{{ ch.topics|length }} topics</span>
+                            <span class="material-symbols-outlined text-base ch-arrow" style="color:var(--text-muted);">expand_more</span>
+                        </div>
+                    </summary>
+
+                    <div class="mt-2 flex flex-col gap-2 topic-list">
+                        {% for t in ch.topics %}
+                        {% set total_q = t.question_counts.total %}
+                        <div class="topic-row"
+                             data-confidence="{{ t.confidence }}"
+                             data-accuracy="{{ t.accuracy_pct }}"
+                             data-name="{{ t.name | lower | e }}"
+                             data-topic-id="{{ t.topic_id }}"
+                             data-q-total="{{ total_q }}"
+                             data-q-easy="{{ t.question_counts.easy }}"
+                             data-q-medium="{{ t.question_counts.medium }}"
+                             data-q-hard="{{ t.question_counts.hard }}">
+
+                            <!-- Confidence indicator -->
+                            <div class="conf-dot {{ t.confidence }}" title="{{ t.confidence | replace('_',' ') | title }}"></div>
+
+                            <!-- Topic info (grows) -->
+                            <div class="flex-1 min-w-0">
+                                <div class="flex items-center gap-2 flex-wrap">
+                                    <span class="text-sm font-medium" style="color:var(--text-primary);">{{ t.name }}</span>
+                                    <span class="conf-badge {{ t.confidence }}">
+                                        {{ t.confidence | replace('_',' ') | title }}
+                                    </span>
+                                </div>
+                                <div class="flex items-center gap-1.5 mt-1.5 flex-wrap">
+                                    {% if t.question_counts.easy > 0 %}
+                                    <span class="diff-chip easy">Easy {{ t.question_counts.easy }}</span>
+                                    {% endif %}
+                                    {% if t.question_counts.medium > 0 %}
+                                    <span class="diff-chip medium">Med {{ t.question_counts.medium }}</span>
+                                    {% endif %}
+                                    {% if t.question_counts.hard > 0 %}
+                                    <span class="diff-chip hard">Hard {{ t.question_counts.hard }}</span>
+                                    {% endif %}
+                                    {% if total_q == 0 %}
+                                    <span class="text-xs" style="color:var(--text-muted);">No questions yet</span>
+                                    {% endif %}
+                                </div>
+                            </div>
+
+                            <!-- Accuracy -->
+                            {% if t.total_attempted > 0 %}
+                            <div class="flex flex-col items-end gap-1 flex-shrink-0">
+                                <span class="text-xs font-semibold" style="color:var(--text-secondary);">{{ t.accuracy_pct }}%</span>
+                                <div class="acc-bar">
+                                    <div class="acc-fill {% if t.accuracy_pct >= 70 %}high{% elif t.accuracy_pct >= 45 %}mid{% else %}low{% endif %}"
+                                         style="width:{{ t.accuracy_pct }}%;"></div>
+                                </div>
+                            </div>
+                            {% endif %}
+
+                            <!-- Start button -->
+                            <button class="start-btn {% if total_q == 0 %}no-q{% endif %}"
+                                    data-topic-id="{{ t.topic_id }}"
+                                    data-topic-name="{{ t.name }}"
+                                    data-question-total="{{ t.question_counts.total if t.question_counts else 0 }}"
+                                    data-question-easy="{{ t.question_counts.easy if t.question_counts else 0 }}"
+                                    data-question-medium="{{ t.question_counts.medium if t.question_counts else 0 }}"
+                                    data-question-hard="{{ t.question_counts.hard if t.question_counts else 0 }}"
+                                    onclick="openStartModal(this)">
+                                {% if total_q > 0 %}Start →{% else %}—{% endif %}
+                            </button>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </details>
+                {% endfor %}
+            </div>
+            {% endfor %}
+
+            {% else %}
+            <!-- Empty state -->
+            <div class="flex-1 flex flex-col items-center justify-center text-center py-16">
+                <span class="material-symbols-outlined text-5xl mb-4" style="color:var(--text-muted);">quiz</span>
+                <h3 class="text-base font-semibold mb-1" style="color:var(--text-primary);">No syllabus found</h3>
+                <p class="text-sm" style="color:var(--text-muted);">Set up your board and grade in Settings.</p>
+            </div>
+            {% endif %}
+
+            </div>
+
+        <!-- Subject Progress & Stats Panel (Below Topics) -->
+        {% if subjects_data %}
+        <div class="glass-panel rounded-xl p-5">
+            <div class="grid grid-cols-3 gap-4">
+                <!-- Left 2/3: Subject Progress Donut Charts -->
+                <div class="col-span-2">
+                    <h3 class="text-sm font-bold mb-4" style="color:var(--text-primary);">Subject Progress</h3>
+                    <div class="grid grid-cols-2 gap-3">
+                        {% for s in subjects_data %}
+                        <div class="flex items-center gap-2 cursor-pointer p-2 rounded-lg transition-colors"
+                             style="background:var(--bg-tertiary);"
+                             onmouseover="this.style.background='var(--bg-hover)'" 
+                             onmouseout="this.style.background='var(--bg-tertiary)'"
+                             onclick="switchSubjectByName('{{ s.name | e }}')">
+                            <!-- Ring -->
+                            <div class="ring-wrap" style="width: 32px; height: 32px;">
+                                <svg width="32" height="32" viewBox="0 0 32 32">
+                                    <circle cx="16" cy="16" r="12" fill="none" stroke="var(--bg-tertiary)" stroke-width="2.5"/>
+                                    <circle cx="16" cy="16" r="12" fill="none" stroke="var(--accent)" stroke-width="2.5"
+                                        stroke-dasharray="{{ (s.completion_pct * 0.754)|round(1) }} 75.4"
+                                        stroke-linecap="round"/>
+                                </svg>
+                                <div class="ring-label" style="font-size: 0.55rem;">{{ s.completion_pct }}%</div>
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <p class="text-xs font-medium truncate" style="color:var(--text-primary);">{{ s.name }}</p>
+                                <p class="text-xs" style="color:var(--text-muted);">{{ s.confident_topics }}/{{ s.total_topics }}</p>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                
+                <!-- Right 1/3: Overall Stats -->
+                <div>
+                    <h3 class="text-sm font-bold mb-4" style="color:var(--text-primary);">Overall Stats</h3>
+                    {% set total_topics    = subjects_data | sum(attribute='total_topics') %}
+                    {% set total_confident = subjects_data | sum(attribute='confident_topics') %}
+                    <div class="grid grid-cols-1 gap-3">
+                        <div class="p-3 rounded-lg text-center" style="background:var(--bg-tertiary);">
+                            <p class="text-lg font-bold" style="color:var(--text-primary);">{{ total_topics }}</p>
+                            <p class="text-xs mt-0.5" style="color:var(--text-muted);">Topics</p>
+                        </div>
+                        <div class="p-3 rounded-lg text-center" style="background:var(--bg-tertiary);">
+                            <p class="text-lg font-bold" style="color:var(--success);">{{ total_confident }}</p>
+                            <p class="text-xs mt-0.5" style="color:var(--text-muted);">Confident</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- ── RIGHT PANEL ─────────────────────────────────────────────────────── -->
+    <aside class="w-80 flex-shrink-0 flex flex-col gap-4" style="height: calc(100vh - 4rem); overflow: hidden;">
+
+
+                <!-- Recent attempts -->
+        {% if recent_attempts %}
+        <div class="glass-panel rounded-xl p-5 flex-1 flex flex-col" style="min-height: 0;">
+            <h3 class="text-sm font-bold mb-3" style="color:var(--text-primary);">Recent Sessions</h3>
+            <div class="flex-1 overflow-y-auto hide-scrollbar flex flex-col gap-2" style="max-height: 300px;">
+                {% for a in recent_attempts %}
+                {% set score_color = 'var(--success)' if a.score >= 70 else ('var(--warning,#eab308)' if a.score >= 45 else 'var(--error)') %}
+                <a href="{{ url_for('test_results_page', attempt_id=a.attempt_id) }}" class="attempt-row">
+                    <div class="flex-1 min-w-0">
+                        <p class="text-xs font-medium truncate" style="color:var(--text-primary);">
+                            {{ a.mode | title }} · {{ a.topic_id.split('_')[4:] | join(' ') | replace('-',' ') | title if a.topic_id else a.subject or 'Mixed' }}
+                        </p>
+                        <p class="text-xs" style="color:var(--text-muted);">
+                            {{ a.correct_count }}/{{ a.total_count }} correct
+                        </p>
+                    </div>
+                    <span class="text-sm font-bold" style="color:{{ score_color }};">{{ a.score }}%</span>
+                    <span class="material-symbols-outlined text-sm" style="color:var(--text-muted);">chevron_right</span>
+                </a>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Legend -->
+        <div class="glass-panel rounded-xl p-5">
+            <h3 class="text-sm font-bold mb-3" style="color:var(--text-primary);">Confidence Legend</h3>
+            <div class="flex flex-col gap-2.5">
+                <div class="flex items-center gap-2.5">
+                    <div class="conf-dot not_started"></div>
+                    <div>
+                        <p class="text-xs font-medium" style="color:var(--text-primary);">Not Started</p>
+                        <p class="text-xs" style="color:var(--text-muted);">No attempts yet</p>
+                    </div>
+                </div>
+                <div class="flex items-center gap-2.5">
+                    <div class="conf-dot practiced"></div>
+                    <div>
+                        <p class="text-xs font-medium" style="color:var(--text-primary);">Practiced</p>
+                        <p class="text-xs" style="color:var(--text-muted);">Attempted, accuracy below 70%</p>
+                    </div>
+                </div>
+                <div class="flex items-center gap-2.5">
+                    <div class="conf-dot confident"></div>
+                    <div>
+                        <p class="text-xs font-medium" style="color:var(--text-primary);">Confident</p>
+                        <p class="text-xs" style="color:var(--text-muted);">70%+ accuracy achieved</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </aside>
+</main>
+
+<script>
+// ── State ─────────────────────────────────────────────────────────────────────
+let activeFilter   = 'all';
+let activeTopicId  = '';
+let activeTopicName= '';
+let activeQCounts  = {};
+let selectedDiff   = 'mixed';
+let selectedNum    = 10;
+let mockNum        = 30;
+let mockTime       = 60;
+
+// ── Subject switching ─────────────────────────────────────────────────────────
+function switchSubject(idx, btn) {
+    document.querySelectorAll('.subj-tab').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.subject-panel').forEach(p => p.classList.add('hidden'));
+    btn.classList.add('active');
+    document.getElementById('subj-panel-' + idx).classList.remove('hidden');
+    applyFilters();
+}
+
+function switchSubjectByName(name) {
+    document.querySelectorAll('.subj-tab').forEach(btn => {
+        if (btn.textContent.trim() === name) {
+            switchSubject(btn.getAttribute('data-subj-idx'), btn);
+        }
+    });
+}
+
+// ── Filters ───────────────────────────────────────────────────────────────────
+function setFilter(btn, filter) {
+    document.querySelectorAll('.filter-pill').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    activeFilter = filter;
+    applyFilters();
+}
+
+function applyFilters() {
+    const search = document.getElementById('searchInput').value.toLowerCase().trim();
+    console.log('Applying filters, search term:', search); // Debug log
+    document.querySelectorAll('.subject-panel:not(.hidden) .topic-row').forEach(row => {
+        const name       = row.getAttribute('data-name') || '';
+        const confidence = row.getAttribute('data-confidence');
+        const accuracy   = parseInt(row.getAttribute('data-accuracy') || '0', 10);
+
+        const matchSearch = !search || name.includes(search);
+        let   matchFilter = true;
+        if (activeFilter === 'not_started') matchFilter = confidence === 'not_started';
+        if (activeFilter === 'weakness')    matchFilter = confidence !== 'not_started' && accuracy < 60;
+        if (activeFilter === 'strength')    matchFilter = confidence === 'confident';
+
+        const shouldHide = !matchSearch || !matchFilter;
+        row.setAttribute('data-hidden', shouldHide.toString());
+        row.style.display = shouldHide ? 'none' : 'flex'; // Also update display directly
+        console.log(`Topic: ${name}, MatchSearch: ${matchSearch}, MatchFilter: ${matchFilter}, Hidden: ${shouldHide}`); // Debug log
+    });
+}
+
+// ── Start modal ───────────────────────────────────────────────────────────────
+function openStartModal(button) {
+    // Check if button is disabled (no questions)
+    if (button.classList.contains('no-q')) {
+        return;
+    }
+    
+    activeTopicId   = button.getAttribute('data-topic-id');
+    activeTopicName = button.getAttribute('data-topic-name');
+    
+    // Build question counts from individual attributes (safer than JSON)
+    const total = parseInt(button.getAttribute('data-question-total') || '0', 10);
+    const easy = parseInt(button.getAttribute('data-question-easy') || '0', 10);
+    const medium = parseInt(button.getAttribute('data-question-medium') || '0', 10);
+    const hard = parseInt(button.getAttribute('data-question-hard') || '0', 10);
+    
+    activeQCounts = {
+        total: total,
+        easy: easy,
+        medium: medium,
+        hard: hard
+    };
+    
+    console.log('Topic ID:', activeTopicId); // Debug
+    console.log('Topic Name:', activeTopicName); // Debug
+    console.log('Question counts:', activeQCounts); // Debug
+    
+    document.getElementById('modalTopicName').textContent = activeTopicName;
+    selectedDiff = 'mixed';
+    selectedNum  = 10;
+    renderPickers();
+    validateDiffCombo();
+    document.getElementById('startModal').classList.remove('hidden');
+}
+
+function closeModal() {
+    document.getElementById('startModal').classList.add('hidden');
+}
+
+function renderPickers() {
+    document.querySelectorAll('#diffPicker .pick-btn').forEach(b => {
+        b.classList.toggle('sel', b.getAttribute('data-diff') === selectedDiff);
+    });
+    document.querySelectorAll('#numPicker .pick-btn').forEach(b => {
+        b.classList.toggle('sel', parseInt(b.getAttribute('data-num')) === selectedNum);
+    });
+}
+
+document.getElementById('diffPicker').addEventListener('click', e => {
+    const btn = e.target.closest('.pick-btn');
+    if (!btn) return;
+    selectedDiff = btn.getAttribute('data-diff');
+    renderPickers();
+    validateDiffCombo();
+});
+
+document.getElementById('numPicker').addEventListener('click', e => {
+    const btn = e.target.closest('.pick-btn');
+    if (!btn) return;
+    selectedNum = parseInt(btn.getAttribute('data-num'));
+    renderPickers();
+});
+
+function validateDiffCombo() {
+    const avail = selectedDiff === 'mixed'
+        ? activeQCounts.total
+        : (activeQCounts[selectedDiff] || 0);
+    console.log('validateDiffCombo - selectedDiff:', selectedDiff, 'available:', avail, 'activeQCounts:', activeQCounts); // Debug
+    const noQ = document.getElementById('modalNoQ');
+    const btn = document.getElementById('modalStartBtn');
+    if (avail === 0) {
+        noQ.classList.remove('hidden');
+        btn.disabled = true; btn.style.opacity = '0.4';
+    } else {
+        noQ.classList.add('hidden');
+        btn.disabled = false; btn.style.opacity = '1';
+    }
+}
+
+async function launchSession() {
+    const btn = document.getElementById('modalStartBtn');
+    btn.textContent = 'Loading…'; btn.disabled = true;
+    const res = await apiFetch('/api/test/start', 'POST', {
+        mode: 'topic',
+        topic_id: activeTopicId,
+        difficulty: selectedDiff,
+        num_questions: selectedNum,
+    });
+    if (res.success) {
+        sessionStorage.setItem('__test_session', JSON.stringify({
+            session_id: res.session_id,
+            questions:  res.questions,
+            mode: 'topic',
+        }));
+        window.location.href = '/test/session';
+    } else {
+        btn.textContent = 'Start Practice →'; btn.disabled = false;
+        document.getElementById('modalNoQ').textContent = res.error || 'Failed to start.';
+        document.getElementById('modalNoQ').classList.remove('hidden');
+    }
+}
+
+// ── Mock modal ────────────────────────────────────────────────────────────────
+function openMockModal() {
+    document.getElementById('mockModal').classList.remove('hidden');
+}
+function closeMockModal() {
+    document.getElementById('mockModal').classList.add('hidden');
+}
+
+['mockNumPicker','mockTimePicker'].forEach(id => {
+    document.getElementById(id).addEventListener('click', e => {
+        const btn = e.target.closest('.pick-btn');
+        if (!btn) return;
+        document.querySelectorAll(`#${id} .pick-btn`).forEach(b => b.classList.remove('sel'));
+        btn.classList.add('sel');
+        if (id === 'mockNumPicker')  mockNum  = parseInt(btn.getAttribute('data-num'));
+        if (id === 'mockTimePicker') mockTime = parseInt(btn.getAttribute('data-time'));
+    });
+});
+
+async function launchMock() {
+    const subject = document.getElementById('mockSubject').value;
+    const res = await apiFetch('/api/test/start', 'POST', {
+        mode: 'mock',
+        subject: subject || null,
+        num_questions: mockNum,
+        time_limit_minutes: mockTime,
+    });
+    if (res.success) {
+        sessionStorage.setItem('__test_session', JSON.stringify({
+            session_id: res.session_id,
+            questions:  res.questions,
+            mode: 'mock',
+            time_limit_minutes: res.time_limit_minutes,
+        }));
+        window.location.href = '/test/session';
+    } else {
+        alert(res.error || 'Could not start mock test.');
+    }
+}
+
+// ── Utils ─────────────────────────────────────────────────────────────────────
+async function apiFetch(url, method, body) {
+    try {
+        const r = await fetch(url, {
+            method, headers: {'Content-Type': 'application/json'},
+            body: body ? JSON.stringify(body) : undefined,
+        });
+        return r.json();
+    } catch (e) { return {success: false, error: e.message}; }
+}
+
+(function(){
+    const t = localStorage.getItem('sclera-theme');
+    if (t) document.documentElement.setAttribute('data-theme', t);
+})();
+</script>
+</body>
+</html>

@@ -171,7 +171,6 @@
       "collectionGroup": "topic_performance",
       "queryScope": "COLLECTION_GROUP",
       "fields": [
-        { "fieldPath": "user_id", "order": "ASCENDING" },
         { "fieldPath": "priority", "order": "DESCENDING" }
       ]
     },
@@ -179,7 +178,6 @@
       "collectionGroup": "topic_performance",
       "queryScope": "COLLECTION_GROUP",
       "fields": [
-        { "fieldPath": "user_id", "order": "ASCENDING" },
         { "fieldPath": "accuracy", "order": "ASCENDING" }
       ]
     },
@@ -187,7 +185,6 @@
       "collectionGroup": "quiz_attempts",
       "queryScope": "COLLECTION_GROUP",
       "fields": [
-        { "fieldPath": "user_id", "order": "ASCENDING" },
         { "fieldPath": "completed_at", "order": "DESCENDING" }
       ]
     },
@@ -198,6 +195,13 @@
         { "fieldPath": "user_id", "order": "ASCENDING" },
         { "fieldPath": "started_at", "order": "DESCENDING" }
       ]
+    }
+  ],
+  "fieldOverrides": [
+    {
+      "collectionGroup": "test_sessions",
+      "fieldPath": "started_at",
+      "ttl": true
     }
   ]
 }

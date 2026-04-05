@@ -5,6 +5,7 @@ Provides AI-driven insights for at-risk prediction, readiness scoring, and study
 import os
 import json
 import time
+import threading
 from datetime import datetime, timedelta
 from typing import Dict, List, Any, Optional, Tuple
 from collections import defaultdict
@@ -13,7 +14,72 @@ import logging
 # Import existing modules
 from firebase_config import db
 from utils import logger
+from utils.cache import cached, CacheManager
 from templates.academic_data import get_syllabus
+
+# Simple rate limiter to prevent too many concurrent API calls
+class RateLimiter:
+    def __init__(self, max_calls_per_minute: int = 10):
+        self.max_calls = max_calls_per_minute
+        self.calls = []
+        self.lock = threading.Lock()
+    
+    def wait_if_needed(self):
+        with self.lock:
+            now = time.time()
+            # Remove calls older than 1 minute
+            self.calls = [call_time for call_time in self.calls if now - call_time < 60]
+            
+            if len(self.calls) >= self.max_calls:
+                # Calculate how long to wait
+                oldest_call = min(self.calls)
+                wait_time = 60 - (now - oldest_call)
+                if wait_time > 0:
+                    logger.info(f"Rate limit reached, waiting {wait_time:.1f}s")
+                    time.sleep(wait_time)
+            
+            self.calls.append(now)
+
+# Circuit breaker to prevent repeated failures
+class CircuitBreaker:
+    def __init__(self, failure_threshold: int = 5, recovery_timeout: int = 300):
+        self.failure_threshold = failure_threshold
+        self.recovery_timeout = recovery_timeout
+        self.failure_count = 0
+        self.last_failure_time = None
+        self.state = 'CLOSED'  # CLOSED, OPEN, HALF_OPEN
+        self.lock = threading.Lock()
+    
+    def call(self, func, *args, **kwargs):
+        with self.lock:
+            if self.state == 'OPEN':
+                if time.time() - self.last_failure_time > self.recovery_timeout:
+                    self.state = 'HALF_OPEN'
+                    logger.info("Circuit breaker entering HALF_OPEN state")
+                else:
+                    raise Exception("Circuit breaker is OPEN - API calls disabled")
+            
+            try:
+                result = func(*args, **kwargs)
+                # Success - reset failure count and close circuit
+                self.failure_count = 0
+                if self.state == 'HALF_OPEN':
+                    self.state = 'CLOSED'
+                    logger.info("Circuit breaker CLOSED - API calls restored")
+                return result
+            except Exception as e:
+                self.failure_count += 1
+                self.last_failure_time = time.time()
+                
+                if self.failure_count >= self.failure_threshold:
+                    self.state = 'OPEN'
+                    logger.warning(f"Circuit breaker OPENED after {self.failure_count} failures")
+                
+                raise e
+
+# Global rate limiter and circuit breaker
+rate_limiter = RateLimiter(max_calls_per_minute=8)  # Conservative limit
+circuit_breaker = CircuitBreaker(failure_threshold=3, recovery_timeout=300)  # 5 min recovery
 
 
 class GeminiAnalytics:
@@ -25,9 +91,84 @@ class GeminiAnalytics:
             from ai_assistant import get_ai_assistant
             self.ai_assistant = get_ai_assistant()
             self.ai_available = self.ai_assistant.ai_available if self.ai_assistant else False
+            
+            # Initialize model management for dynamic switching
+            self.exhausted_models = set()
+            self.available_models = []
+            self.current_model_index = 0
+            
+            if self.ai_available and hasattr(self.ai_assistant, 'available_models'):
+                self.available_models = self.ai_assistant.available_models.copy()
+                logger.info(f"Initialized with {len(self.available_models)} available models")
         except Exception as e:
             logger.error(f"Failed to initialize AI assistant: {str(e)}")
             self.ai_available = False
+            self.exhausted_models = set()
+            self.available_models = []
+            self.current_model_index = 0
+    
+    def _get_working_model(self):
+        """Get a working model, switching to next available if current is exhausted"""
+        if not self.ai_available or not self.available_models:
+            return None
+        
+        # Try to find a non-exhausted model
+        for i in range(len(self.available_models)):
+            model_name = self.available_models[self.current_model_index]
+            
+            if model_name not in self.exhausted_models:
+                try:
+                    # Try to create a new model instance
+                    import google.generativeai as genai
+                    model = genai.GenerativeModel(model_name=model_name)
+                    logger.info(f"Using model: {model_name}")
+                    return model
+                except Exception as e:
+                    logger.warning(f"Failed to create model {model_name}: {e}")
+                    self._mark_model_exhausted()
+                    continue
+            else:
+                # Move to next model if current is exhausted
+                self.current_model_index = (self.current_model_index + 1) % len(self.available_models)
+        
+        # All models exhausted, reset after a delay
+        logger.warning("All models exhausted, resetting exhausted list after delay")
+        self.exhausted_models.clear()
+        self.current_model_index = 0
+        
+        # Try one more time after reset
+        if self.available_models:
+            model_name = self.available_models[0]
+            try:
+                import google.generativeai as genai
+                model = genai.GenerativeModel(model_name=model_name)
+                logger.info(f"Reset complete, using model: {model_name}")
+                return model
+            except Exception as e:
+                logger.error(f"Failed to create model after reset: {e}")
+        
+        return None
+    
+    def _mark_model_exhausted(self):
+        """Mark current model as exhausted and move to next"""
+        if self.available_models and self.current_model_index < len(self.available_models):
+            exhausted_model = self.available_models[self.current_model_index]
+            self.exhausted_models.add(exhausted_model)
+            logger.info(f"Marked model as exhausted: {exhausted_model}")
+            
+            # Move to next model
+            self.current_model_index = (self.current_model_index + 1) % len(self.available_models)
+            next_model = self.available_models[self.current_model_index]
+            logger.info(f"Switching to next model: {next_model}")
+    
+    def get_model_status(self):
+        """Get current model status for debugging"""
+        return {
+            'available_models': self.available_models,
+            'exhausted_models': list(self.exhausted_models),
+            'current_model_index': self.current_model_index,
+            'current_model': self.available_models[self.current_model_index] if self.available_models and self.current_model_index < len(self.available_models) else None
+        }
     
     def build_student_features(self, uid: str) -> Dict[str, Any]:
         """
@@ -411,74 +552,106 @@ Create 3-5 meaningful clusters that capture the main study patterns in the class
 """
     
     def call_gemini_with_rate_limit(self, prompt: str, retries: int = 3) -> Optional[Dict[str, Any]]:
-        """Call Gemini API with rate limiting and error handling"""
+        """Call Gemini API with improved rate limiting and dynamic model switching"""
         if not self.ai_available:
             logger.warning("Gemini AI not available for analytics")
             return None
         
-        for attempt in range(retries):
-            try:
-                # Use existing AI assistant to call Gemini
-                chat = self.ai_assistant.model.start_chat(history=[])
-                response = chat.send_message(prompt, stream=False)
-                
-                if response and hasattr(response, 'text'):
-                    # Parse JSON response
-                    try:
-                        # Extract JSON from response text
-                        response_text = response.text.strip()
-                        
-                        # Handle responses with explanatory text + JSON code blocks
-                        if '```json' in response_text:
-                            # Extract JSON code block
-                            start_idx = response_text.find('```json') + 7
-                            end_idx = response_text.find('```', start_idx)
-                            if end_idx != -1:
-                                response_text = response_text[start_idx:end_idx].strip()
-                        elif response_text.startswith('```json'):
-                            # Handle case where response starts with ```json
-                            response_text = response_text[7:-3]  # Remove ```json and ```
-                        elif response_text.startswith('{') and response_text.endswith('}'):
-                            # Direct JSON response
-                            pass  # Use as-is
-                        else:
-                            # Try to find JSON in the text
-                            import re
-                            json_pattern = r'\{[\s\S]*\}'
-                            match = re.search(json_pattern, response_text)
-                            if match:
-                                response_text = match.group(0)
-                        
-                        return json.loads(response_text)
-                    except json.JSONDecodeError as e:
-                        logger.error(f"Failed to parse Gemini JSON response: {e}")
-                        logger.error(f"Response text: {response.text}")
-                        continue
-                else:
-                    logger.error("Empty response from Gemini")
-                    continue
+        def _make_api_call():
+            # Wait if we've made too many calls recently
+            rate_limiter.wait_if_needed()
+            
+            for attempt in range(retries):
+                try:
+                    # Add initial delay for first attempt to avoid immediate rate limiting
+                    if attempt == 0:
+                        time.sleep(0.5)
                     
-            except Exception as e:
-                error_msg = str(e).lower()
-                
-                # Check for rate limit errors
-                if 'rate limit' in error_msg or 'quota' in error_msg or '429' in error_msg:
-                    wait_time = (2 ** attempt) + 1  # Exponential backoff
-                    logger.warning(f"Rate limit hit, waiting {wait_time}s before retry {attempt + 1}")
-                    time.sleep(wait_time)
-                    continue
-                else:
-                    logger.error(f"Gemini API error: {e}")
-                    if attempt == retries - 1:
-                        return None
-                    time.sleep(1)
+                    # Try to get a working model
+                    model = self._get_working_model()
+                    if not model:
+                        raise Exception("No working AI models available")
+                    
+                    # Use the model to call Gemini
+                    chat = model.start_chat(history=[])
+                    response = chat.send_message(prompt, stream=False)
+                    
+                    if response and hasattr(response, 'text'):
+                        # Parse JSON response
+                        try:
+                            # Extract JSON from response text
+                            response_text = response.text.strip()
+                            
+                            # Handle responses with explanatory text + JSON code blocks
+                            if '```json' in response_text:
+                                # Extract JSON code block
+                                start_idx = response_text.find('```json') + 7
+                                end_idx = response_text.find('```', start_idx)
+                                if end_idx != -1:
+                                    response_text = response_text[start_idx:end_idx].strip()
+                            elif response_text.startswith('```json'):
+                                # Handle case where response starts with ```json
+                                response_text = response_text[7:-3]  # Remove ```json and ```
+                            elif response_text.startswith('{') and response_text.endswith('}'):
+                                # Direct JSON response
+                                pass  # Use as-is
+                            else:
+                                # Try to find JSON in the text
+                                import re
+                                json_pattern = r'\{[\s\S]*\}'
+                                match = re.search(json_pattern, response_text)
+                                if match:
+                                    response_text = match.group(0)
+                            
+                            return json.loads(response_text)
+                        except json.JSONDecodeError as e:
+                            logger.error(f"Failed to parse Gemini JSON response: {e}")
+                            logger.error(f"Response text: {response.text}")
+                            if attempt < retries - 1:
+                                time.sleep(2)  # Wait before retry on parse error
+                            continue
+                    else:
+                        logger.error("Empty response from Gemini")
+                        if attempt < retries - 1:
+                            time.sleep(2)  # Wait before retry on empty response
+                        continue
+                        
+                except Exception as e:
+                    error_msg = str(e).lower()
+                    
+                    # Check for rate limit errors
+                    if 'rate limit' in error_msg or 'quota' in error_msg or '429' in error_msg or 'resource exhausted' in error_msg:
+                        # Mark current model as exhausted and try next
+                        self._mark_model_exhausted()
+                        logger.warning(f"Model exhausted, switching to next available model")
+                        
+                        # More conservative exponential backoff: 5s, 10s, 20s
+                        wait_time = 5 * (2 ** attempt)
+                        logger.warning(f"Rate limit hit, waiting {wait_time}s before retry {attempt + 1}")
+                        time.sleep(wait_time)
+                        continue
+                    else:
+                        logger.error(f"Gemini API error: {e}")
+                        if attempt == retries - 1:
+                            raise e  # Re-raise to trigger circuit breaker
+                        time.sleep(3)  # Wait 3s for other errors
+            
+            logger.error(f"Failed to get Gemini response after {retries} attempts")
+            raise Exception("All retry attempts failed")
         
-        logger.error(f"Failed to get Gemini response after {retries} attempts")
-        return None
+        try:
+            return circuit_breaker.call(_make_api_call)
+        except Exception as e:
+            if "Circuit breaker is OPEN" in str(e):
+                logger.warning("Circuit breaker prevented API call due to repeated failures")
+                return None
+            else:
+                logger.error(f"API call failed: {e}")
+                return None
     
-    def process_students_in_batches(self, student_uids: List[str], batch_size: int = 50, 
-                                delay_between_batches: float = 1.2) -> List[Dict[str, Any]]:
-        """Process students in batches to respect rate limits"""
+    def process_students_in_batches(self, student_uids: List[str], batch_size: int = 30, 
+                                delay_between_batches: float = 3.0) -> List[Dict[str, Any]]:
+        """Process students in smaller batches with longer delays to respect rate limits"""
         results = []
         total_batches = (len(student_uids) + batch_size - 1) // batch_size
         
@@ -500,7 +673,7 @@ Create 3-5 meaningful clusters that capture the main study patterns in the class
             
             results.extend(batch_results)
             
-            # Add delay between batches (except last batch)
+            # Add longer delay between batches (except last batch)
             if i + batch_size < len(student_uids):
                 logger.info(f"Waiting {delay_between_batches}s before next batch...")
                 time.sleep(delay_between_batches)
@@ -508,7 +681,14 @@ Create 3-5 meaningful clusters that capture the main study patterns in the class
         return results
     
     def predict_student_risk_and_readiness(self, uid: str) -> Tuple[Optional[Dict], Optional[Dict]]:
-        """Predict both risk and readiness for a student"""
+        """Predict both risk and readiness for a student with manual caching"""
+        # Check cache first
+        cache_key = f"gemini_risk:predict_student_risk_and_readiness:{uid}"
+        cached_result = CacheManager.get(cache_key)
+        if cached_result:
+            logger.info(f"Using cached risk/readiness prediction for student {uid}")
+            return cached_result.get('risk'), cached_result.get('readiness')
+        
         try:
             features = self.build_student_features(uid)
             if not features:
@@ -545,6 +725,12 @@ Return a single JSON response with both predictions:
             if response:
                 risk_data = response.get('risk_prediction')
                 readiness_data = response.get('readiness_prediction')
+                
+                # Cache the result
+                result_to_cache = {'risk': risk_data, 'readiness': readiness_data}
+                CacheManager.set(cache_key, result_to_cache, timeout=3600)  # 1 hour cache
+                logger.info(f"Cached risk/readiness prediction for student {uid}")
+                
                 return risk_data, readiness_data
             else:
                 return None, None
@@ -554,7 +740,14 @@ Return a single JSON response with both predictions:
             return None, None
     
     def analyze_class_study_patterns(self, class_id: str) -> List[Dict[str, Any]]:
-        """Analyze study patterns for all students in a class"""
+        """Analyze study patterns for all students in a class with manual caching"""
+        # Check cache first
+        cache_key = f"gemini_cluster:analyze_class_study_patterns:{class_id}"
+        cached_result = CacheManager.get(cache_key)
+        if cached_result:
+            logger.info(f"Using cached clustering for class {class_id}")
+            return cached_result
+        
         try:
             # Get class document
             class_doc = db.collection('classes').document(class_id).get()
@@ -580,7 +773,13 @@ Return a single JSON response with both predictions:
             response = self.call_gemini_with_rate_limit(prompt)
             
             if response and 'clusters' in response:
-                return response['clusters']
+                clusters = response['clusters']
+                
+                # Cache the result
+                CacheManager.set(cache_key, clusters, timeout=7200)  # 2 hour cache
+                logger.info(f"Cached clustering result for class {class_id}")
+                
+                return clusters
             else:
                 return []
                 

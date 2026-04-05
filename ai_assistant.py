@@ -21,6 +21,7 @@ class AIAssistant:
         self.genai = None
         self.error_message = None
         self.model_name = None
+        self.available_models = []  # Store available models for dynamic switching
         
         try:
             # Check if API key is set
@@ -99,33 +100,32 @@ class AIAssistant:
             # ]
 
             model_names = [
-                    'models/gemini-2.5-pro',
-                    'models/gemini-3.1-pro-preview',
-                    'models/gemini-3-pro-preview',
-                    'models/gemini-2.5-flash',
-                    'models/gemini-3-flash-preview',
-                    'models/gemini-3.1-flash-lite-preview',
-                    'models/gemini-2.5-flash-lite',
-                    'models/gemini-2.0-flash',
-                    'models/gemini-2.0-flash-001',
-                    'models/gemini-2.0-flash-lite',
-                    'models/gemini-2.0-flash-lite-001',
-                    'models/gemini-2.5-flash-lite-preview-09-2025',
-                    'models/gemini-pro-latest',
-                    'models/gemini-flash-latest',
-                    'models/gemini-flash-lite-latest',
-                    'models/deep-research-pro-preview-12-2025',
-                    'models/gemini-2.5-computer-use-preview-10-2025',
-                    'models/gemma-3-27b-it',
-                    'models/gemma-3-12b-it',
-                    'models/gemma-3-4b-it',
-                    'models/gemma-3-1b-it',
-                    'models/gemma-3n-e4b-it',
-                    'models/gemma-3n-e2b-it',
-                    'models/nano-banana-pro-preview',
-                    'models/gemini-embedding-2-preview',
-                    'models/gemini-embedding-001',
-                    'models/aqa'
+                    'models/gemini-2.0-flash-lite',  # Free tier friendly
+                    'models/gemini-2.0-flash-lite-001',  # Free tier friendly
+                    'models/gemini-2.5-flash-lite',  # Free tier friendly
+                    'models/gemini-3.1-flash-lite-preview',  # Free tier friendly
+                    'models/gemma-3-27b-it',  # Free model
+                    'models/gemma-3-12b-it',  # Free model
+                    'models/gemma-3-4b-it',  # Free model
+                    'models/gemma-3-1b-it',  # Free model
+                    'models/gemini-2.0-flash',  # Backup
+                    'models/gemini-2.0-flash-001',  # Backup
+                    'models/gemini-2.5-flash',  # Higher tier
+                    'models/gemini-3-flash-preview',  # Higher tier
+                    'models/gemini-2.5-pro',  # Pro tier (last resort)
+                    'models/gemini-3.1-pro-preview',  # Pro tier (last resort)
+                    'models/gemini-3-pro-preview',  # Pro tier (last resort)
+                    'models/gemini-pro-latest',  # Pro tier (last resort)
+                    'models/gemini-flash-latest',  # Pro tier (last resort)
+                    'models/gemini-flash-lite-latest',  # Pro tier (last resort)
+                    'models/deep-research-pro-preview-12-2025',  # Specialized
+                    'models/gemini-2.5-computer-use-preview-10-2025',  # Specialized
+                    'models/gemma-3n-e4b-it',  # Free nano models
+                    'models/gemma-3n-e2b-it',  # Free nano models
+                    'models/nano-banana-pro-preview',  # Specialized
+                    'models/gemini-embedding-2-preview',  # Embedding models
+                    'models/gemini-embedding-001',  # Embedding models
+                    'models/aqa'  # Q&A model
                 ]
                 
             # Get available models from the API first
@@ -137,10 +137,14 @@ class AIAssistant:
                 model_names = [m for m in model_names if m in available_models]
                 logger.info(f"Filtered to available models: {model_names}")
                 
+                # Store available models for dynamic switching
+                self.available_models = model_names.copy()
+                
             except Exception as e:
                 logger.warning(f"Could not list models: {e}")
                 # Fall back to original list if list_models fails
                 model_names = model_names
+                self.available_models = model_names.copy()
                 
             # Log the models we'll try to use
             logger.info(f"Will try to initialize with models: {model_names}")

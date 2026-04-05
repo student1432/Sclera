@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Results — Sclera</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Serif+Display:ital,wght@0,300;0,400;0,600;0,700;1,400&family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap" rel="stylesheet"/>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: { extend: {
+                colors: { "primary": "#ffffff" },
+                fontFamily: { "display": ["Inter","sans-serif"] },
+                borderRadius: { "DEFAULT": "1rem", "lg": "2rem", "xl": "3rem", "full": "9999px" }
+            }}
+        }
+    </script>
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: var(--bg-primary); color: var(--text-primary); }
+        .glass-panel { background: var(--bg-secondary); backdrop-filter: blur(16px); border: 1px solid var(--border); }
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
+        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+        /* Score ring */
+        .score-ring-wrap { position: relative; width: 120px; height: 120px; flex-shrink: 0; }
+        .score-ring-wrap svg { transform: rotate(-90deg); }
+        .score-ring-label { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+
+        /* Q review cards */
+        .review-card { border-radius: 0.875rem; border: 1px solid var(--border); background: var(--bg-secondary); overflow: hidden; }
+        .review-card.correct { border-color: var(--success); }
+        .review-card.wrong   { border-color: var(--error); }
+
+        .opt-row { display: flex; align-items: flex-start; gap: 0.625rem; padding: 0.5rem 0.75rem; border-radius: 0.5rem; }
+        .opt-row.is-correct  { background: var(--success-bg); }
+        .opt-row.is-wrong    { background: var(--error-bg); }
+        .opt-letter-sm { width: 22px; height: 22px; border-radius: 50%; background: var(--bg-tertiary); display: flex; align-items: center; justify-content: center; font-size: 0.65rem; font-weight: 700; flex-shrink: 0; color: var(--text-muted); }
+        .opt-row.is-correct .opt-letter-sm { background: var(--success); color: #fff; }
+        .opt-row.is-wrong   .opt-letter-sm { background: var(--error);   color: #fff; }
+
+        .diff-badge { font-size: 0.6rem; font-weight: 600; padding: 0.18rem 0.45rem; border-radius: 999px; text-transform: uppercase; }
+        .diff-badge.easy   { background: var(--success-bg); color: var(--success); }
+        .diff-badge.medium { background: var(--warning-bg, rgba(234,179,8,0.1)); color: var(--warning, #eab308); }
+        .diff-badge.hard   { background: var(--error-bg); color: var(--error); }
+
+        .expl-box { border-left: 3px solid var(--border); border-radius: 0 0.5rem 0.5rem 0; background: var(--bg-tertiary); padding: 0.625rem 0.875rem; }
+
+        .stat-box { background: var(--bg-secondary); border: 1px solid var(--border); border-radius: 0.875rem; padding: 0.875rem; text-align: center; }
+
+        @keyframes fadeUp { from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:translateY(0);} }
+        .fade-up { animation: fadeUp 0.25s ease; }
+        .fade-up-2 { animation: fadeUp 0.35s ease; }
+    </style>
+</head>
+
+<body class="min-h-screen" style="background-color:var(--bg-primary);">
+{% include '_topnav.html' %}
+
+<div class="max-w-2xl mx-auto pt-20 pb-16 px-4">
+
+    <!-- ── Score hero ─────────────────────────────────────────────────────── -->
+    <div class="glass-panel rounded-xl p-6 mb-5 fade-up">
+        <div class="flex items-center gap-6">
+            <!-- Ring -->
+            <div class="score-ring-wrap">
+                <svg width="120" height="120" viewBox="0 0 120 120">
+                    <circle cx="60" cy="60" r="50" fill="none" stroke="var(--bg-tertiary)" stroke-width="8"/>
+                    <circle cx="60" cy="60" r="50" fill="none" stroke="var(--accent)" stroke-width="8"
+                        id="scoreArc"
+                        stroke-dasharray="0 314.16"
+                        stroke-linecap="round"/>
+                </svg>
+                <div class="score-ring-label">
+                    <span class="text-2xl font-bold" style="color:var(--text-primary);">{{ attempt.score|int }}%</span>
+                    <span class="text-xs" style="color:var(--text-muted);">Score</span>
+                </div>
+            </div>
+            <!-- Text -->
+            <div class="flex-1">
+                <h1 class="text-lg font-semibold mb-1" style="color:var(--text-primary);">
+                    {% if attempt.score >= 80 %}Excellent! 🎉
+                    {% elif attempt.score >= 60 %}Good effort! 📚
+                    {% else %}Keep practising 💪
+                    {% endif %}
+                </h1>
+                <p class="text-sm mb-4" style="color:var(--text-secondary);">
+                    {% if attempt.submitted_count is defined %}
+                        {{ attempt.correct_count }} correct · {{ attempt.submitted_count - attempt.correct_count }} wrong · {{ attempt.submitted_count }} submitted
+                        {% if attempt.attempted_count != attempt.submitted_count %}
+                        · {{ attempt.attempted_count - attempt.submitted_count }} unsubmitted
+                        {% endif %}
+                    {% else %}
+                        {{ attempt.correct_count }} correct · {{ attempt.total_count - attempt.correct_count }} wrong · {{ attempt.total_count }} total
+                    {% endif %}
+                </p>
+                <!-- Submission status indicator -->
+                {% if attempt.submitted_count is defined and attempt.attempted_count != attempt.submitted_count %}
+                <div class="flex items-center gap-2 mb-2 p-2 rounded-lg" style="background: var(--warning-bg, rgba(234,179,8,0.1));">
+                    <span class="material-symbols-outlined text-sm" style="color: var(--warning, #eab308);">warning</span>
+                    <span class="text-xs" style="color: var(--warning, #eab308);">
+                        {{ attempt.attempted_count - attempt.submitted_count }} question(s) selected but not submitted
+                    </span>
+                </div>
+                {% endif %}
+                <!-- Difficulty breakdown chips -->
+                <div class="flex gap-2 flex-wrap" id="diffBreakdown"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── Stat row ───────────────────────────────────────────────────────── -->
+    {% if attempt.submitted_count is defined %}
+    <div class="grid grid-cols-4 gap-3 mb-5 fade-up-2">
+        <div class="stat-box">
+            <p class="text-xl font-bold" style="color:var(--success);">{{ attempt.correct_count }}</p>
+            <p class="text-xs mt-0.5" style="color:var(--text-muted);">Correct</p>
+        </div>
+        <div class="stat-box">
+            <p class="text-xl font-bold" style="color:var(--error);">{{ attempt.submitted_count - attempt.correct_count }}</p>
+            <p class="text-xs mt-0.5" style="color:var(--text-muted);">Wrong</p>
+        </div>
+        <div class="stat-box">
+            <p class="text-xl font-bold" style="color:var(--text-primary);">{{ attempt.submitted_count }}</p>
+            <p class="text-xs mt-0.5" style="color:var(--text-muted);">Submitted</p>
+        </div>
+        <div class="stat-box">
+            <p class="text-xl font-bold" style="color:var(--text-muted);">{{ attempt.attempted_count }}</p>
+            <p class="text-xs mt-0.5" style="color:var(--text-muted);">Attempted</p>
+        </div>
+    </div>
+    {% else %}
+    <div class="grid grid-cols-3 gap-3 mb-5 fade-up-2">
+        <div class="stat-box">
+            <p class="text-xl font-bold" style="color:var(--success);">{{ attempt.correct_count }}</p>
+            <p class="text-xs mt-0.5" style="color:var(--text-muted);">Correct</p>
+        </div>
+        <div class="stat-box">
+            <p class="text-xl font-bold" style="color:var(--error);">{{ attempt.total_count - attempt.correct_count }}</p>
+            <p class="text-xs mt-0.5" style="color:var(--text-muted);">Incorrect</p>
+        </div>
+        <div class="stat-box">
+            <p class="text-xl font-bold" style="color:var(--text-primary);">{{ attempt.total_count }}</p>
+            <p class="text-xs mt-0.5" style="color:var(--text-muted);">Total</p>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- ── Analytics insights ───────────────────────────────────────────────── -->
+    {% if attempt.submitted_count is defined and attempt.attempted_count != attempt.submitted_count %}
+    <div class="glass-panel rounded-xl p-6 mb-5 fade-up-2">
+        <h3 class="text-sm font-semibold mb-4" style="color:var(--text-muted);">PERFORMANCE INSIGHTS</h3>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div class="flex items-center gap-3 p-3 rounded-lg" style="background: var(--warning-bg, rgba(234,179,8,0.1));">
+                <span class="material-symbols-outlined text-2xl" style="color: var(--warning, #eab308);">insights</span>
+                <div>
+                    <p class="text-sm font-medium" style="color:var(--text-primary);">Unsubmitted Answers</p>
+                    <p class="text-xs" style="color:var(--text-secondary);">
+                        {{ attempt.attempted_count - attempt.submitted_count }} question(s) were selected but not submitted
+                    </p>
+                </div>
+            </div>
+            <div class="flex items-center gap-3 p-3 rounded-lg" style="background: var(--info-bg, rgba(59,130,246,0.1));">
+                <span class="material-symbols-outlined text-2xl" style="color: var(--info, #3b82f6);">tips_and_updates</span>
+                <div>
+                    <p class="text-sm font-medium" style="color:var(--text-primary);">Study Tip</p>
+                    <p class="text-xs" style="color:var(--text-secondary);">
+                        Remember to submit your answers to count them toward your score!
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- ── CTA buttons ────────────────────────────────────────────────────── -->
+    <div class="flex gap-3 mb-6 flex-wrap">
+        {% if attempt.topic_id %}
+        <a href="{{ url_for('test_dashboard') }}" onclick="retryTopic(event)"
+            class="flex-1 min-w-[130px] py-2.5 px-4 text-center rounded-xl text-sm font-medium border transition-colors"
+            style="border-color:var(--border);color:var(--text-secondary);"
+            id="retryBtn">
+            <span class="material-symbols-outlined text-sm align-middle mr-1">replay</span>Retry Topic
+        </a>
+        {% endif %}
+        <button onclick="reviewAnswers()" 
+            class="flex-1 min-w-[130px] py-2.5 px-4 text-center rounded-xl text-sm font-medium border transition-colors"
+            style="border-color:var(--border);color:var(--text-secondary);">
+            <span class="material-symbols-outlined text-sm align-middle mr-1">visibility</span>Review Answers
+        </button>
+        <a href="{{ url_for('test_dashboard') }}"
+            class="flex-1 min-w-[130px] py-2.5 px-4 text-center rounded-xl text-sm font-semibold"
+            style="background:var(--accent);color:var(--bg-primary);">
+            <span class="material-symbols-outlined text-sm align-middle mr-1">home</span>All Tests
+        </a>
+    </div>
+
+    <!-- ── Question review ────────────────────────────────────────────────── -->
+    <h2 class="text-sm font-semibold mb-3" style="color:var(--text-muted);">QUESTION REVIEW</h2>
+    <div class="flex flex-col gap-4">
+        {% for r in attempt.results %}
+        <div class="review-card {% if r.is_correct %}correct{% else %}wrong{% endif %} fade-up">
+            <!-- Card header -->
+            <div class="flex items-center justify-between px-4 py-3 border-b"
+                 style="border-color:var(--border-subtle, var(--border));">
+                <div class="flex items-center gap-2">
+                    <span class="material-symbols-outlined text-base {% if r.is_correct %}" style="color:var(--success)">check_circle{% else %}" style="color:var(--error)">cancel{% endif %}">
+                    </span>
+                    <span class="text-xs font-medium" style="color:var(--text-secondary);">Q{{ loop.index }}</span>
+                    <span class="diff-badge {{ r.difficulty }}">{{ r.difficulty }}</span>
+                    {% if r.submitted_at is defined %}
+                    <span class="text-xs px-2 py-1 rounded-full" style="background: var(--success-bg); color: var(--success);">
+                        Submitted
+                    </span>
+                    {% endif %}
+                </div>
+                {% if r.topic_id %}
+                <span class="text-xs" style="color:var(--text-muted);">
+                    {{ r.topic_id.split('_')[4:] | join(' ') | replace('-',' ') | title if r.topic_id.split('_')|length > 4 else '' }}
+                </span>
+                {% endif %}
+            </div>
+
+            <!-- Body -->
+            <div class="p-4 flex flex-col gap-3">
+                <p class="text-sm font-medium leading-relaxed" style="color:var(--text-primary);">{{ r.text }}</p>
+
+                <!-- Options -->
+                <div class="flex flex-col gap-1.5">
+                    {% for opt in r.options %}
+                    {% set i = loop.index0 %}
+                    <div class="opt-row {% if i == r.correct_option_index %}is-correct{% elif i == r.selected_option and not r.is_correct %}is-wrong{% endif %}">
+                        <span class="opt-letter-sm">{{ ['A','B','C','D'][i] }}</span>
+                        <span class="text-xs leading-relaxed flex-1" style="color:var(--text-secondary);">{{ opt }}</span>
+                        {% if i == r.correct_option_index %}
+                        <span class="material-symbols-outlined text-xs" style="color:var(--success);">check</span>
+                        {% elif i == r.selected_option and not r.is_correct %}
+                        <span class="material-symbols-outlined text-xs" style="color:var(--error);">close</span>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                </div>
+
+                <!-- Explanation -->
+                {% if r.explanation %}
+                <div class="expl-box">
+                    <p class="text-xs font-semibold mb-0.5" style="color:var(--accent);">Explanation</p>
+                    <p class="text-xs leading-relaxed" style="color:var(--text-secondary);">{{ r.explanation }}</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+</div>
+
+<script>
+const ATTEMPT  = {{ attempt | tojson }};
+const RESULTS  = ATTEMPT.results || [];
+const SCORE    = ATTEMPT.score;
+const TOPIC_ID = ATTEMPT.topic_id || '';
+
+// Animate score ring
+window.addEventListener('DOMContentLoaded', () => {
+    const arc = document.getElementById('scoreArc');
+    const circ = 2 * Math.PI * 50;  // r=50
+    const dash = (SCORE / 100) * circ;
+    setTimeout(() => {
+        arc.style.transition = 'stroke-dasharray 0.9s ease';
+        arc.setAttribute('stroke-dasharray', `${dash.toFixed(2)} ${circ.toFixed(2)}`);
+    }, 100);
+
+    // Difficulty breakdown
+    const counts = { easy:{t:0,c:0}, medium:{t:0,c:0}, hard:{t:0,c:0} };
+    RESULTS.forEach(r => {
+        const d = r.difficulty || 'medium';
+        if (counts[d]) { counts[d].t++; if (r.is_correct) counts[d].c++; }
+    });
+    const container = document.getElementById('diffBreakdown');
+    Object.entries(counts).forEach(([d, v]) => {
+        if (!v.t) return;
+        const pct = Math.round(v.c / v.t * 100);
+        const chip = document.createElement('span');
+        chip.className = 'diff-badge ' + d;
+        chip.textContent = `${d.charAt(0).toUpperCase()+d.slice(1)}: ${v.c}/${v.t} (${pct}%)`;
+        container.appendChild(chip);
+    });
+    
+    // Add question navigation dots
+    addQuestionNavigation();
+});
+
+// Retry topic
+function retryTopic(e) {
+    e.preventDefault();
+    if (!TOPIC_ID) { window.location.href = '/test'; return; }
+    const btn = document.getElementById('retryBtn');
+    btn.textContent = 'Loading…';
+    fetch('/api/test/start', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ mode: 'topic', topic_id: TOPIC_ID, num_questions: ATTEMPT.total_count }),
+    }).then(r => r.json()).then(res => {
+        if (res.success) {
+            sessionStorage.setItem('__test_session', JSON.stringify({
+                session_id: res.session_id, questions: res.questions, mode: 'topic',
+            }));
+            window.location.href = '/test/session';
+        } else { window.location.href = '/test'; }
+    }).catch(() => { window.location.href = '/test'; });
+}
+
+// Review answers - scroll to specific question
+function reviewAnswers() {
+    // Smooth scroll to the first question review
+    const firstQuestion = document.querySelector('.review-card');
+    if (firstQuestion) {
+        firstQuestion.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        // Highlight the first question briefly
+        firstQuestion.style.transition = 'all 0.3s ease';
+        firstQuestion.style.transform = 'scale(1.02)';
+        firstQuestion.style.boxShadow = '0 8px 24px rgba(var(--accent-rgb), 0.15)';
+        setTimeout(() => {
+            firstQuestion.style.transform = 'scale(1)';
+            firstQuestion.style.boxShadow = '';
+        }, 1000);
+    }
+}
+
+// Navigate to specific question
+function goToQuestion(questionIndex) {
+    const questionCard = document.querySelectorAll('.review-card')[questionIndex];
+    if (questionCard) {
+        questionCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        // Highlight the question
+        questionCard.style.transition = 'all 0.3s ease';
+        questionCard.style.transform = 'scale(1.02)';
+        questionCard.style.boxShadow = '0 8px 24px rgba(var(--accent-rgb), 0.15)';
+        setTimeout(() => {
+            questionCard.style.transform = 'scale(1)';
+            questionCard.style.boxShadow = '';
+        }, 1000);
+    }
+}
+
+// Add keyboard navigation for questions
+document.addEventListener('keydown', (e) => {
+    if (e.key >= '1' && e.key <= '9') {
+        const questionIndex = parseInt(e.key) - 1;
+        if (questionIndex < RESULTS.length) {
+            goToQuestion(questionIndex);
+        }
+    }
+});
+
+// Add question navigation dots
+function addQuestionNavigation() {
+    const reviewSection = document.querySelector('.flex.flex-col.gap-4');
+    if (!reviewSection || RESULTS.length <= 1) return;
+    
+    // Create navigation container
+    const navContainer = document.createElement('div');
+    navContainer.className = 'flex items-center justify-center gap-2 mb-4 p-3 rounded-lg';
+    navContainer.style.cssText = 'background: var(--bg-tertiary); border: 1px solid var(--border);';
+    
+    // Add navigation dots
+    for (let i = 0; i < RESULTS.length; i++) {
+        const dot = document.createElement('button');
+        dot.className = 'w-8 h-8 rounded-full text-xs font-medium transition-all duration-200';
+        dot.textContent = i + 1;
+        dot.onclick = () => goToQuestion(i);
+        
+        const result = RESULTS[i];
+        if (result.is_correct) {
+            dot.style.cssText = 'background: var(--success); color: white; border: 2px solid var(--success);';
+        } else {
+            dot.style.cssText = 'background: var(--error); color: white; border: 2px solid var(--error);';
+        }
+        
+        dot.onmouseover = () => {
+            dot.style.transform = 'scale(1.2)';
+            dot.style.boxShadow = '0 4px 12px rgba(0,0,0,0.2)';
+        };
+        dot.onmouseout = () => {
+            dot.style.transform = 'scale(1)';
+            dot.style.boxShadow = '';
+        };
+        
+        navContainer.appendChild(dot);
+    }
+    
+    // Insert navigation before the first question
+    reviewSection.parentNode.insertBefore(navContainer, reviewSection);
+}
+
+(function(){
+    const t = localStorage.getItem('sclera-theme');
+    if (t) document.documentElement.setAttribute('data-theme', t);
+})();
+</script>
+</body>
+</html>

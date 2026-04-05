@@ -5,7 +5,7 @@
 #           Institution Management (Admin/Teacher), Statistics, Settings
 # Excludes: Community/Bubbles/Chat (ScleraCollab), Careers/Courses (ScleraCareer)
 # ============================================================================
-from flask import Flask, render_template, request, redirect, url_for, session, flash, jsonify, abort, send_from_directory
+from flask import Flask, render_template, request, redirect, url_for, session, flash, jsonify, abort, send_from_directory, make_response
 from firebase_config import auth, db
 from firebase_admin import auth as admin_auth, storage
 from datetime import datetime, date, timedelta
@@ -34,8 +34,7 @@ import random
 import string
 from marshmallow import ValidationError
 import traceback
-# AI Assistant import
-from ai_assistant import get_ai_assistant
+from test_system import test_system   # noqa (remove if already imported at top)
 # Gemini Analytics import
 from gemini_analytics import gemini_analytics
 # CLI Commands import
@@ -2293,14 +2292,11 @@ def ai_assistant():
     if not user_data:
         flash('User data not found', 'error')
         return redirect(url_for('logout'))
-    # TEMPORARILY BYPASS CONSENT CHECK FOR DEBUGGING
     # Check if user has consented to AI features
-    # ai_consent = user_data.get('ai_consent', False)
-    # if not ai_consent:
-    #     # Show consent screen
-    #     return render_template('ai_consent.html', user=user_data)
-    # Show AI assistant interface (force consent for debugging)
-    ai_consent = True  # Force consent for debugging
+    ai_consent = user_data.get('ai_consent', False)
+    if not ai_consent:
+        # Show consent screen
+        return render_template('ai_consent.html', user=user_data)
     context = {
         'user': user_data,
         'name': user_data.get('name', 'Student'),
@@ -2332,9 +2328,8 @@ def ai_chat_planning():
     if not user_data:
         return jsonify({'error': 'User not found'}), 404
     # Check consent
-    # TEMPORARILY BYPASS CONSENT CHECK FOR DEBUGGING
-    # if not user_data.get('ai_consent', False):
-    #     return jsonify({'error': 'AI consent required'}), 403
+    if not user_data.get('ai_consent', False):
+        return jsonify({'error': 'AI consent required'}), 403
     message = request.json.get('message', '').strip()
     if not message:
         return jsonify({'error': 'Message required'}), 400
@@ -2359,9 +2354,8 @@ def ai_chat_doubt():
     if not user_data:
         return jsonify({'error': 'User not found'}), 404
     # Check consent
-    # TEMPORARILY BYPASS CONSENT CHECK FOR DEBUGGING
-    # if not user_data.get('ai_consent', False):
-    #     return jsonify({'error': 'AI consent required'}), 403
+    if not user_data.get('ai_consent', False):
+        return jsonify({'error': 'AI consent required'}), 403
     message = request.json.get('message', '').strip()
     if not message:
         return jsonify({'error': 'Message required'}), 400
@@ -2513,6 +2507,100 @@ def get_thread_history(chatbot_type, thread_id):
         return jsonify({'error': 'Failed to load thread history'}), 500
 
 # ============================================================================
+# CACHE MANAGEMENT ENDPOINTS (FOR TESTING)
+# ============================================================================
+@app.route('/api/cache/clear/ai/student/<uid>', methods=['POST'])
+@require_teacher_v2  # Only teachers can clear student cache
+def clear_student_ai_cache(uid):
+    """Clear AI cache for a specific student"""
+    try:
+        from utils.cache import clear_ai_cache_for_student
+        clear_ai_cache_for_student(uid)
+        return jsonify({'success': True, 'message': f'AI cache cleared for student {uid}'})
+    except Exception as e:
+        logger.error(f"Error clearing student AI cache: {str(e)}")
+        return jsonify({'error': 'Failed to clear cache'}), 500
+
+@app.route('/api/cache/clear/ai/class/<class_id>', methods=['POST'])
+@require_teacher_v2  # Only teachers can clear class cache
+def clear_class_ai_cache(class_id):
+    """Clear AI cache for a specific class"""
+    try:
+        from utils.cache import clear_ai_cache_for_class
+        clear_ai_cache_for_class(class_id)
+        return jsonify({'success': True, 'message': f'AI cache cleared for class {class_id}'})
+    except Exception as e:
+        logger.error(f"Error clearing class AI cache: {str(e)}")
+        return jsonify({'error': 'Failed to clear cache'}), 500
+
+@app.route('/api/cache/clear/ai/all', methods=['POST'])
+@require_admin_v2  # Only admins can clear all AI cache
+def clear_all_ai_cache():
+    """Clear all AI cache entries"""
+    try:
+        from utils.cache import clear_all_ai_cache
+        clear_all_ai_cache()
+        return jsonify({'success': True, 'message': 'All AI cache cleared'})
+    except Exception as e:
+        logger.error(f"Error clearing all AI cache: {str(e)}")
+        return jsonify({'error': 'Failed to clear cache'}), 500
+
+@app.route('/api/cache/list', methods=['GET'])
+@require_admin_v2  # Only admins can list cache
+def list_cache_entries():
+    """List cache entries (for debugging)"""
+    try:
+        from utils.cache import list_cache_keys
+        pattern = request.args.get('pattern', '')
+        keys = list_cache_keys(pattern if pattern else None)
+        return jsonify({'keys': keys, 'count': len(keys)})
+    except Exception as e:
+        logger.error(f"Error listing cache: {str(e)}")
+        return jsonify({'error': 'Failed to list cache'}), 500
+
+@app.route('/api/cache/clear/pattern', methods=['POST'])
+@require_admin_v2  # Only admins can clear by pattern
+def clear_cache_by_pattern():
+    """Clear cache entries matching a pattern"""
+    try:
+        pattern = request.json.get('pattern', '')
+        if not pattern:
+            return jsonify({'error': 'Pattern is required'}), 400
+        
+        from utils.cache import clear_cache_for_pattern
+        clear_cache_for_pattern(pattern)
+        return jsonify({'success': True, 'message': f'Cache cleared for pattern: {pattern}'})
+    except Exception as e:
+        logger.error(f"Error clearing cache by pattern: {str(e)}")
+        return jsonify({'error': 'Failed to clear cache'}), 500
+
+@app.route('/api/ai/models/status', methods=['GET'])
+@require_admin_v2  # Only admins can check model status
+def get_ai_model_status():
+    """Get current AI model status"""
+    try:
+        from gemini_analytics import gemini_analytics
+        status = gemini_analytics.get_model_status()
+        return jsonify(status)
+    except Exception as e:
+        logger.error(f"Error getting model status: {str(e)}")
+        return jsonify({'error': 'Failed to get model status'}), 500
+
+@app.route('/api/ai/models/reset', methods=['POST'])
+@require_admin_v2  # Only admins can reset models
+def reset_ai_models():
+    """Reset exhausted AI models"""
+    try:
+        from gemini_analytics import gemini_analytics
+        gemini_analytics.exhausted_models.clear()
+        gemini_analytics.current_model_index = 0
+        logger.info("AI models reset by admin")
+        return jsonify({'success': True, 'message': 'AI models reset successfully'})
+    except Exception as e:
+        logger.error(f"Error resetting models: {str(e)}")
+        return jsonify({'error': 'Failed to reset models'}), 500
+
+# ============================================================================
 # GEMINI ANALYTICS API ENDPOINTS
 # ============================================================================
 @app.route('/api/analytics/cluster/class/<class_id>', methods=['POST'])
@@ -2547,17 +2635,33 @@ def cluster_class_study_patterns(class_id):
                 })
         
         # Generate new clusters
-        clusters = gemini_analytics.analyze_class_study_patterns(class_id)
-        
-        if clusters:
-            gemini_analytics.store_class_clusters(class_id, clusters)
+        try:
+            clusters = gemini_analytics.analyze_class_study_patterns(class_id)
+            
+            if clusters:
+                gemini_analytics.store_class_clusters(class_id, clusters)
+                return jsonify({
+                    'clusters': clusters,
+                    'cached': False,
+                    'last_clustered': datetime.utcnow().isoformat()
+                })
+            else:
+                # Return empty clusters as fallback instead of error
+                return jsonify({
+                    'clusters': [],
+                    'cached': False,
+                    'error': 'AI clustering temporarily unavailable',
+                    'message': 'Study pattern clustering is currently experiencing rate limits. Please try again later.'
+                })
+        except Exception as api_error:
+            logger.error(f"AI clustering failed for class {class_id}: {str(api_error)}")
+            # Return graceful fallback instead of 500 error
             return jsonify({
-                'clusters': clusters,
+                'clusters': [],
                 'cached': False,
-                'last_clustered': datetime.utcnow().isoformat()
+                'error': 'AI clustering temporarily unavailable',
+                'message': 'Study pattern clustering is currently experiencing rate limits. Please try again later.'
             })
-        else:
-            return jsonify({'error': 'Failed to generate clusters'}), 500
             
     except Exception as e:
         logger.error(f"Error clustering class {class_id}: {str(e)}")
@@ -2877,6 +2981,302 @@ def serve_profile_picture(filename):
 # ============================================================================
 # ACADEMIC DASHBOARD
 # ============================================================================
+
+# =============================================================================
+# TEST SYSTEM ROUTES  — paste into sclera.py
+# Add near top:  from test_system import test_system
+# =============================================================================
+
+# ── Helper ────────────────────────────────────────────────────────────────────
+
+def _board_grade(user_data: dict):
+    school = user_data.get("school") or {}
+    board  = school.get("board", "").lower().strip()
+    grade  = str(school.get("grade", "")).strip()
+    
+    # Validate that both board and grade are provided
+    if not board or not grade:
+        return None, None
+    
+    return board, grade
+
+
+def _build_subjects_data(uid, board, grade):
+    """Merge syllabus + performance + question counts for template."""
+    # Return empty data if board or grade is None
+    if not board or not grade:
+        return []
+        
+    from templates.academic_data import get_syllabus
+    syllabus     = get_syllabus('school', board, grade) or {}
+    performances = test_system.get_all_performances(uid)
+    q_counts     = test_system.get_all_question_counts()
+    
+    subjects_data = []
+    for subj_name, subj_data in syllabus.items():
+        if not isinstance(subj_data, dict):
+            continue
+        chapters_raw = subj_data.get("chapters", {})
+        chapters = []
+        subj_total = subj_confident = 0
+
+        for chap_name, chap_data in chapters_raw.items():
+            if not isinstance(chap_data, dict):
+                continue
+            topics_raw = chap_data.get("topics", [])
+            topics = []
+            for t in topics_raw:
+                name = t.get("name", "") if isinstance(t, dict) else str(t)
+                tid  = test_system.make_topic_id(board, grade, subj_name, chap_name, name)
+                perf = performances.get(tid, {})
+                qc   = q_counts.get(tid, {"total": 0, "easy": 0, "medium": 0, "hard": 0})
+                conf = perf.get("confidence", "not_started")
+                acc  = perf.get("accuracy", 0.0)
+                
+                topics.append({
+                    "name":             name,
+                    "topic_id":         tid,
+                    "accuracy_pct":     round(acc * 100),
+                    "confidence":       conf,
+                    "total_attempted":  perf.get("total_attempted", 0),
+                    "question_counts":  qc,
+                })
+                subj_total += 1
+                if conf == "confident":
+                    subj_confident += 1
+
+            if topics:
+                chapters.append({"name": chap_name, "topics": topics})
+
+        if chapters:
+            subjects_data.append({
+                "name":            subj_name,
+                "chapters":        chapters,
+                "total_topics":    subj_total,
+                "confident_topics": subj_confident,
+                "completion_pct":  round(subj_confident / subj_total * 100) if subj_total else 0,
+            })
+    
+    print(f"DEBUG: Returning {len(subjects_data)} subjects with data")
+    return subjects_data
+
+
+# ── Page routes ───────────────────────────────────────────────────────────────
+
+@app.route("/test")
+@require_login
+def test_dashboard():
+    uid       = session["uid"]
+    user_data = get_user_data(uid) or {}
+    board, grade = _board_grade(user_data)
+    
+    # If user doesn't have valid board/grade data, show empty dashboard
+    if not board or not grade:
+        return render_template("test_dashboard.html", 
+                             subjects_data=[], 
+                             recent_attempts=[], 
+                             user_data=user_data,
+                             board=None, 
+                             grade=None)
+    
+    subjects_data   = _build_subjects_data(uid, board, grade)
+    recent_attempts = test_system.get_recent_attempts(uid, limit=6)
+    
+    # Add cache-busting headers
+    response = make_response(render_template(
+        "test_dashboard.html",
+        subjects_data=subjects_data,
+        recent_attempts=recent_attempts,
+        user_data=user_data,
+        board=board, grade=grade,
+    ))
+    # Force no-caching for development
+    if app.debug:
+        response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+        response.headers['Pragma'] = 'no-cache'
+        response.headers['Expires'] = '0'
+    return response
+
+
+@app.route("/test/session")
+@require_login
+def test_session_page():
+    uid       = session["uid"]
+    user_data = get_user_data(uid) or {}
+    board, grade = _board_grade(user_data)
+    # Get available subjects for mock test setup
+    from templates.academic_data import get_available_subjects
+    subjects = get_available_subjects(board, grade) or []
+    return render_template("test_session.html", user_data=user_data, subjects=subjects, board=board, grade=grade)
+
+
+@app.route("/test/results/<attempt_id>")
+@require_login
+def test_results_page(attempt_id):
+    uid     = session["uid"]
+    attempt = test_system.get_attempt(uid, attempt_id)
+    if not attempt:
+        flash("Results not found.", "error")
+        return redirect(url_for("test_dashboard"))
+    user_data = get_user_data(uid) or {}
+    return render_template("test_results.html", attempt=attempt, user_data=user_data)
+
+
+# ── API routes ────────────────────────────────────────────────────────────────
+
+@app.route("/api/test/start", methods=["POST"])
+@require_login
+@limiter.limit("20 per hour")
+def api_test_start():
+    uid       = session["uid"]
+    data      = request.get_json(silent=True) or {}
+    mode      = data.get("mode", "topic")
+    user_data = get_user_data(uid) or {}
+    board, grade = _board_grade(user_data)
+
+    try:
+        if mode == "topic":
+            topic_id   = data.get("topic_id", "")
+            difficulty = data.get("difficulty") or "mixed"
+            num_q      = min(int(data.get("num_questions", 10)), 20)
+            if not topic_id:
+                return jsonify(success=False, error="topic_id required"), 400
+
+            questions = test_system.get_questions_for_topic(
+                topic_id,
+                None if difficulty == "mixed" else difficulty,
+                num_q,
+            )
+            if not questions:
+                return jsonify(
+                    success=False,
+                    error="No questions available for this topic yet. Check back soon!"
+                ), 404
+
+            sid = test_system.create_session(uid, questions, "topic", topic_id=topic_id)
+            return jsonify(
+                success=True,
+                session_id=sid,
+                questions=[test_system._client_q(q) for q in questions],
+            )
+
+        elif mode == "mock":
+            subject    = data.get("subject") or None
+            num_q      = min(int(data.get("num_questions", 30)), 60)
+            time_limit = min(int(data.get("time_limit_minutes", 60)), 180)
+
+            questions = test_system.get_questions_for_mock(board, grade, subject, num_q)
+            if not questions:
+                return jsonify(success=False, error="No questions available."), 404
+
+            sid = test_system.create_session(
+                uid, questions, "mock",
+                subject=subject, time_limit_minutes=time_limit,
+            )
+            return jsonify(
+                success=True,
+                session_id=sid,
+                questions=[test_system._client_q(q) for q in questions],
+                time_limit_minutes=time_limit,
+            )
+
+        return jsonify(success=False, error="Invalid mode"), 400
+
+    except Exception as e:
+        logger.error(f"api_test_start: {e}", exc_info=True)
+        return jsonify(success=False, error="Failed to start test"), 500
+
+
+@app.route("/api/test/check", methods=["POST"])
+@require_login
+def api_test_check():
+    """Check answer without submitting for scoring (for practice/validation)"""
+    uid  = session["uid"]
+    data = request.get_json(silent=True) or {}
+    sid  = data.get("session_id", "")
+    qid  = data.get("question_id", "")
+    sel  = data.get("selected_option")
+
+    if sel is None or not sid or not qid:
+        return jsonify(success=False, error="Missing fields"), 400
+
+    try:
+        result = test_system.check_answer(uid, sid, qid, int(sel), submit_answer=False)
+        
+        # Don't provide AI explanation for non-submitted checks
+        return jsonify(success=True, **result)
+
+    except Exception as e:
+        return jsonify(success=False, error=str(e)), 500
+
+
+@app.route("/api/test/answer", methods=["POST"])
+@require_login
+def api_test_answer():
+    uid  = session["uid"]
+    data = request.get_json(silent=True) or {}
+    sid  = data.get("session_id", "")
+    qid  = data.get("question_id", "")
+    sel  = data.get("selected_option")
+    submit_answer = data.get("submit_answer", True)  # Default to True for backward compatibility
+
+    if sel is None or not sid or not qid:
+        return jsonify(success=False, error="Missing fields"), 400
+
+    try:
+        result = test_system.check_answer(uid, sid, qid, int(sel), submit_answer)
+
+        # AI explanation for wrong answers (only if actually submitted)
+        ai_explanation = None
+        if not result["is_correct"] and result["submitted"]:
+            q_doc = db.collection("questions").document(qid).get()
+            if q_doc.exists:
+                q = q_doc.to_dict()
+                ai_explanation = test_system.get_ai_explanation(
+                    q.get("text", ""),
+                    q.get("options", []),
+                    q.get("correct_option_index", 0),
+                    q.get("explanation", ""),
+                )
+        result["ai_explanation"] = ai_explanation
+        return jsonify(success=True, **result)
+
+    except Exception as e:
+        return jsonify(success=False, error=str(e)), 500
+    except ValueError as e:
+        return jsonify(success=False, error=str(e)), 404
+    except Exception as e:
+        logger.error(f"api_test_answer: {e}", exc_info=True)
+        return jsonify(success=False, error="Failed to check answer"), 500
+
+
+@app.route("/api/test/complete", methods=["POST"])
+@require_login
+def api_test_complete():
+    uid  = session["uid"]
+    data = request.get_json(silent=True) or {}
+    sid  = data.get("session_id", "")
+    if not sid:
+        return jsonify(success=False, error="session_id required"), 400
+    try:
+        result = test_system.complete_session(uid, sid)
+        return jsonify(success=True, **result)
+    except Exception as e:
+        logger.error(f"api_test_complete: {e}", exc_info=True)
+        return jsonify(success=False, error="Failed to complete session"), 500
+
+
+@app.route("/api/test/performance")
+@require_login
+def api_test_performance():
+    uid = session["uid"]
+    try:
+        perfs = test_system.get_all_performances(uid)
+        return jsonify(success=True, performances=perfs)
+    except Exception as e:
+        logger.error(f"api_test_performance: {e}", exc_info=True)
+        return jsonify(success=False, error="Failed to load performance"), 500
+
 @app.route('/academic')
 @require_login
 def academic_dashboard():
@@ -6087,7 +6487,7 @@ def update_ai_predictions():
 if __name__ == '__main__':
     env = os.environ.get('FLASK_ENV', 'production')
     debug = env == 'development'
-    port = int(os.environ.get('PORT', 5001))
+    port = int(os.environ.get('PORT', 5000))
     logger.info("application_startup", environment=env, debug=debug, port=port)
     
     # Register CLI commands
